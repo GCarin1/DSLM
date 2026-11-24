@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "doctrina-cli": "^0.22.1"
+  }
+}

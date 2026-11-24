@@ -1,0 +1,5 @@
+{
+  "$comment": "Doctrina project configuration — add a key to change it. Options: \"language\" (\"en\" | \"pt\", or null to detect per file); \"surface\" (\"core\": AGENTS.md lists the session loop and defers the rest to `doctrina --help`; \"full\": it lists every command; then `doctrina upgrade --write`); \"context_budget\" (positive integer, default 15000); \"rules\" (array of { id, forbid, paths, message } — permanent project constraints enforced by `doctrina validate`). Run `doctrina doctor` to see the effective value of each option and where it came from.",
+  "surface": "core",
+  "language": "en"
+}

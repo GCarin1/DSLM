@@ -1,0 +1,127 @@
+{
+  "$schema_version": "0.1.0",
+  "project": "DSLM",
+  "framework_version": "0.22.1",
+  "last_updated": "2026-11-24",
+  "artifacts": {
+    "product": {
+      "path": ".doctrina/product.md",
+      "status": "active",
+      "version": "0.1.0",
+      "last_updated": "2026-11-24"
+    },
+    "specs": [
+      {
+        "id": "ds-interface",
+        "path": ".doctrina/specs/ds-interface/spec.md",
+        "status": "active",
+        "version": "0.1.0",
+        "last_updated": "2026-11-24",
+        "implementation": "planned — current phase is documentation and planning only; no code yet",
+        "realizes": [
+          "SC4"
+        ],
+        "depends_on": [
+          "inference-engine"
+        ]
+      },
+      {
+        "id": "fixed-point-inference",
+        "path": ".doctrina/specs/fixed-point-inference/spec.md",
+        "status": "active",
+        "version": "0.1.0",
+        "last_updated": "2026-11-24",
+        "implementation": "planned — current phase is documentation and planning only; no code yet",
+        "realizes": [
+          "SC3"
+        ],
+        "depends_on": [
+          "inference-engine",
+          "model-loading"
+        ]
+      },
+      {
+        "id": "inference-engine",
+        "path": ".doctrina/specs/inference-engine/spec.md",
+        "status": "active",
+        "version": "0.1.0",
+        "last_updated": "2026-11-24",
+        "implementation": "planned — current phase is documentation and planning only; no code yet",
+        "realizes": [
+          "SC1",
+          "SC2"
+        ],
+        "depends_on": [
+          "model-loading"
+        ]
+      },
+      {
+        "id": "model-loading",
+        "path": ".doctrina/specs/model-loading/spec.md",
+        "status": "active",
+        "version": "0.1.0",
+        "last_updated": "2026-11-24",
+        "implementation": "planned — current phase is documentation and planning only; no code yet",
+        "realizes": [
+          "SC1",
+          "SC5"
+        ],
+        "depends_on": [
+          "pc-toolchain"
+        ]
+      },
+      {
+        "id": "pc-toolchain",
+        "path": ".doctrina/specs/pc-toolchain/spec.md",
+        "status": "active",
+        "version": "0.1.0",
+        "last_updated": "2026-11-24",
+        "implementation": "planned — current phase is documentation and planning only; no code yet",
+        "realizes": [
+          "SC2",
+          "SC5"
+        ]
+      }
+    ],
+    "decisions": [
+      {
+        "id": "0001",
+        "path": ".doctrina/decisions/0001-base-the-inference-engine-on-llama2-c.md",
+        "title": "Base the inference engine on llama2.c",
+        "status": "proposed",
+        "date": "2026-11-24",
+        "summary": "The inference engine is a port of `llama2.c`'s `run.c` (fp32) and, for the performance build, `runq.c` (int8)."
+      },
+      {
+        "id": "0002",
+        "path": ".doctrina/decisions/0002-load-the-whole-model-into-the-4-mb-main-ram.md",
+        "title": "Load the whole model into the 4 MB main RAM",
+        "status": "proposed",
+        "date": "2026-11-24",
+        "summary": "The whole model (weights + KV cache + buffers) lives in main RAM, loaded once at startup."
+      },
+      {
+        "id": "0003",
+        "path": ".doctrina/decisions/0003-fixed-point-int8-as-the-performance-path-fp32-as-the-reference.md",
+        "title": "Fixed-point int8 as the performance path, fp32 as the reference",
+        "status": "proposed",
+        "date": "2026-11-24",
+        "summary": "The project keeps two builds:"
+      }
+    ],
+    "changes": [],
+    "changes_archive": [],
+    "skills": [],
+    "contracts": [
+      {
+        "id": "model-file-format",
+        "path": ".doctrina/contracts/model-file-format.md",
+        "status": "active",
+        "last_updated": "2026-11-24"
+      }
+    ],
+    "entrypoint": {
+      "path": "AGENTS.md"
+    }
+  }
+}
