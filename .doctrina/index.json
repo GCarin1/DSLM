@@ -59,7 +59,7 @@
         "id": "model-loading",
         "path": ".doctrina/specs/model-loading/spec.md",
         "status": "active",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "last_updated": "2026-11-24",
         "implementation": "planned — current phase is documentation and planning only; no code yet",
         "realizes": [
@@ -74,12 +74,30 @@
         "id": "pc-toolchain",
         "path": ".doctrina/specs/pc-toolchain/spec.md",
         "status": "active",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "last_updated": "2026-11-24",
         "implementation": "planned — current phase is documentation and planning only; no code yet",
         "realizes": [
           "SC2",
           "SC5"
+        ]
+      },
+      {
+        "id": "test-harness",
+        "path": ".doctrina/specs/test-harness/spec.md",
+        "status": "active",
+        "version": "0.1.0",
+        "last_updated": "2026-11-24",
+        "implementation": "planned — current phase is documentation and planning only; no code yet",
+        "realizes": [
+          "SC1",
+          "SC2",
+          "SC3",
+          "SC6"
+        ],
+        "depends_on": [
+          "pc-toolchain",
+          "inference-engine"
         ]
       }
     ],
@@ -107,11 +125,69 @@
         "status": "proposed",
         "date": "2026-11-24",
         "summary": "The project keeps two builds:"
+      },
+      {
+        "id": "0004",
+        "path": ".doctrina/decisions/0004-use-blocksds-as-the-ds-toolchain.md",
+        "title": "Use BlocksDS as the DS toolchain",
+        "status": "proposed",
+        "date": "2026-11-24",
+        "summary": "DSLM is built with BlocksDS, with DLDI in its default ARM9 mode."
+      },
+      {
+        "id": "0005",
+        "path": ".doctrina/decisions/0005-r4-hardware-target-and-kernel-policy.md",
+        "title": "R4 hardware target and kernel policy",
+        "status": "proposed",
+        "date": "2026-11-24",
+        "summary": "Reference cart."
       }
     ],
     "changes": [],
-    "changes_archive": [],
-    "skills": [],
+    "changes_archive": [
+      {
+        "id": "0001-r4-research-and-delivery-roadmap",
+        "title": "R4 research and delivery roadmap",
+        "path": ".doctrina/changes/archive/2026-11-24-0001-r4-research-and-delivery-roadmap",
+        "status": "applied",
+        "applied": "2026-11-24",
+        "specs_affected": [
+          {
+            "capability": "model-loading",
+            "operation": "MODIFIED"
+          },
+          {
+            "capability": "pc-toolchain",
+            "operation": "MODIFIED"
+          },
+          {
+            "capability": "test-harness",
+            "operation": "ADDED"
+          }
+        ],
+        "lane": "docs (planning only; no runtime code exists yet)"
+      }
+    ],
+    "skills": [
+      {
+        "id": "ds-memory-budget",
+        "path": ".doctrina/skills/ds-memory-budget.md",
+        "description": "Check whether a model and its buffers fit in the DS's memory and decide where each buffer lives (main RAM, ITCM, DTCM, VRAM).",
+        "last_updated": "2026-11-24"
+      },
+      {
+        "id": "emulator-testing",
+        "path": ".doctrina/skills/emulator-testing.md",
+        "description": "Run and check DSLM builds in melonDS (primary), DeSmuME (second opinion) and no$gba (debugger) with a virtual SD card.",
+        "last_updated": "2026-11-24"
+      },
+      {
+        "id": "r4-deploy",
+        "path": ".doctrina/skills/r4-deploy.md",
+        "description": "Put a DSLM build on a real DS through an R4-family flashcart and fix the usual launch and DLDI failures.",
+        "last_updated": "2026-11-24"
+      }
+    ],
     "contracts": [
       {
         "id": "model-file-format",

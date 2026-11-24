@@ -5,7 +5,7 @@
 **Implementation:** planned — current phase is documentation and planning only; no code yet
 **Realizes:** SC2, SC5
 **Last updated:** 2026-11-24
-**Version:** 0.1.0
+**Version:** 0.2.0
 
 ## Purpose
 
@@ -17,12 +17,14 @@ Python scripts that run on the PC and prepare everything that goes onto the R4's
 
 - The toolchain shall produce files only in the layouts defined by `contracts/model-file-format`.
 - The toolchain shall pin the `llama2.c` commit it uses to build golden outputs.
+- The toolchain shall record the size in bytes and the SHA-256 of every staged model and tokenizer file.
 
 ### Event-driven
 
 - When asked to inspect a checkpoint, the toolchain shall print the header fields and the RAM the DS needs for weights, KV cache and run-state buffers.
 - When asked to build golden outputs, the toolchain shall run the reference `llama2.c` binary with temperature 0 on a fixed prompt list and save the token ids and text for each prompt.
 - When asked to quantize, the toolchain shall convert an fp32 checkpoint into the int8 format and report the size before and after.
+- When asked to stage a card, the toolchain shall write the /dslm/ tree (models, tokenizer and dslm.ini) into a target directory that works both as the melonDS SD sync folder and as the root of the R4 microSD card.
 
 ### Unwanted-behavior (must-not)
 
@@ -37,6 +39,7 @@ Python scripts that run on the PC and prepare everything that goes onto the R4's
 1. [unverified] Inspecting `stories260K.bin` shows the header and a memory budget below 4 MB — verified by `tools/tests/test_inspect.py`.
 2. [unverified] Golden outputs built twice from the same `llama2.c` commit are identical — verified by `tools/tests/test_golden.py`.
 3. [unverified] The generated int8 checkpoint is read by the reference `runq.c` — verified by `tools/tests/test_quantize.py`.
+4. [unverified] The staged directory boots in melonDS (DLDI sync folder) and, copied as-is, on a real R4 — verified by `tools/tests/test_stage.py`.
 
 ## Maturity
 

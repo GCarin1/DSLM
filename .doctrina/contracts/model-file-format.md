@@ -29,14 +29,51 @@ Not applicable: hardware tests are manual scripts under `tests/hw/`.
 | Limit | Direction | Value |
 |-------|-----------|-------|
 | DS main RAM in DS mode (binary + weights + KV cache + buffers) | input | 4194304 bytes |
+| Practical heap + code + stack for a flashcart-launched homebrew (ends at the IPC region, `0x23FF000`) | input | about 3.5 MB; measure on hardware |
+| DLDI driver area reserved in the `.nds` (patched in by the kernel or `dlditool`) | input | 16384 bytes |
 | Token length in the tokenizer (`max_token_length`) | input | defined in the `tok.bin` header |
 
 ## Interfaces
 
-**Location on the microSD card**
+**Layout of the microSD card**
 
-- `/dslm/models/<name>.bin`: checkpoint.
-- `/dslm/models/tok<vocab>.bin`: tokenizer (e.g. `tok512.bin` for `stories260K`).
+```
+/                     kernel files (e.g. __rpg/, _DS_MENU.DAT); never shipped by DSLM
+/dslm.nds             the homebrew (may also live under /apps/)
+/dslm/dslm.ini        settings (below)
+/dslm/models/stories260K.bin
+/dslm/models/tok512.bin
+/dslm/bench.txt       written by the harness after each run
+```
+
+The same tree, minus the kernel files, is the melonDS "Sync SD to folder" directory. `pc-toolchain` stages it.
+
+**`/dslm/dslm.ini`: settings (no argv)**
+
+```ini
+[model]
+checkpoint = /dslm/models/stories260K.bin
+tokenizer  = /dslm/models/tok512.bin
+
+[sampling]
+temperature = 0.0
+topp        = 0.9
+steps       = 256
+seed        = 0
+```
+
+Unknown keys are ignored. A missing file falls back to these defaults.
+
+**`/dslm/bench.txt`: one `key=value` per line, one block per run**
+
+```
+build=fp32|int8
+emulated=yes|no
+load_ms=<int>
+tokens=<int>
+tok_per_s=<float>
+heap_peak_bytes=<int>
+```
 
 **fp32 checkpoint: legacy `llama2.c` format (read by `run.c`)**
 
@@ -60,3 +97,4 @@ The quantized format for `fixed-point-inference` has not been chosen yet. The ca
 - `specs/inference-engine`
 - `specs/fixed-point-inference`
 - `specs/pc-toolchain`
+- `specs/test-harness`

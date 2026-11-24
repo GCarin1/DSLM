@@ -1,0 +1,26 @@
+{
+  "$comment": "doctrina verify runs each check in order. Phase 0 has no code, so the checks are documentation gates; the BlocksDS build and the parity tests join here in M1/M3.",
+  "checks": [
+    {
+      "name": "clarify",
+      "run": "npx doctrina clarify --all",
+      "expect": {
+        "require_output_matches": "no smells"
+      }
+    },
+    {
+      "name": "trace",
+      "run": "npx doctrina trace --strict",
+      "expect": {
+        "require_output_matches": "intent anchors realized"
+      }
+    },
+    {
+      "name": "links",
+      "run": "python3 -c \"import re,pathlib,sys;bad=[(str(f),l) for f in list(pathlib.Path('.').glob('*.md'))+list(pathlib.Path('docs').glob('*.md')) for l in re.findall(r'\\]\\(((?!https?:)[^)#]+)',f.read_text()) if not (f.parent/l).exists()];print('broken links:',bad) if bad else print('links ok');sys.exit(1 if bad else 0)\"",
+      "expect": {
+        "require_output_matches": "links ok"
+      }
+    }
+  ]
+}

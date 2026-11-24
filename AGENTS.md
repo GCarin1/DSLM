@@ -58,7 +58,7 @@ scaffolds from canonical templates and syncs `index.json`.
 
 ## Stack and tooling
 
-- DS firmware: C99/C11, devkitPro (devkitARM + libnds + libfat) or BlocksDS (open decision)
+- DS firmware: C99/C11, BlocksDS (ADR 0004, proposed), DLDI in ARM9 mode
 - PC tools: Python 3 + PyTorch, `llama2.c` scripts (pinned commit)
 - Testing: melonDS / DeSmuME and real hardware with an R4; scripts in `tests/hw/`
 - Docs/specs: Doctrina (`npx doctrina ...`)
@@ -68,18 +68,22 @@ scaffolds from canonical templates and syncs `index.json`.
 
 ```
 # install (docs)      npm install
-# gates               npx doctrina validate && npx doctrina clarify --all && npx doctrina trace
-# build / test        to be defined in phase 1 (toolchain)
+# gates               npx doctrina validate && npx doctrina verify
+# build / test        BlocksDS build and parity tests join verify.json in M1/M3
 ```
 
 ## Repository structure
 
-- `.doctrina/`: product, specs, file-format contract, ADRs
-- `docs/`: reference notes (DS hardware)
-- `assets/`: logo and images
+- `.doctrina/`: product, specs, file-format contract, ADRs, skills (`r4-deploy`, `emulator-testing`, `ds-memory-budget`)
+- `docs/`: hardware, R4 flashcart, testing, prior art, risks
+- `benchmarks/`: real-hardware results only (`emulated=no`)
+- `assets/`: logo and images; `.github/workflows/`: docs gates CI
 - Planned: `src/` (DS firmware), `tools/` (Python), `tests/` (parity, hardware)
 
 ## Conventions and boundaries
+
+- Emulator (melonDS) first, reference R4 second; never publish emulator timings as hardware results.
+- Never commit flashcart kernels, firmware, third-party `.dldi` files or ROMs (ADR 0005).
 
 - Specs in `.doctrina/specs/<capability>/spec.md` are the current truth.
 - ADRs in `.doctrina/decisions/` are immutable; supersede instead of edit.

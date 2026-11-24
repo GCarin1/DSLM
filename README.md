@@ -6,42 +6,69 @@
 
 A tiny LLM running **100% offline on a Nintendo DS**, launched from an **R4** flashcart. DSLM is a port of [`llama2.c`](https://github.com/karpathy/llama2.c) running the `stories260K` model, which writes short, simple stories in English.
 
-> **Status:** phase 0, documentation and planning only. No code yet.
+> **Status:** M0 (planning) complete. No code yet. Next up: M1, toolchain and card I/O.
 
 ## Why it's hard
 
 - **No FPU:** the ~67 MHz ARM9 emulates every `float` in software.
-- **4 MB of RAM:** the binary, weights, KV cache and buffers all share it.
-- **No OS:** no `mmap()`, no threads. Weights are read from the microSD card through libfat.
+- **About 3.5 MB of usable RAM:** the binary, weights, KV cache and buffers all share it.
+- **No OS:** no `mmap()`, no threads. Weights are read once from the microSD card through DLDI.
+- **"R4" is not one cart:** dozens of clones, kernels and DLDI drivers.
 
-## How the project is organized
+## What makes DSLM different
 
-DSLM uses [Doctrina](https://github.com/GCarin1/Doctrina) for spec-driven development:
+LLMs have already reached the DS ([chatds](https://github.com/papayuh/chatds), ds-llm; see [prior art](docs/prior-art.md)). DSLM aims at two things nobody has published yet:
+
+1. **Exact parity:** token-for-token identical output to `llama2.c` on a PC (temperature 0).
+2. **Real-hardware numbers:** load time, tokens per second and heap peak measured on an actual R4, not in an emulator.
+
+## Roadmap
+
+Emulator first (melonDS), real R4 second. Success criteria SC1–SC6 are defined in [`product.md`](.doctrina/product.md).
+
+| Milestone | Deliverables | Exit criteria | Realizes | Status |
+|---|---|---|---|---|
+| **M0 — Plan** | Product, 6 specs, file-format contract, ADRs 0001–0005, docs, Doctrina skills | Doctrina gates green | — | ✅ Done |
+| **M1 — Toolchain & card I/O** | Pinned BlocksDS (Docker/script); hello-world `.nds` that parses `/dslm/dslm.ini` via DLDI | Runs in melonDS (sync folder) **and** on the reference R4 | SC1 (partial) | ⏳ Next |
+| **M2 — PC toolchain** | `tools/`: download, inspect + memory budget, stage card, golden outputs from a pinned `llama2.c` commit | `stories260K` budget < 3.5 MB; golden outputs reproducible | SC2, SC5 | Planned |
+| **M3 — fp32 skeleton (emulator)** | `run.c` port: loader, forward pass, tokenizer, sampler; fixed prompt on the console; headless melonDS parity script | Zero divergence vs golden output in melonDS | SC2 (emulated) | Planned |
+| **M4 — Hardware bring-up** | Same build on the reference R4; DLDI fallback documented; first `benchmarks/` file | Parity on hardware; fp32 baseline recorded | SC1, SC2, SC6 | Planned |
+| **M5 — Fixed point / int8** | int8 format in the contract, quantizer, ITCM matmul, fixed-point RMSNorm/softmax/SiLU | Parity vs `runq.c`; ≥ 3 tok/s on hardware (provisional) | SC3, SC6 | Planned |
+| **M6 — Interface** | On-screen keyboard, token streaming, B to cancel, settings from `dslm.ini` | UI acceptance criteria pass on hardware | SC4 | Planned |
+| **M7 — v1.0 release** | Release `.nds` + staging script, complete docs, benchmark and cart-compatibility tables | Every spec `verified`; release notes with hardware numbers | SC5, SC6 | Planned |
+| **M8 — Beyond v1.0** *(optional)* | Custom 100K–1M parameter models; DSi-mode bonus via TWiLight Menu++ | — | — | Optional |
+
+## Project map
+
+DSLM uses [Doctrina](https://github.com/GCarin1/Doctrina) for spec-driven development.
 
 | Where | What |
 |---|---|
-| [`.doctrina/product.md`](.doctrina/product.md) | Vision, scope, success criteria (SC1–SC5) and **delivery order** |
-| [`.doctrina/specs/`](.doctrina/specs/) | Capabilities: `model-loading`, `inference-engine`, `fixed-point-inference`, `ds-interface`, `pc-toolchain` |
-| [`.doctrina/contracts/model-file-format.md`](.doctrina/contracts/model-file-format.md) | Binary layout of the files that go onto the microSD card |
-| [`.doctrina/decisions/`](.doctrina/decisions/) | ADRs 0001–0003 (llama2.c, whole model in RAM, fixed point + fp32 reference) |
-| [`docs/hardware-ds.md`](docs/hardware-ds.md) | DS hardware notes and memory budget |
-| [`AGENTS.md`](AGENTS.md) | Instructions for AI agents |
+| [`.doctrina/product.md`](.doctrina/product.md) | Vision, scope, success criteria, delivery order |
+| [`.doctrina/specs/`](.doctrina/specs/) | `model-loading`, `inference-engine`, `fixed-point-inference`, `ds-interface`, `pc-toolchain`, `test-harness` |
+| [`.doctrina/contracts/model-file-format.md`](.doctrina/contracts/model-file-format.md) | microSD layout, checkpoint/tokenizer formats, `dslm.ini`, `bench.txt`, memory budgets |
+| [`.doctrina/decisions/`](.doctrina/decisions/) | ADRs: llama2.c base, whole model in RAM, fixed point + fp32 reference, BlocksDS, R4 target & kernel policy |
+| [`.doctrina/skills/`](.doctrina/skills/) | Agent skills: `r4-deploy`, `emulator-testing`, `ds-memory-budget` |
+| [`docs/hardware-ds.md`](docs/hardware-ds.md) | DS hardware, usable RAM, microSD read speed |
+| [`docs/r4-flashcart.md`](docs/r4-flashcart.md) | Identifying the cart, kernels, card layout, DLDI patching |
+| [`docs/testing.md`](docs/testing.md) | melonDS, DeSmuME, no$gba and the hardware runbook |
+| [`docs/prior-art.md`](docs/prior-art.md) | LLMs on the DS and other `llama2.c` ports |
+| [`docs/risks.md`](docs/risks.md) | Risk register with mitigations |
+| [`benchmarks/`](benchmarks/) | Hardware results (one file per run) |
 
-## Roadmap (summary, details in `product.md`)
+## Target hardware
 
-1. Environment: toolchain, hello world on melonDS and the R4, reading from microSD
-2. fp32 skeleton: `stories260K` generating text from a fixed prompt
-3. Parity with `llama2.c` on the PC (temperature 0)
-4. int8 / fixed-point build and tokens/s measurement
-5. Interface with on-screen keyboard and streaming
-6. (Optional) training custom models
+- Nintendo DS or DS Lite, in DS mode.
+- **Reference cart:** original R4 (r4ds.com) or M3 Simply with the Wood R4 1.62 kernel, microSD of 2 GB or less. Other DLDI carts are best-effort (ADR 0005).
+- DSLM never ships kernels or firmware. See [`docs/r4-flashcart.md`](docs/r4-flashcart.md).
 
 ## Open questions
 
-- Toolchain: **devkitPro** or **BlocksDS**?
-- SC3 performance target: currently **≥ 3 tokens/s**, a provisional value.
+- Accept or revise the proposed ADRs 0001–0005 (toolchain: BlocksDS is recommended).
+- SC3 target: ≥ 3 tok/s is provisional until the first hardware measurement.
 - int8 checkpoint format: reuse `runq.c`'s v2 format or define our own?
-- ADRs 0001–0003 are `proposed` and awaiting acceptance.
+- Project license: MIT would match `llama2.c` (no license file yet).
+- Which R4 is on hand? Identify it before M1 (`docs/r4-flashcart.md` §1).
 
 ## Documentation gates
 
@@ -50,6 +77,8 @@ npm install
 npx doctrina validate && npx doctrina clarify --all && npx doctrina trace
 ```
 
+The same gates run in GitHub Actions on every push.
+
 ## Credits
 
-Built on [`llama2.c`](https://github.com/karpathy/llama2.c) by Andrej Karpathy (MIT) and inspired by the C64, PSP, PS Vita and DOS ports.
+Built on [`llama2.c`](https://github.com/karpathy/llama2.c) by Andrej Karpathy (MIT). Informed by chatds, ds-llm, the C64, PSP, PS Vita and DOS ports, the [flashcard archive](https://github.com/flashcarts/flashcard-archive) and the [BlocksDS](https://blocksds.skylyrac.net/) docs.

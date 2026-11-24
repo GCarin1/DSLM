@@ -10,7 +10,7 @@
 
 ## Context
 
-The DS has no operating system, no FPU and 4 MB of RAM. Any inference engine must be pure C, small, dependency-free and easy to audit line by line. `llama2.c` (Andrej Karpathy) runs the Llama 2 architecture from a single C file of about 700 lines and has been ported to the Commodore 64, DOS, Windows 98, PSP, PS Vita and Xbox 360. Those ports show the required adaptations are well understood: replace `mmap()` with file reads and adapt the arithmetic.
+The DS has no operating system, no FPU and 4 MB of RAM. Any inference engine must be pure C, small, dependency-free and easy to audit line by line. `llama2.c` (Andrej Karpathy) runs the Llama 2 architecture from a single C file of about 700 lines and has been ported to the Commodore 64, DOS, Windows 98, PSP, PS Vita and Xbox 360. Those ports show the required adaptations are well understood: replace `mmap()` with file reads and adapt the arithmetic. On the DS itself, ds-llm (int8 Llama 2 inference, MIT according to third parties) and chatds (BlocksDS, its own DSQ8 format) already exist; both are references to study, not engines to fork (see `docs/prior-art.md`).
 
 ## Decision
 

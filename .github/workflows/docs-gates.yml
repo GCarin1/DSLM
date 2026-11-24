@@ -1,0 +1,23 @@
+name: docs-gates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  doctrina:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Validate artifacts
+        run: npx doctrina validate
+      - name: Ambiguity check
+        run: npx doctrina clarify --all
+      - name: Intent trace
+        run: npx doctrina trace --strict

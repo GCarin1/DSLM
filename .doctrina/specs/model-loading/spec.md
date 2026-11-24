@@ -6,7 +6,7 @@
 **Realizes:** SC1, SC5
 **Depends on:** pc-toolchain
 **Last updated:** 2026-11-24
-**Version:** 0.1.0
+**Version:** 0.2.0
 
 ## Purpose
 
@@ -18,11 +18,14 @@ Read the checkpoint (`model.bin`) and the tokenizer (`tok.bin`) from the R4 flas
 
 - The loader shall read the checkpoint and the tokenizer from the microSD card through libfat, in the layout defined by `contracts/model-file-format`.
 - The loader shall keep the whole model in main RAM; it shall compute the total memory needed (weights, KV cache, run-state buffers) from the checkpoint header before allocating.
+- The loader shall read model files with fread calls of at least 32 KB each.
 
 ### Event-driven
 
 - When the homebrew starts, the loader shall look for the model and tokenizer files in a fixed directory on the microSD card and print which files it found.
 - When the checkpoint header reports a model whose total memory need exceeds the free heap, the loader shall stop and print the required and available byte counts.
+- When the homebrew starts, the loader shall read the model path, tokenizer path and sampling settings from /dslm/dslm.ini.
+- When FAT initialisation fails, the loader shall print a hint that the binary may need a manual DLDI patch with dlditool.
 
 ### State-driven
 
@@ -32,6 +35,7 @@ Read the checkpoint (`model.bin`) and the tokenizer (`tok.bin`) from the R4 flas
 
 - The loader shall not start inference when the FAT filesystem fails to mount or a model file is missing; it shall show the error on screen instead.
 - The loader shall never read weights from the microSD card during token generation.
+- The loader shall not depend on launch arguments (argv) for any setting.
 
 ### Optional
 
@@ -42,6 +46,7 @@ Read the checkpoint (`model.bin`) and the tokenizer (`tok.bin`) from the R4 flas
 1. [unverified] `stories260K.bin` and `tok512.bin` load from the microSD card on melonDS (with a FAT/DLDI image) and on a real R4 — verified by `tests/hw/load-stories260k.md`.
 2. [unverified] With an oversized checkpoint (e.g. `stories15M.bin`), the loader refuses and shows the required and available bytes — verified by `tests/hw/oversized-model.md`.
 3. [unverified] With no microSD card or no files, the screen shows the error and nothing runs — verified by `tests/hw/missing-files.md`.
+4. [unverified] The stories260K load time on a real R4 is measured with a DS hardware timer and recorded — verified by `tests/hw/load-time.md`.
 
 ## Maturity
 
