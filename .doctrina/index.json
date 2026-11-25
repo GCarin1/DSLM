@@ -44,7 +44,7 @@
         "id": "inference-engine",
         "path": ".doctrina/specs/inference-engine/spec.md",
         "status": "active",
-        "version": "0.2.1",
+        "version": "0.3.0",
         "last_updated": "2026-11-24",
         "implementation": "implemented — fp32 engine (`src/engine/llama2.c`), parity on melonDS and on the reference R4 (`benchmarks/2026-11-25-r4-ysmenu.txt`)",
         "realizes": [
@@ -59,7 +59,7 @@
         "id": "model-loading",
         "path": ".doctrina/specs/model-loading/spec.md",
         "status": "active",
-        "version": "0.4.1",
+        "version": "0.5.0",
         "last_updated": "2026-11-25",
         "implementation": "implemented — header check, RAM budget, chunked reads and error paths (`src/main.c`, `src/storage/`); loads on melonDS and on the reference R4 in 249 ms",
         "realizes": [
@@ -296,6 +296,24 @@
           }
         ],
         "lane": "product (confident; signals: record)"
+      },
+      {
+        "id": "0009-spec-sync-for-stop-format-probe-and-tokens-txt",
+        "title": "Spec sync for stop, format probe and tokens.txt",
+        "path": ".doctrina/changes/archive/2026-11-25-0009-spec-sync-for-stop-format-probe-and-tokens-txt",
+        "status": "applied",
+        "applied": "2026-11-25",
+        "specs_affected": [
+          {
+            "capability": "inference-engine",
+            "operation": "MODIFIED"
+          },
+          {
+            "capability": "model-loading",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "product (confident; signals: record, spec)"
       }
     ],
     "skills": [

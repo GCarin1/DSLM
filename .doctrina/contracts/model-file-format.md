@@ -45,6 +45,7 @@ Not applicable: hardware tests are manual scripts under `tests/hw/`.
 /dslm/models/stories260K.bin       fp32 reference
 /dslm/models/tok512.bin
 /dslm/bench.txt       written by the harness after each run
+/dslm/tokens.txt      written by the homebrew after each generation (below)
 /dslm/manifest.txt    written by pc-toolchain: "<card path> <size> <sha256>" per staged file
 ```
 
@@ -65,6 +66,21 @@ seed        = 0
 ```
 
 Unknown keys are ignored. A missing file falls back to these defaults.
+
+**`/dslm/tokens.txt`: the last generation, one `key=value` per line**
+
+```
+checkpoint=<path from dslm.ini>
+prompt=<prompt text>
+steps=<int>
+prompt_tokens=<int, BOS included>
+tokens=<space-separated token ids, BOS first>
+stopped=0|1
+load_ms=<int>
+gen_ms=<int>
+```
+
+Replaced on every generation. `python tools/dslm.py parity` reads it and picks the golden file named after the checkpoint.
 
 **`/dslm/bench.txt`: one `key=value` per line, one block per run**
 

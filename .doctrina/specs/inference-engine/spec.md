@@ -6,7 +6,7 @@
 **Realizes:** SC1, SC2
 **Depends on:** model-loading
 **Last updated:** 2026-11-24
-**Version:** 0.2.1
+**Version:** 0.3.0
 
 ## Purpose
 
@@ -23,6 +23,7 @@ A port of the core of `llama2.c`'s `run.c` to the Nintendo DS ARM9. It covers th
 
 - When a prompt is submitted, the engine shall encode it with the BPE tokenizer and generate tokens until it reaches the configured step limit or the BOS token.
 - When a token is produced, the engine shall hand its decoded text to the caller immediately, so the interface can stream it.
+- When the caller's per-token callback asks to stop, the engine shall end generation after that token and keep every token produced so far.
 
 ### State-driven
 
@@ -43,6 +44,7 @@ A port of the core of `llama2.c`'s `run.c` to the Nintendo DS ARM9. It covers th
 2. [verified] The same `.nds` generates text on a real R4 with no network — verified by `tests/hw/offline-run.md`.
 3. [verified] The fp32 build's time per token is measured and recorded (baseline for the fixed-point build) — verified by `tests/hw/benchmark-fp32.md`.
 4. [verified] The engine built for the host reproduces every golden prompt token for token — verified by `tools/tests/test_engine_host.py`
+5. [verified] Stopping after N tokens returns BOS plus those N tokens, identical to the golden prefix — verified by `tools/tests/test_engine_host.py`
 
 ## Maturity
 
