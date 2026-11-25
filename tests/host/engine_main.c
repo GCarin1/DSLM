@@ -45,8 +45,9 @@ static int on_token(int token, const char *piece, void *user)
 
 int main(int argc, char **argv)
 {
-    if (argc != 5 && argc != 6) {
-        fprintf(stderr, "usage: engine_main <checkpoint> <tokenizer> <steps> <prompt> [stop_after]\n");
+    if (argc < 5 || argc > 9) {
+        fprintf(stderr, "usage: engine_main <checkpoint> <tokenizer> <steps> <prompt>"
+                        " [stop_after [temperature [topp [seed]]]]\n");
         return 2;
     }
     size_t ckpt_size, tok_size;
@@ -54,7 +55,10 @@ int main(int argc, char **argv)
     void *tok = slurp(argv[2], &tok_size);
 
     llama2 m;
-    llama2_status st = llama2_init(&m, ckpt, ckpt_size, tok, tok_size, 0.0f, 0.9f, 0);
+    float temperature = argc > 6 ? (float)atof(argv[6]) : 0.0f;
+    float topp = argc > 7 ? (float)atof(argv[7]) : 0.9f;
+    unsigned long long seed = argc > 8 ? strtoull(argv[8], NULL, 10) : 0;
+    llama2_status st = llama2_init(&m, ckpt, ckpt_size, tok, tok_size, temperature, topp, seed);
     if (st != LLAMA2_OK) {
         fprintf(stderr, "llama2_init failed: %d\n", (int)st);
         return 1;
@@ -67,7 +71,7 @@ int main(int argc, char **argv)
 
     /* Text first into a temp file, so the token line can come before it. */
     FILE *text = tmpfile();
-    run_ctx ctx = {text, 0, argc == 6 ? atoi(argv[5]) : 0};
+    run_ctx ctx = {text, 0, argc > 5 ? atoi(argv[5]) : 0};
     int n = llama2_generate(&m, argv[4], steps, out, m.config.seq_len + 1, &n_prompt, on_token, &ctx);
     if (n < 0) {
         fprintf(stderr, "prompt too long\n");

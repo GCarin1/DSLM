@@ -8,6 +8,7 @@
  * model comes from buffers in RAM and every buffer is allocated once.
  */
 #include "llama2.h"
+#include "llama2_fixed.h"
 
 #include <ctype.h>
 #include <math.h>
@@ -126,6 +127,7 @@ size_t llama2_runtime_bytes(const llama2_config *c, const llama2_format *f, size
                ALIGN8((LLAMA2_MAX_PROMPT + 3) * sizeof(int));
     if (f->quantized)
         n += ALIGN8(qstate_floats(c, f) * sizeof(float)) + 8 /* carved in two blocks */ +
+             ALIGN8((size_t)(c->dim / 2) * sizeof(int32_t)) /* RoPE frequencies */ +
              ALIGN8((size_t)c->dim + c->hidden_dim) +
              ALIGN8((7 * (size_t)c->n_layers + 2) * sizeof(llama2_qtensor));
     return n;
@@ -196,10 +198,8 @@ static void init_qweights(llama2 *m, const void *checkpoint, unsigned char **are
     t += L;
     w->wcls = m->format.shared ? w->q_tokens : map_qtensors(&ptr, 1, d * V, gs, t);
 
-    /* dequantize(): x[i] = q[i] * s[i / GS] */
+    /* filled with the Q16 embedding by fx_prepare() */
     w->token_embedding_table = carve(arena, V * d * sizeof(float));
-    for (size_t i = 0; i < V * d; i++)
-        w->token_embedding_table[i] = w->q_tokens->q[i] * w->q_tokens->s[i / gs];
 }
 
 llama2_status llama2_init(llama2 *m, const void *checkpoint, size_t checkpoint_size,
@@ -341,6 +341,11 @@ state:;
 
     m->str_buffer = carve(&arena, m->max_token_length * 2 + 1 + 2);
     m->prompt_tokens = carve(&arena, (LLAMA2_MAX_PROMPT + 3) * sizeof(int));
+
+    if (m->format.quantized) {
+        m->fx_freq_q30 = carve(&arena, (size_t)(p->dim / 2) * sizeof(int32_t));
+        fx_prepare(m);
+    }
     return LLAMA2_OK;
 }
 
@@ -411,164 +416,10 @@ static void rope_table(float *rope, int dim, int head_size, int pos)
     }
 }
 
-/* ---- int8 blocks (runq.c) ----------------------------------------------- */
-
-/*
- * runq.c quantize(). fabsf/roundf give the same results as its fabs/round on
- * float inputs without going through double.
- */
-static void quantize(llama2_qtensor *qx, const float *x, int n, int gs)
-{
-    int num_groups = n / gs;
-    float Q_MAX = 127.0f;
-    for (int group = 0; group < num_groups; group++) {
-        float wmax = 0.0f;
-        for (int i = 0; i < gs; i++) {
-            float val = fabsf(x[group * gs + i]);
-            if (val > wmax) {
-                wmax = val;
-            }
-        }
-        float scale = wmax / Q_MAX;
-        qx->s[group] = scale;
-        for (int i = 0; i < gs; i++) {
-            float quant_value = x[group * gs + i] / scale;
-            int8_t quantized = (int8_t)roundf(quant_value);
-            qx->q[group * gs + i] = quantized;
-        }
-    }
-}
-
-/* runq.c matmul(): integer dot products per group, scaled in float. */
-static void matmul_q(float *xout, const llama2_qtensor *x, const llama2_qtensor *w, int n, int d, int gs)
-{
-    for (int i = 0; i < d; i++) {
-        float val = 0.0f;
-        int32_t ival = 0;
-        int in = i * n;
-        for (int j = 0; j <= n - gs; j += gs) {
-            for (int k = 0; k < gs; k++) {
-                ival += ((int32_t)x->q[j + k]) * ((int32_t)w->q[in + j + k]);
-            }
-            val += ((float)ival) * w->s[(in + j) / gs] * x->s[j / gs];
-            ival = 0;
-        }
-        xout[i] = val;
-    }
-}
-
-static void rmsnorm(float *o, float *x, float *weight, int size);
-static void softmax(float *x, int size);
-
-static float *forward_q(llama2 *m, int token, int pos)
-{
-    llama2_config *p = &m->config;
-    llama2_qweights *w = &m->qweights;
-    llama2_state *s = &m->state;
-    float *x = s->x;
-    int gs = m->format.group_size;
-    int dim = p->dim;
-    int kv_dim = (p->dim * p->n_kv_heads) / p->n_heads;
-    int kv_mul = p->n_heads / p->n_kv_heads;
-    int hidden_dim = p->hidden_dim;
-    int head_size = dim / p->n_heads;
-    float sqrt_head_size = sqrtf(head_size);
-    rope_table(s->rope, dim, head_size, pos);
-
-    memcpy(x, w->token_embedding_table + token * dim, dim * sizeof(float));
-
-    for (int l = 0; l < p->n_layers; l++) {
-        rmsnorm(s->xb, x, w->rms_att_weight + l * dim, dim);
-
-        quantize(&s->xq, s->xb, dim, gs);
-        matmul_q(s->q, &s->xq, w->wq + l, dim, dim, gs);
-        matmul_q(s->k, &s->xq, w->wk + l, dim, kv_dim, gs);
-        matmul_q(s->v, &s->xq, w->wv + l, dim, kv_dim, gs);
-
-        for (int i = 0; i < dim; i += 2) {
-            float fcr = s->rope[i];
-            float fci = s->rope[i + 1];
-            int rotn = i < kv_dim ? 2 : 1;
-            for (int v = 0; v < rotn; v++) {
-                float *vec = v == 0 ? s->q : s->k;
-                float v0 = vec[i];
-                float v1 = vec[i + 1];
-                vec[i] = v0 * fcr - v1 * fci;
-                vec[i + 1] = v0 * fci + v1 * fcr;
-            }
-        }
-
-        int loff = l * p->seq_len * kv_dim;
-        float *key_cache_row = s->key_cache + loff + pos * kv_dim;
-        float *value_cache_row = s->value_cache + loff + pos * kv_dim;
-        memcpy(key_cache_row, s->k, kv_dim * sizeof(*key_cache_row));
-        memcpy(value_cache_row, s->v, kv_dim * sizeof(*value_cache_row));
-
-        for (int h = 0; h < p->n_heads; h++) {
-            float *q = s->q + h * head_size;
-            float *att = s->att + h * p->seq_len;
-            for (int t = 0; t <= pos; t++) {
-                float *k = s->key_cache + loff + t * kv_dim + (h / kv_mul) * head_size;
-                float score = 0.0f;
-                for (int i = 0; i < head_size; i++) {
-                    score += q[i] * k[i];
-                }
-                score /= sqrt_head_size;
-                att[t] = score;
-            }
-
-            softmax(att, pos + 1);
-
-            float *xb = s->xb + h * head_size;
-            memset(xb, 0, head_size * sizeof(float));
-            for (int t = 0; t <= pos; t++) {
-                float *v = s->value_cache + loff + t * kv_dim + (h / kv_mul) * head_size;
-                float a = att[t];
-                for (int i = 0; i < head_size; i++) {
-                    xb[i] += a * v[i];
-                }
-            }
-        }
-
-        quantize(&s->xq, s->xb, dim, gs);
-        matmul_q(s->xb2, &s->xq, w->wo + l, dim, dim, gs);
-
-        for (int i = 0; i < dim; i++) {
-            x[i] += s->xb2[i];
-        }
-
-        rmsnorm(s->xb, x, w->rms_ffn_weight + l * dim, dim);
-
-        quantize(&s->xq, s->xb, dim, gs);
-        matmul_q(s->hb, &s->xq, w->w1 + l, dim, hidden_dim, gs);
-        matmul_q(s->hb2, &s->xq, w->w3 + l, dim, hidden_dim, gs);
-
-        for (int i = 0; i < hidden_dim; i++) {
-            float val = s->hb[i];
-            val *= (1.0f / (1.0f + expf(-val)));
-            val *= s->hb2[i];
-            s->hb[i] = val;
-        }
-
-        quantize(&s->hq, s->hb, hidden_dim, gs);
-        matmul_q(s->xb, &s->hq, w->w2 + l, hidden_dim, dim, gs);
-
-        for (int i = 0; i < dim; i++) {
-            x[i] += s->xb[i];
-        }
-    }
-
-    rmsnorm(x, x, w->rms_final_weight, dim);
-
-    quantize(&s->xq, x, dim, gs);
-    matmul_q(s->logits, &s->xq, w->wcls, dim, p->vocab_size, gs);
-    return s->logits;
-}
-
 float *llama2_forward(llama2 *m, int token, int pos)
 {
     if (m->format.quantized)
-        return forward_q(m, token, pos);
+        return NULL; /* int8 runs the fixed-point engine: fx_forward() */
 
     llama2_config *p = &m->config;
     llama2_weights *w = &m->weights;
@@ -860,7 +711,8 @@ static int sample_topp(float *probabilities, int n, float topp, llama2_prob_inde
     return probindex[last_idx].index;
 }
 
-static unsigned int random_u32(unsigned long long *state)
+/* Shared with the fixed-point sampler (llama2_fixed.arm.c). */
+unsigned int llama2_rand_u32(unsigned long long *state)
 {
     *state ^= *state >> 12;
     *state ^= *state << 25;
@@ -870,7 +722,7 @@ static unsigned int random_u32(unsigned long long *state)
 
 static float random_f32(unsigned long long *state)
 {
-    return (random_u32(state) >> 8) / 16777216.0f;
+    return (llama2_rand_u32(state) >> 8) / 16777216.0f;
 }
 
 int llama2_sample(llama2 *m, float *logits)
@@ -918,13 +770,21 @@ int llama2_generate(llama2 *m, const char *prompt, int steps,
     n_out++;
 
     int pos = 0;
+    int quantized = m->format.quantized;
+    if (quantized)
+        fx_begin(m); /* sampling settings to fixed point, outside the per-token loop */
     while (pos < steps) {
-        float *logits = llama2_forward(m, token, pos);
+        float *logits = NULL;
+        int32_t *ilogits = NULL;
+        if (quantized)
+            ilogits = fx_forward(m, token, pos);
+        else
+            logits = llama2_forward(m, token, pos);
         int next;
         if (pos < num_prompt_tokens - 1) {
             next = prompt_tokens[pos + 1];
         } else {
-            next = llama2_sample(m, logits);
+            next = quantized ? fx_sample(m, ilogits) : llama2_sample(m, logits);
         }
         pos++;
 

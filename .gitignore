@@ -11,3 +11,5 @@ tests/host/test_ini.exe
 __pycache__/
 tests/host/test_textview
 tests/host/test_textview.exe
+tests/host/test_fxmath
+tests/host/test_fxmath.exe

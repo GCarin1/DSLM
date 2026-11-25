@@ -1,5 +1,5 @@
 {
-  "$comment": "doctrina verify runs each check in order. The first three are documentation gates; host-test and nds-build run in the Docker image (docs/building.md); the parity tests join here in M3.",
+  "$comment": "doctrina verify runs each check in order. The first three are documentation gates; the rest run in the Docker image (docs/building.md): C and Python tests (engine parity included), the generated tables, the .nds build, and the fixed-point forward pass checked for soft-float calls and ITCM placement.",
   "checks": [
     {
       "name": "clarify",
@@ -26,7 +26,14 @@
       "name": "host-test",
       "run": "docker compose -f docker/docker-compose.yml run --rm test",
       "expect": {
-        "require_output_matches": "all ini tests passed"
+        "require_output_matches": "all fxmath tests passed"
+      }
+    },
+    {
+      "name": "fxtables",
+      "run": "python3 tools/gen_fxtables.py --check || python tools/gen_fxtables.py --check",
+      "expect": {
+        "require_output_matches": "fxtables up to date"
       }
     },
     {
@@ -41,6 +48,13 @@
       "run": "docker compose -f docker/docker-compose.yml run --rm shell bash -c \"make nds && test -s dslm.nds && echo nds ok\"",
       "expect": {
         "require_output_matches": "nds ok"
+      }
+    },
+    {
+      "name": "no-softfloat",
+      "run": "docker compose -f docker/docker-compose.yml run --rm shell python3 tools/check_softfloat.py",
+      "expect": {
+        "require_output_matches": "matmul_fx in ITCM"
       }
     }
   ]

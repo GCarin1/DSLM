@@ -96,6 +96,12 @@ typedef struct {
     unsigned long long rng_state;
     llama2_prob_index *probindex;
 
+    /* fixed-point int8 engine (llama2_fixed.arm.c) */
+    int32_t *fx_freq_q30;   /* RoPE frequency of each (cos, sin) pair */
+    int32_t fx_inv_sqrt_hs; /* 1 / sqrt(head_size), Q16 */
+    int32_t fx_inv_temp;    /* 1 / temperature, Q16; 0 means argmax */
+    int32_t fx_topp;        /* top-p, Q16 */
+
     /* scratch, allocated once so generation never allocates */
     char *str_buffer;
     int *prompt_tokens;
@@ -130,8 +136,10 @@ size_t llama2_runtime_bytes(const llama2_config *c, const llama2_format *f, size
 /*
  * Wire up a model whose checkpoint and tokenizer files are already in RAM,
  * in either format. The checkpoint buffer must stay alive and be 4-byte
- * aligned; weights are used in place. The tokenizer buffer may be freed
- * after this returns.
+ * aligned; weights are used in place. An int8 checkpoint is converted in
+ * place (its float scales and norms become fixed point), so its buffer must
+ * be writable and is no longer a valid file afterwards. The tokenizer buffer
+ * may be freed after this returns.
  */
 llama2_status llama2_init(llama2 *m, const void *checkpoint, size_t checkpoint_size,
                           const void *tokenizer, size_t tokenizer_size,

@@ -275,7 +275,10 @@ void ui_panel_story(int tokens, unsigned total_ms, int stopped)
     show_keyboard(0);
     clear_bottom();
     linef(&bottom, 0, stopped ? C_TITLE : C_OK, stopped ? " Stopped: %d tokens" : " Done: %d tokens", tokens);
-    linef(&bottom, 1, C_DIM, " %u.%u s", total_ms / 1000, (total_ms % 1000) / 100);
+    /* positions per second (the BOS token is not generated), integer math */
+    unsigned tps10 = total_ms && tokens > 1 ? (unsigned)((uint64_t)(tokens - 1) * 10000 / total_ms) : 0;
+    linef(&bottom, 1, C_DIM, " %u.%u s  %u.%u tokens/s", total_ms / 1000, (total_ms % 1000) / 100,
+          tps10 / 10, tps10 % 10);
     linef(&bottom, 3, C_DIM, " Up/Down scrolls the story");
     box(STORY_NEW_ROW, 0, 31, "New prompt  (A)", C_OK);
     box(STORY_AGAIN_ROW, 0, 31, "Same prompt again  (Y)", C_ACCENT);

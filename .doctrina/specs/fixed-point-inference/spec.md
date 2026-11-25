@@ -2,11 +2,11 @@
 
 **Capability:** fixed-point-inference
 **Status:** active
-**Implementation:** partial — int8 weights with integer matmul and exact parity against runq.c (`src/engine/llama2.c`, ADR 0007); fixed-point activations, exp table and ITCM placement are M5b
+**Implementation:** implemented — integer-only int8 engine (`src/engine/llama2_fixed.arm.c`, `src/engine/fxmath.arm.c`, ADR 0008), matmul in ITCM, verified on the host and melonDS; the R4 benchmark is pending
 **Realizes:** SC3
 **Depends on:** inference-engine, model-loading
 **Last updated:** 2026-11-24
-**Version:** 0.2.0
+**Version:** 0.3.0
 
 ## Purpose
 
@@ -18,6 +18,7 @@ The performance build. It replaces software-emulated `float` with integer arithm
 
 - The fixed-point build shall run the forward pass with integer arithmetic only, using int8 weights with per-group scales and fixed-point activations.
 - The fixed-point build shall load the quantized checkpoint format produced by `pc-toolchain`, as defined in `contracts/model-file-format`.
+- The fixed-point build shall produce bit-identical results on the DS and in its host build, using no libm and no float after the model is loaded.
 
 ### Event-driven
 
@@ -31,6 +32,7 @@ The performance build. It replaces software-emulated `float` with integer arithm
 ### Unwanted-behavior (must-not)
 
 - The fixed-point build shall not call software floating-point routines inside the per-token forward pass.
+- The fixed-point build shall not diverge from runq.c within the first 64 generated tokens of any golden prompt at temperature 0.
 
 ### Optional
 
@@ -39,10 +41,12 @@ The performance build. It replaces software-emulated `float` with integer arithm
 ## Acceptance criteria
 
 1. [unverified] The time per token measured on a real R4 is recorded and compared with the fp32 baseline — verified by `tests/hw/benchmark-int8.md`.
-2. [unverified] No software-float symbol (`__aeabi_fmul`, `__aeabi_fadd`, ...) appears in the forward pass call map — verified by `tests/build/no-softfloat-in-forward.md`.
+2. [verified] No software-float symbol (`__aeabi_fmul`, `__aeabi_fadd`, ...) appears in the forward pass call map — verified by `tests/build/no-softfloat-in-forward.md`.
 3. [verified] At temperature 0, the first generated tokens match the PC int8 golden output (`runq.c` running the same quantized checkpoint) — verified by `tests/parity/int8-stories260k.md`.
 4. [verified] The int8 checkpoint the `pc-toolchain` quantizer generates is read by the reference `runq.c` — verified by `tools/tests/test_quantize.py`.
-5. [verified] The int8 engine built for the host reproduces every runq.c golden prompt token for token — verified by `tools/tests/test_engine_host.py`
+5. [verified] At temperature 0 the fixed-point engine matches runq.c for at least 64 generated tokens on every golden prompt — verified by `tools/tests/test_engine_host.py`
+6. [verified] A DS int8 run matches the host build of the engine token for token — verified by `tests/parity/int8-stories260k.md`
+7. [verified] The integer exp, sin/cos and square root stay within 3e-5 of libm over their working ranges — verified by `tests/host/test_fxmath.c`
 
 ## Maturity
 

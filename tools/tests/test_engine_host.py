@@ -11,19 +11,14 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 import dslm  # noqa: E402
 
 GOLDEN = dslm.GOLDEN_DIR / "stories260K.json"
+MIN_MATCH = 64  # generated tokens; measured minimum is 82 (ADR 0008)
 
 
 class EngineHost(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory()
-        cls.exe = pathlib.Path(cls.tmp.name) / "engine_main"
-        subprocess.run(
-            ["cc", "-O2", "-std=c99", "-Wall", "-Wextra", "-Werror", "-ffp-contract=off",
-             f"-I{dslm.ROOT / 'src' / 'engine'}", "-o", str(cls.exe),
-             str(dslm.ROOT / "tests" / "host" / "engine_main.c"),
-             str(dslm.ROOT / "src" / "engine" / "llama2.c"), "-lm"],
-            check=True)
+        cls.exe = dslm.build_engine_binary()
         cls.golden = json.loads(GOLDEN.read_text(encoding="utf-8"))
 
     @classmethod
@@ -39,13 +34,42 @@ class EngineHost(unittest.TestCase):
             self.assertEqual(got["tokens"], run["tokens"], run["prompt"])
             self.assertEqual(got["text"], run["text"], run["prompt"])
 
-    def test_int8_matches_runq_golden_for_every_prompt(self):
+    def test_int8_matches_its_golden_exactly(self):
+        """The DS reference: the fixed-point engine is integer-only, so any change shows here."""
         q, tok = dslm.ensure_q80()
         golden = json.loads((dslm.GOLDEN_DIR / "stories260K_q80.json").read_text(encoding="utf-8"))
         for run in golden["runs"]:
             got = dslm.run_golden(self.exe, q, tok, run["prompt"], golden["steps"])
             self.assertEqual(got["tokens"], run["tokens"], run["prompt"])
             self.assertEqual(got["text"], run["text"], run["prompt"])
+
+    def test_int8_drift_against_runq_is_bounded(self):
+        """Quality: the fixed-point engine follows float runq.c for at least MIN_MATCH generated tokens."""
+        q, tok = dslm.ensure_q80()
+        ref = json.loads((dslm.GOLDEN_DIR / "stories260K_q80_runq.json").read_text(encoding="utf-8"))
+        for run in ref["runs"]:
+            got = dslm.run_golden(self.exe, q, tok, run["prompt"], ref["steps"])
+            n, bad = dslm.compare_tokens(got["tokens"], run["tokens"])
+            matching = (n if bad is None else bad) - run["prompt_tokens"]
+            self.assertGreaterEqual(matching, min(MIN_MATCH, len(run["tokens"]) - run["prompt_tokens"]),
+                                    run["prompt"])
+
+    def sample_run(self, ckpt, tok, temperature, topp, seed):
+        out = subprocess.run([str(self.exe), str(ckpt), str(tok), "48", "Once upon a time", "0",
+                              str(temperature), str(topp), str(seed)],
+                             check=True, capture_output=True, text=True).stdout
+        return [int(t) for t in out.splitlines()[1].split()[1:]]
+
+    def test_int8_sampling_is_reproducible_and_valid(self):
+        q, tok = dslm.ensure_q80()
+        for topp in ("0.9", "1.0"):  # nucleus and plain multinomial
+            a = self.sample_run(q, tok, "1.0", topp, 42)
+            b = self.sample_run(q, tok, "1.0", topp, 42)
+            c = self.sample_run(q, tok, "1.0", topp, 7)
+            self.assertEqual(a, b, topp)                 # same seed, same story
+            self.assertNotEqual(a, c, topp)              # another seed, another story
+            self.assertTrue(all(0 <= t < 512 for t in a))
+            self.assertEqual(a[:5], [1, 403, 407, 261, 378])  # the prompt itself is forced
 
     def test_stop_keeps_the_tokens_produced_so_far(self):
         ckpt, tok = dslm.model_paths()

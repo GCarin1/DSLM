@@ -1,17 +1,31 @@
 # Parity test: int8-stories260k
 
-Proves `fixed-point-inference` criterion 3: at temperature 0, the DS int8 build produces the same token ids as `runq.c` on the PC (`tests/golden/stories260K_q80.json`, from `stories260K_q80.bin` built by `tools/dslm.py quantize`).
+Proves `fixed-point-inference` criterion 3. Since M5b the int8 model runs the fixed-point engine (ADR 0008), which has two references:
 
-Two layers:
+- **Exact (DS identity):** `tests/golden/stories260K_q80.json`, the same engine built for the host. Every operation after load is integer, so a DS run must match it token for token. `python tools/dslm.py parity` picks it from the checkpoint recorded in `tokens.txt`.
+- **Quality (drift bound):** `tests/golden/stories260K_q80_runq.json`, from the pinned `runq.c` (float). At temperature 0 the engine must follow it for at least 64 generated tokens on every prompt (`tools/tests/test_engine_host.py`).
 
-1. **Host (automated).** `tools/tests/test_engine_host.py` builds `src/engine/llama2.c` for the host and checks every int8 golden prompt token for token (`tools-test` in `doctrina verify`).
-2. **DS (this runbook).** Same steps as `fp32-stories260k.md`; the default `dslm.ini` already points at the int8 model, and `tokens.txt` records the checkpoint so `python tools/dslm.py parity` picks the int8 golden.
+## Steps (DS)
+
+1. `python tools/dslm.py stage .tools/card --force`, set `steps = 128`, run in melonDS (or on the R4), let it finish, close melonDS normally.
+2. `python tools/dslm.py parity .tools/card/dslm/tokens.txt`.
+
+## Drift against runq.c (host, temperature 0, 128 steps)
+
+| Prompt | Generated tokens identical to runq.c |
+|--------|--------------------------------------|
+| (empty) | 128 of 128 |
+| Once upon a time | 124 of 124 |
+| The little dog | 82 |
+| Lily wanted to | 124 of 124 |
+| Tom and his mom went to the park | 92 |
 
 ## Results
 
 | Date | Target | Build | Steps | Result | gen_ms | emulated |
 |------|--------|-------|-------|--------|--------|----------|
-| 2026-11-25 | melonDS 1.1 | M5a int8 (GS 4) | 128 | parity ok, 129 tokens | 72658 | yes |
-| 2026-11-25 | melonDS 1.1 | M5a int8 + per-token RoPE table | 128 | parity ok, 129 tokens | 69605 | yes |
+| 2026-11-25 | melonDS 1.1 | M5a int8 (float scales, GS 4) | 128 | 129 tokens identical to runq.c | 72658 | yes |
+| 2026-11-25 | melonDS 1.1 | M5a int8 + per-token RoPE table | 128 | 129 tokens identical to runq.c | 69605 | yes |
+| 2026-11-25 | melonDS 1.1 | M5b fixed point | 128 | 129 tokens identical to the host build | 16546 | yes |
 
-For comparison, fp32 on melonDS took 87480 ms for the same run. Emulator timings are indicative only.
+For comparison, fp32 on melonDS took 87480 ms for the same run. Emulator timings are indicative only; hardware numbers go to `tests/hw/benchmark-int8.md`.

@@ -5,7 +5,7 @@
     python tools/dslm.py quantize               int8 copy of the model (llama2.c v2)
     python tools/dslm.py inspect [checkpoint]   header and DS memory budget
     python tools/dslm.py stage <dir> [--force]  write the /dslm card tree
-    python tools/dslm.py golden [--force]       fp32 golden outputs (needs cc)
+    python tools/dslm.py golden [--kind K]      golden outputs: fp32, q80-runq, q80 (needs cc)
     python tools/dslm.py parity <tokens.txt>    compare a DS run with the golden
     python tools/dslm.py package [--force]      zip to unzip at the microSD root
 
@@ -370,16 +370,41 @@ def run_golden(exe, checkpoint, tokenizer, prompt, steps):
     }
 
 
-def golden(out_path=None, force=False, steps=GOLDEN_STEPS, model=DEFAULT_MODEL, quantized=False):
-    name = f"{model}_q80" if quantized else model
+ENGINE_SOURCES = ["src/engine/llama2.c", "src/engine/llama2_fixed.arm.c", "src/engine/fxmath.arm.c"]
+
+# kind -> (golden file suffix, checkpoint, reference that produces it)
+GOLDEN_KINDS = {
+    "fp32": ("", "fp32", "run.c"),
+    "q80-runq": ("_q80_runq", "q80", "runq.c"),
+    "q80": ("_q80", "q80", "dslm engine (host build)"),
+}
+
+
+def build_engine_binary(cc="cc"):
+    """The DS engine built for the host: the exact reference for int8 DS runs."""
+    exe = CACHE / "engine_main"
+    exe.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [cc, "-O2", "-std=c99", "-Wall", "-Wextra", "-Werror", "-ffp-contract=off",
+           f"-I{ROOT / 'src' / 'engine'}", "-o", str(exe), str(ROOT / "tests" / "host" / "engine_main.c"),
+           *[str(ROOT / s) for s in ENGINE_SOURCES], "-lm"]
+    subprocess.run(cmd, check=True)
+    return exe
+
+
+def golden(out_path=None, force=False, steps=GOLDEN_STEPS, model=DEFAULT_MODEL, kind="fp32"):
+    suffix, ckpt_kind, reference = GOLDEN_KINDS[kind]
+    name = f"{model}{suffix}"
     out_path = pathlib.Path(out_path or GOLDEN_DIR / f"{name}.json")
     if out_path.exists() and not force:
         raise SystemExit(f"error: {out_path} exists; pass --force to overwrite it")
-    checkpoint, tokenizer = ensure_q80(model) if quantized else fetch(model)
-    exe = build_golden_binary(quantized=quantized)
+    checkpoint, tokenizer = ensure_q80(model) if ckpt_kind == "q80" else fetch(model)
+    if kind == "q80":
+        exe = build_engine_binary()
+    else:
+        exe = build_golden_binary(quantized=kind == "q80-runq")
     doc = {
         "model": name,
-        "reference": "runq.c" if quantized else "run.c",
+        "reference": reference,
         "llama2c_commit": load_pins()["llama2c"]["commit"],
         "checkpoint_sha256": sha256_file(checkpoint),
         "tokenizer_sha256": sha256_file(tokenizer),
@@ -566,7 +591,8 @@ def main(argv=None):
     p = sub.add_parser("golden")
     p.add_argument("--force", action="store_true", help="overwrite an existing golden file")
     p.add_argument("--out")
-    p.add_argument("--q80", action="store_true", help="int8 golden from runq.c instead of fp32 run.c")
+    p.add_argument("--kind", choices=sorted(GOLDEN_KINDS), default="fp32",
+                   help="fp32 (run.c), q80-runq (runq.c, quality reference) or q80 (DS engine, exact DS reference)")
     p = sub.add_parser("package")
     p.add_argument("--nds", default=str(ROOT / "dslm.nds"))
     p.add_argument("--out", default=str(ROOT / "build" / "dslm-package.zip"))
@@ -595,7 +621,7 @@ def main(argv=None):
         for line in stage(args.target, q, tok, args.force, extra=[ckpt]):
             print(f"staged {line}")
     elif args.cmd == "golden":
-        print(f"wrote {golden(args.out, args.force, quantized=args.q80)}")
+        print(f"wrote {golden(args.out, args.force, kind=args.kind)}")
     elif args.cmd == "package":
         ckpt, _ = fetch()
         q, tok = ensure_q80()

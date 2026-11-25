@@ -94,8 +94,8 @@ class QuantizeStories260K(unittest.TestCase):
         self.assertTrue(run["text"].startswith("Once upon a time"))
 
     def test_q80_golden_builds_twice_identically(self):
-        a = dslm.golden(self.dir / "a.json", steps=16, quantized=True)
-        b = dslm.golden(self.dir / "b.json", steps=16, quantized=True)
+        a = dslm.golden(self.dir / "a.json", steps=16, kind="q80-runq")
+        b = dslm.golden(self.dir / "b.json", steps=16, kind="q80-runq")
         self.assertEqual(a.read_bytes(), b.read_bytes())
         self.assertEqual(json.loads(a.read_text())["reference"], "runq.c")
 
