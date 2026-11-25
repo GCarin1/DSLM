@@ -34,15 +34,26 @@ class MlqHost(unittest.TestCase):
     def tearDownClass(cls):
         cls.tmp.cleanup()
 
-    def test_greedy_matches_its_golden(self):
-        for g in self.golden["greedy"]:
-            got = dslm.run_golden(self.exe, self.model, self.tok, g["prompt"], self.golden["steps"])
+    def test_ds_default_runs_match_their_golden(self):
+        for g in self.golden["runs"]:
+            got = dslm.run_golden(self.exe, self.model, self.tok, g["prompt"], self.golden["steps"], dslm.MLQ_GREEDY)
             self.assertEqual(got["tokens"], g["tokens"], g["prompt"])
 
     def test_sampled_matches_its_golden(self):
         for g in self.golden["sampled"]:
-            got = dslm.run_golden(self.exe, self.model, self.tok, g["prompt"], self.golden["steps"], dslm.MLQ_SAMPLED)
+            got = dslm.run_golden(self.exe, self.model, self.tok, g["prompt"], self.golden["sampled_steps"],
+                                  dslm.MLQ_SAMPLED)
             self.assertEqual(got["tokens"], g["tokens"], g["prompt"])
+
+    def test_the_first_chat_example_is_a_golden_prompt(self):
+        main_c = (dslm.ROOT / "src" / "main.c").read_text(encoding="utf-8")
+        self.assertIn('{"What causes the seasons?"', main_c)
+        self.assertEqual(self.golden["runs"][0]["prompt"], "<|user|>What causes the seasons?<|end|><|assistant|>")
+
+    def test_the_file_names_its_tokenizer(self):
+        raw = self.model.read_bytes()[:128]
+        self.assertEqual(raw[:4], b"MLQ1")
+        self.assertEqual(raw[80:128].rstrip(bytes(1)), b"littlekedi.tok")
 
     def test_drift_against_fp32_is_bounded(self):
         agree = total = 0

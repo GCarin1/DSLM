@@ -312,7 +312,7 @@ def ensure_q80(model=DEFAULT_MODEL):
 
 def ensure_littlekedi():
     """Fetch the pinned LittleKedi files and convert them; returns (model, tokenizer)."""
-    entry = load_pins()["experimental"]["littlekedi"]
+    entry = load_pins()["chat"]["littlekedi"]
     hf = CACHE / "models" / "littlekedi-hf"
     for name, f in entry["files"].items():
         fetch_pinned(f["url"], hf / name, f["sha256"], f["size"])
@@ -328,10 +328,11 @@ def ensure_littlekedi():
 
 
 def ensure_littlekedi_q():
-    """The int8 MLQ1 copy of LittleKedi (built from the fp32 MLA1 file)."""
+    """The int8 MLQ1 copy of LittleKedi (built from the fp32 MLA1 file); it names littlekedi.tok."""
     model, tok = ensure_littlekedi()
-    q = CACHE / "models" / "littlekedi_q.bin"
-    if not q.exists() or q.stat().st_mtime < model.stat().st_mtime:
+    q = CACHE / "models" / "littlekedi_q80.bin"
+    newest = max(model.stat().st_mtime, (TOOLS / "m8" / "convert_littlekedi.py").stat().st_mtime)
+    if not q.exists() or q.stat().st_mtime < newest:
         sys.path.insert(0, str(TOOLS / "m8"))
         import convert_littlekedi
         convert_littlekedi.quantize_mla(model, q)
@@ -403,10 +404,14 @@ def run_golden(exe, checkpoint, tokenizer, prompt, steps, extra=()):
 
 ENGINE_SOURCES = ["src/engine/llama2.c", "src/engine/llama2_fixed.arm.c", "src/engine/fxkern.arm.c",
                   "src/engine/fxmath.arm.c"]
-MLQ_SOURCES = ENGINE_SOURCES + ["src/engine/mlq_fixed.arm.c", "src/engine/mla.c", "src/engine/bpe.c"]
+MLQ_SOURCES = ENGINE_SOURCES + ["src/engine/mlq_fixed.arm.c", "src/engine/mlq_chat.c", "src/engine/mla.c",
+                                 "src/engine/bpe.c"]
 
-# sampling settings of the LittleKedi golden runs: temperature, top-p, repeat penalty, seed
+# LittleKedi golden settings (temperature, top-p, repeat penalty, seed). GREEDY is what the DS
+# runs with the default dslm.ini (temperature 0; the chat mode always applies the 1.15 penalty).
+MLQ_GREEDY = (0, 0.9, 1.15, 1)
 MLQ_SAMPLED = (0.7, 0.9, 1.15, 42)
+MLQ_GREEDY_STEPS = 128
 
 
 def build_host(main, out, sources):
@@ -465,9 +470,9 @@ def golden(out_path=None, force=False, steps=GOLDEN_STEPS, model=DEFAULT_MODEL, 
 PACKAGE_README = """DSLM - a tiny Llama 2 language model for the Nintendo DS
 ==========================================================
 
-DSLM writes short children's stories in English, entirely offline. The
-model (stories260K, about 1 MB) is in this package; the DS never needs
-the internet.
+DSLM writes short children's stories in English, entirely offline, and
+answers questions with a tiny chat model. The models are in this package;
+the DS never needs the internet.
 
 What you need
 -------------
@@ -485,7 +490,9 @@ Install
        dslm/models/stories260K_q80.bin   (int8, the fast default)
        dslm/models/tiny1m_q80.bin        (int8, better stories, slower)
        dslm/models/stories260K.bin       (fp32 reference, slowest)
-       dslm/models/tok512.bin            (tokenizer shared by all three)
+       dslm/models/tok512.bin            (tokenizer of the three above)
+       dslm/models/littlekedi_q80.bin    (chat model, experimental)
+       dslm/models/littlekedi.tok        (its tokenizer)
    (dslm.nds may also go in another folder your kernel lists, but the
    dslm folder must stay at the root.)
 2. Put the card back in the flashcart, boot the DS and launch dslm.nds
@@ -500,8 +507,9 @@ Every action works with buttons or with the stylus.
   Story:       Up/Down scroll, A new prompt, Y same prompt again.
   Settings:    Up/Down choose, Left/Right change, START saves, B back.
                The Model row picks any checkpoint in dslm/models:
-               stories260K_q80 (about 7 tokens/s) or tiny1m_q80
-               (about 4.5 tokens/s, richer stories).
+               stories260K_q80 (about 7 tokens/s), tiny1m_q80
+               (about 4.5 tokens/s, richer stories) or littlekedi_q80
+               (chat: type a question; its answers are often wrong).
 Each token takes about half a second; a 256-token story takes minutes.
 
 Troubleshooting
@@ -546,7 +554,20 @@ def third_party_notice():
         "llama2.c (the inference code dslm.nds is ported from)\n"
         f"  Source: https://github.com/karpathy/llama2.c (commit {pins['llama2c']['commit']})\n"
         "  License: MIT, text below. The models above are published under the same MIT terms.\n\n")
-    return "".join(parts) + license_text
+    chat = []
+    for name, entry in pins.get("chat", {}).items():
+        urls = "\n          ".join(f["url"] for f in entry["files"].values())
+        chat.append(
+            f"Model {name} ({name}_q80.bin, {name}.tok)\n"
+            f"  Source: {urls}\n"
+            f"  Author: {entry['author']}. License: {entry['license']} (per its model card), text at the end.\n"
+            "  Modified by DSLM: converted and quantized to int8 by tools/m8/convert_littlekedi.py;\n"
+            "  the tokenizer is re-encoded from tokenizer.json. The model publishes no NOTICE file.\n\n")
+    text = "".join(parts + chat) + license_text
+    if chat:
+        apache = (ROOT / "third_party" / "apache-2.0" / "LICENSE").read_text(encoding="utf-8")
+        text += "\n\n" + "=" * 70 + "\nApache License 2.0 (the chat models above)\n" + "=" * 70 + "\n\n" + apache
+    return text
 
 
 def packaged_models():
@@ -564,6 +585,7 @@ def package_checkpoints():
             extra.append(q)
         if pins[model].get("ship_fp32"):
             extra.append(model_paths(model)[0])
+    extra += list(ensure_littlekedi_q())  # the chat model and the tokenizer its header names
     return default_q, tok, extra
 
 

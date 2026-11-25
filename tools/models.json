@@ -38,9 +38,9 @@
       }
     }
   },
-  "experimental": {
+  "chat": {
     "littlekedi": {
-      "$comment": "DeepSeek-V3-style MLA + MoE chat model (M8); not in the package yet. Pinned at a repo revision.",
+      "$comment": "DeepSeek-V3-style MLA + MoE chat model (M8), packaged as littlekedi_q80.bin + littlekedi.tok. Pinned at a repo revision.",
       "author": "edededdy (edededdy/LittleKedi-tiny-instruct)",
       "license": "Apache-2.0",
       "files": {

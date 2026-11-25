@@ -2,7 +2,7 @@
 
 **Contract:** model-file-format
 **Status:** active
-**Last updated:** 2026-11-24
+**Last updated:** 2026-11-25
 
 ## Purpose
 
@@ -43,7 +43,10 @@ Not applicable: hardware tests are manual scripts under `tests/hw/`.
 /dslm/dslm.ini        settings (below)
 /dslm/models/stories260K_q80.bin   int8 (default)
 /dslm/models/stories260K.bin       fp32 reference
+/dslm/models/tiny1m_q80.bin        int8
 /dslm/models/tok512.bin
+/dslm/models/littlekedi_q80.bin    chat model, MLQ1 (below)
+/dslm/models/littlekedi.tok        its tokenizer, BPE1 (named in the MLQ1 header)
 /dslm/bench.txt       written by the harness after each run
 /dslm/tokens.txt      written by the homebrew after each generation (below)
 /dslm/manifest.txt    written by pc-toolchain: "<card path> <size> <sha256>" per staged file
@@ -80,13 +83,13 @@ load_ms=<int>
 gen_ms=<int>
 ```
 
-Replaced on every generation. `python tools/dslm.py parity` reads it and picks the golden file named after the checkpoint.
+Replaced on every generation. `python tools/dslm.py parity` reads it and picks the golden file named after the checkpoint. For a chat model, `prompt` is the text the engine read (chat markers included), `prompt_tokens` has no BOS, and `steps` is the cap on answer tokens.
 
 **`/dslm/bench.txt`: one `key=value` per line, one block per run, appended**
 
 ```
 version=<DSLM version, e.g. 1.0.0>
-build=fp32|int8
+build=fp32|int8|chat-int8
 emulated=unknown
 checkpoint=<path from dslm.ini>
 prompt=<prompt text>
@@ -122,6 +125,19 @@ Little-endian, produced by `tools/dslm.py quantize` from the fp32 checkpoint (AD
 3. Quantized tensors, each as `int8 q[n]` followed by `float32 s[n / group_size]` (`q ≈ w / s`, `s = max|w| / 127` per group of `group_size` consecutive values): `token_embedding_table`, then per layer `wq`, then per layer `wk`, `wv`, `wo`, `w1`, `w2`, `w3`, then `wcls` if not shared.
 
 `group_size` must divide both `dim` and `hidden_dim`: `runq.c`'s matmul only walks whole groups and would drop the rest. For stories260K (dim 64, hidden 172) it is 4.
+
+**Chat model: MLQ1 (LittleKedi, DeepSeek-V3-style MLA + MoE), `<model>_q80.bin`**
+
+Little-endian, produced by `tools/m8/convert_littlekedi.py` (fp32 MLA1, then `--quantize`; ADR 0010).
+
+1. Header of 128 bytes: `char magic[4] = "MLQ1"`, `int32 version = 1`, `int32` `dim`, `n_layers`, `n_dense_layers`, `n_heads`, `qk_nope_dim`, `qk_rope_dim`, `v_head_dim`, `kv_rank`, `dense_hidden`, `n_experts`, `n_active`, `moe_hidden`, `vocab`, `max_seq`; `float32` `norm_eps`, `rope_theta` (must be 10000), `route_scale`; `int32 group_size` at byte 76; at byte 80 the tokenizer's file name (same folder, no `/`), NUL-padded to 48 bytes.
+2. Tensors in file order, every matrix row-major `[out][in]`. A vector is `float32[n]`; a matrix is `int8 q[rows * cols]` then `float32 s[rows * cols / group_size]`, except the expert router (`gate_w`), which stays `float32[n_experts][dim]`. Per layer: `attn_norm`, `wq`, `wkv_a`, `kv_norm`, `wkv_b`, `wo`, `ffn_norm`; dense layers `w1`, `w2`, `w3`; MoE layers `gate_w`, `gate_b`, per expert `gate`, `up`, `down`, then the shared expert `w1`, `w2`, `w3`. Then `norm` and `embed[vocab][dim]` (also the output layer).
+
+`group_size` must divide `dim`, `kv_rank`, `n_heads * v_head_dim` and both hidden sizes (32 for LittleKedi).
+
+**Chat tokenizer: BPE1 (GPT-2 byte-level BPE)**
+
+`char magic[4] = "BPE1"`, `int32 vocab`, `n_merges`, `n_special`; per token id `int32 len` and its raw bytes; per special token `int32 id`, `int32 len`, its text (e.g. `<|end|>`); per merge in rank order `int32 left, right, result`. Every byte must have a single-byte token. The chat prompt is `<|user|>question<|end|><|assistant|>`; the answer ends at `<|end|>`.
 
 The loader tells the formats apart by the first four bytes.
 

@@ -7,7 +7,7 @@ its window (no mouse or focus change; melonDS must map START to Enter),
 waits for the generation, closes melonDS normally so it writes the card back,
 then runs `tools/dslm.py parity` on /dslm/tokens.txt.
 
-    python tests/parity/run_melonds.py --steps 128 [--model fp32|int8]
+    python tests/parity/run_melonds.py --steps 128 [--model fp32|int8|tiny1m|littlekedi]
 """
 import argparse
 import ctypes
@@ -57,7 +57,7 @@ def press_start(hwnd):
 
 
 CHECKPOINTS = {"int8": "/dslm/models/stories260K_q80.bin", "fp32": "/dslm/models/stories260K.bin",
-               "tiny1m": "/dslm/models/tiny1m_q80.bin"}
+               "tiny1m": "/dslm/models/tiny1m_q80.bin", "littlekedi": "/dslm/models/littlekedi_q80.bin"}
 
 
 def set_run(ini, steps, model):
@@ -85,7 +85,7 @@ def main():
     original = set_run(ini, args.steps, args.model)
     if tokens.exists():
         tokens.unlink()
-    wait = args.wait if args.wait is not None else 15 + args.steps * {"fp32": 0.8, "tiny1m": 0.3}.get(args.model, 0.2)
+    wait = args.wait if args.wait is not None else 15 + args.steps * {"fp32": 0.8, "tiny1m": 0.3, "littlekedi": 0.6}.get(args.model, 0.2)
     proc = subprocess.Popen([str(MELON), str(NDS)])
     try:
         hwnd = find_window(proc.pid)

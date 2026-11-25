@@ -25,14 +25,19 @@ Chain of evidence: llama.cpp ≡ numpy oracle ≡ C engine.
 
 ## Step 2: fixed-point engine (done)
 
-- `tools/m8/convert_littlekedi.py --quantize` writes `littlekedi_q.bin` (MLQ1, 2.25 MB): every matrix int8 with one fp32 scale per group of 32, the tied embedding included; vectors and the expert router stay fp32 and become Q16 at load.
+- `tools/m8/convert_littlekedi.py --quantize` writes `littlekedi_q80.bin` (MLQ1, 2.25 MB): every matrix int8 with one fp32 scale per group of 32, the tied embedding included; vectors and the expert router stay fp32 and become Q16 at load.
 - `src/engine/mlq_fixed.arm.c` is the integer forward pass. It shares its kernels (`src/engine/fxkern.arm.c`: RMSNorm, activation quantization, the ITCM matmul, softmax, sigmoid, sampler) with the llama2 int8 engine, whose goldens stay bit-exact.
 - The sampler applies llama.cpp's repeat penalty (positive logits divided, negative multiplied, each recent token once) before temperature and top-p; without it the model loops ("a cat's cat's cat's…").
 - **Fidelity** (ADR 0010): reading the fp32 golden sequences, the int8 engine picks the same token as the fp32 engine at 96.2% of positions, with 2.4% mean logit error. Exact sequences can still split early: a mixture-of-experts router can face two experts 0.001 apart, and any 8-bit rounding flips the choice. llama.cpp's Q8_0 file splits on the same prompts and gives the same answers as this engine.
 - Runtime memory beyond the model: about 115 KB plus 768 bytes per context token (the latent and RoPE-key cache of 4 layers), 904 KB at the full 1024 tokens.
 
+## Step 3: chat on the DS (done in melonDS)
+
+- The loader recognises MLQ1 by its magic, reads the tokenizer file named in its header from the same folder, and sizes the context from the RAM left after the files (at least 128 tokens are required, up to 1024). The Settings picker lists it as `chat`.
+- Chat mode (`src/engine/mlq_chat.c`, shared by the DS and the host driver): the typed question becomes `<|user|>question<|end|><|assistant|>`, the answer stops at `<|end|>`, and the repeat penalty 1.15 is always on. Each question is a new, single-turn chat; the top screen shows `> question` and the answer.
+- melonDS: 40/40 tokens identical to the host golden on "What causes the seasons?" (`tests/golden/littlekedi_q80.json`, run by `tests/parity/run_melonds.py --model littlekedi`), about 3 tokens/s emulated.
+- The package ships `littlekedi_q80.bin` and `littlekedi.tok` with the Apache License 2.0 in `THIRD_PARTY.txt`.
+
 ## Next steps
 
-1. **Chat mode in the interface**: wrap the typed text as `<|user|>…<|end|><|assistant|>`, stop at `<|end|>`, keep the conversation on screen.
-2. **Loader and picker**: detect MLQ1 files next to their tokenizer, cap the context to fit RAM, show the model in Settings; package with its Apache-2.0 notice.
-3. **Hardware**: expected around 2 to 3 tokens/s and about 3 MB of RAM, to be measured.
+1. **Hardware**: parity and tokens per second on the reference R4, then a release.

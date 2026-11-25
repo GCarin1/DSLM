@@ -6,7 +6,7 @@
 **Realizes:** SC1, SC5
 **Depends on:** pc-toolchain
 **Last updated:** 2026-11-25
-**Version:** 0.6.1
+**Version:** 0.7.0
 
 ## Purpose
 
@@ -30,6 +30,7 @@ Read the checkpoint (`model.bin`) and the tokenizer (`tok.bin`) from the R4 flas
 - When the homebrew starts, the loader shall read the model path, tokenizer path and sampling settings from /dslm/dslm.ini.
 - When FAT initialisation fails, the loader shall print a hint that the binary may need a manual DLDI patch with dlditool.
 - When a generation ends, the homebrew shall write /dslm/tokens.txt with the checkpoint, prompt, token ids and timings, in the format of contracts/model-file-format.
+- When the checkpoint starts with the MLQ1 magic number, the loader shall read the tokenizer named in its header from the same folder and size the context from the memory left after both files, refusing the model below 128 tokens.
 
 ### State-driven
 
@@ -55,6 +56,7 @@ Read the checkpoint (`model.bin`) and the tokenizer (`tok.bin`) from the R4 flas
 6. [verified] The hello-world `.nds` mounts the card and prints the settings read from `/dslm/dslm.ini` on melonDS — verified by `tests/hw/hello-card.md`
 7. [verified] The same loader runs the fp32 and the int8 checkpoint and records the checkpoint in tokens.txt — verified by `tests/parity/int8-stories260k.md`
 8. [verified] Only valid checkpoints are offered, and after unloading a model the budget sees the freed memory — verified by `tests/hw/model-picker.md`
+9. [verified] The picker offers the MLQ1 chat model, the loader finds its tokenizer from the header and the package ships both with the Apache-2.0 notice — verified by `tools/tests/test_mlq_host.py`
 
 ## Maturity
 

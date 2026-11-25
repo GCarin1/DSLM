@@ -29,20 +29,27 @@ static int cmp_pair(const void *a, const void *b)
     return xa < xb ? -1 : xa > xb;
 }
 
+size_t bpe_runtime_bytes(const void *header)
+{
+    const uint8_t *p = header;
+    int vocab = rd32(p + 4), merges = rd32(p + 8), special = rd32(p + 12);
+    if (memcmp(p, "BPE1", 4) != 0 || vocab <= 256 || merges < 0 || merges > 65535 || special < 0 || special > vocab)
+        return 0;
+    return (size_t)vocab * (sizeof(uint8_t *) + sizeof(int)) + (size_t)special * sizeof(int) +
+           (size_t)merges * sizeof(uint16_t);
+}
+
 int bpe_init(bpe_tokenizer *t, const void *file, size_t size)
 {
     const uint8_t *p = file, *end = p + size;
     memset(t, 0, sizeof *t);
-    if (size < 16 || memcmp(p, "BPE1", 4) != 0)
+    size_t bytes = size < BPE_HEADER_BYTES ? 0 : bpe_runtime_bytes(p);
+    if (!bytes)
         return -1;
     t->vocab = rd32(p + 4);
     t->n_merges = rd32(p + 8);
     t->n_special = rd32(p + 12);
-    if (t->vocab <= 256 || t->n_merges < 0 || t->n_merges > 65535 || t->n_special < 0)
-        return -1;
-    p += 16;
-    size_t bytes = (size_t)t->vocab * (sizeof(uint8_t *) + sizeof(int)) + (size_t)t->n_special * sizeof(int) +
-                   (size_t)t->n_merges * sizeof(uint16_t);
+    p += BPE_HEADER_BYTES;
     uint8_t *arena = malloc(bytes);
     if (!arena)
         return -1;
@@ -60,7 +67,7 @@ int bpe_init(bpe_tokenizer *t, const void *file, size_t size)
         p += 4 + t->piece_len[i];
     }
     for (int i = 0; i < t->n_special; i++) {
-        if (end - p < 8)
+        if (end - p < 8 || rd32(p) < 0 || rd32(p) >= t->vocab)
             goto bad;
         t->special_id[i] = rd32(p);
         p += 8 + rd32(p + 4);
@@ -68,6 +75,10 @@ int bpe_init(bpe_tokenizer *t, const void *file, size_t size)
     if (end - p < (ptrdiff_t)(12 * (size_t)t->n_merges))
         goto bad;
     t->merges = p;
+    for (int r = 0; r < t->n_merges; r++)
+        for (int k = 0; k < 3; k++)
+            if (merge_field(t, r, k) < 0 || merge_field(t, r, k) >= t->vocab)
+                goto bad;
 
     for (int b = 0; b < 256; b++)
         t->byte_tok[b] = -1;
@@ -78,6 +89,9 @@ int bpe_init(bpe_tokenizer *t, const void *file, size_t size)
         if (!special && t->piece_len[i] == 1 && t->byte_tok[t->piece[i][0]] < 0)
             t->byte_tok[t->piece[i][0]] = i;
     }
+    for (int b = 0; b < 256; b++)
+        if (t->byte_tok[b] < 0)
+            goto bad; /* byte-level BPE needs a token for every byte */
     for (int i = 0; i < t->n_merges; i++)
         t->by_pair[i] = (uint16_t)i;
     sort_ctx = t;

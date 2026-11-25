@@ -49,6 +49,12 @@ mla_status mlq_read_config(const void *header, size_t n, mla_config *c, int *gro
 size_t mlq_file_bytes(const mla_config *c, int group_size);
 size_t mlq_runtime_bytes(const mla_config *c, int seq);
 
+/* File name of the tokenizer the header names (same folder); returns 0, or -1 if absent or too long. */
+int mlq_tokenizer_name(const void *header, size_t n, char *out, size_t cap);
+
+/* Largest context (<= max_seq, a multiple of 64) whose runtime fits in `budget` bytes; 0 if none. */
+int mlq_fit_seq(const mla_config *c, size_t budget);
+
 /* The file buffer is converted in place (scales and vectors become fixed point). */
 mla_status mlq_init(mlq_model *m, void *file, size_t size, int seq);
 void mlq_free(mlq_model *m);

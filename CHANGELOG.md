@@ -2,6 +2,19 @@
 
 All notable changes to DSLM are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/). Each entry links to the Doctrina change that delivered it (`.doctrina/changes/archive/`).
 
+## [Unreleased]
+
+### Added
+
+- **Chat mode with LittleKedi** (experimental): [edededdy/LittleKedi-tiny-instruct](https://huggingface.co/edededdy/LittleKedi-tiny-instruct) (2.0M parameters, Apache-2.0), a DeepSeek-V3-style model (multi-head latent attention, mixture of experts, GPT-2 tokenizer). Pick `littlekedi_q80` in Settings, type a question, START. Its answers are often wrong; it is the first chat model on DSLM (changes 0017, 0018, 0019).
+- Engines: an fp32 reference (`src/engine/mla.c`, equal to llama.cpp and a numpy oracle), the integer-only int8 engine (`src/engine/mlq_fixed.arm.c`) with a repeat penalty, a GPT-2 BPE tokenizer (`src/engine/bpe.c`); the integer kernels are shared with the llama2 engine (`src/engine/fxkern.arm.c`).
+- File formats MLQ1 and BPE1 (`contracts/model-file-format`); the context is sized from the free RAM at load (up to 1024 tokens).
+- `THIRD_PARTY.txt` carries the Apache License 2.0 for the chat model.
+
+### Emulator results (not hardware)
+
+- melonDS: LittleKedi parity 40/40 tokens against the host build on "What causes the seasons?", about 3 tokens/s, heap peak 3.4 MB. Real-DS numbers come with the next release.
+
 ## [1.1.0] - 2026-11-25
 
 ### Added

@@ -19,6 +19,12 @@ typedef struct {
     void *arena;
 } bpe_tokenizer;
 
+#define BPE_HEADER_BYTES 16
+
+/* Bytes bpe_init allocates, from the first BPE_HEADER_BYTES of the file; 0 if it is not a BPE1 file. */
+size_t bpe_runtime_bytes(const void *header);
+
+/* The file buffer must stay alive while the tokenizer is used (pieces point into it). */
 int bpe_init(bpe_tokenizer *t, const void *file, size_t size);
 void bpe_free(bpe_tokenizer *t);
 

@@ -1,6 +1,6 @@
 /*
  * Host driver for the fixed-point LittleKedi engine (src/engine/mlq_fixed.arm.c).
- *   mlq_main <littlekedi_q.bin> <littlekedi.tok> <steps> <prompt> [temp topp penalty seed]
+ *   mlq_main <littlekedi_q80.bin> <littlekedi.tok> <steps> <prompt> [temp topp penalty seed]
  * Without the optional arguments: greedy, no repeat penalty. Prints:
  *   P <prompt tokens>   T <all token ids>   S <generated text as hex>
  */
@@ -8,9 +8,7 @@
 #include <stdlib.h>
 
 #include "bpe.h"
-#include "mlq.h"
-
-#define RECENT 64 /* repeat-penalty window, llama.cpp's default */
+#include "mlq_chat.h" /* the same generation loop as the DS app */
 
 static void *slurp(const char *path, size_t *size)
 {
@@ -48,34 +46,17 @@ int main(int argc, char **argv)
         return 1;
     }
     int steps = atoi(argv[3]);
-    int32_t inv_temp = 0, topp = 0, penalty = 1 << 16;
-    unsigned long long rng = 1;
-    if (argc == 9) {
-        float temp = (float)atof(argv[5]);
-        inv_temp = temp > 0.0f ? fxk_to_fixed(1.0f / temp, 16) : 0;
-        topp = fxk_to_fixed((float)atof(argv[6]), 16);
-        penalty = fxk_to_fixed((float)atof(argv[7]), 16);
-        rng = strtoull(argv[8], NULL, 10);
-    }
+    mlq_sampling s;
+    if (argc == 9)
+        mlq_sampling_init(&s, (float)atof(argv[5]), (float)atof(argv[6]), (float)atof(argv[7]),
+                          strtoull(argv[8], NULL, 10));
+    else
+        mlq_sampling_init(&s, 0.0f, 0.0f, 1.0f, 1);
     int *ids = malloc((size_t)m.seq * sizeof(int));
-    int n = bpe_encode(&t, argv[4], ids, m.seq);
-    if (n <= 0) {
+    int n = 0, total = mlq_generate(&m, &t, argv[4], steps, &s, ids, m.seq, &n, NULL, NULL);
+    if (total < 0) {
         fprintf(stderr, "encode failed\n");
         return 1;
-    }
-    int end = bpe_special(&t, "<|end|>"), eot = bpe_special(&t, "<|endoftext|>");
-    int total = n;
-    for (int pos = 0; pos < total && pos < m.seq - 1; pos++) {
-        int32_t *lg = mlq_forward(&m, ids[pos], pos);
-        if (pos < n - 1)
-            continue;
-        if (total - n >= steps)
-            break;
-        int from = total > RECENT ? total - RECENT : 0;
-        int next = mlq_sample(&m, lg, ids + from, total - from, penalty, inv_temp, topp, &rng);
-        if (next == end || next == eot)
-            break;
-        ids[total++] = next;
     }
     printf("P %d\nT", n);
     for (int i = 0; i < total; i++)

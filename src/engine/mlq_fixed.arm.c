@@ -86,6 +86,30 @@ size_t mlq_runtime_bytes(const mla_config *c, int seq)
            (size_t)c->n_layers * sizeof(mlq_layer) + (size_t)c->n_layers * c->n_experts * 3 * sizeof(mlq_tensor) + 64;
 }
 
+int mlq_tokenizer_name(const void *header, size_t n, char *out, size_t cap)
+{
+    const char *name = (const char *)header + 80;
+    size_t len = 0;
+    if (n < MLA_HEADER_BYTES)
+        return -1;
+    while (len < 48 && name[len])
+        len++;
+    if (len == 0 || len == 48 || len >= cap || memchr(name, '/', len))
+        return -1;
+    memcpy(out, name, len);
+    out[len] = '\0';
+    return 0;
+}
+
+int mlq_fit_seq(const mla_config *c, size_t budget)
+{
+    int best = 0;
+    for (int seq = 64; seq <= c->max_seq; seq += 64)
+        if (mlq_runtime_bytes(c, seq) <= budget)
+            best = seq;
+    return best;
+}
+
 /* map one int8 matrix; its scales become Q30 in place */
 static mlq_tensor take_mat(unsigned char **p, size_t rows, size_t cols, int gs)
 {

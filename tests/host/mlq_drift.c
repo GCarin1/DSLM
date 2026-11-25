@@ -2,7 +2,7 @@
  * Drift of the fixed-point LittleKedi engine against the fp32 one, teacher-forced:
  * both read the same token sequence; at every position after the first we count
  * whether their argmax agrees, and average the relative L2 error of the logits.
- *   mlq_drift <littlekedi.bin> <littlekedi_q.bin> <token ids...>
+ *   mlq_drift <littlekedi.bin> <littlekedi_q80.bin> <token ids...>
  * Prints: <agreements> <positions> <mean relative error>
  */
 #include <math.h>

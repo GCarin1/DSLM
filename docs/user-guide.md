@@ -1,6 +1,6 @@
 # DSLM user guide
 
-DSLM runs tiny language models (stories260K by default, tiny1m as an option) on a Nintendo DS with no internet connection. It writes short children's stories in English from the first words you give it.
+DSLM runs tiny language models (stories260K by default, tiny1m as an option) on a Nintendo DS with no internet connection. It writes short children's stories in English from the first words you give it. An experimental chat model, LittleKedi, answers questions instead.
 
 ## What goes on the microSD card
 
@@ -12,7 +12,9 @@ The DS never downloads anything. The model travels on the card with the program:
 /dslm/models/stories260K_q80.bin  the model, int8, about 0.5 MB (default)
 /dslm/models/tiny1m_q80.bin       a larger model, int8, about 1 MB (richer stories, slower)
 /dslm/models/stories260K.bin      the same model in fp32, about 1 MB (reference)
-/dslm/models/tok512.bin       the tokenizer, about 6 KB
+/dslm/models/tok512.bin       the tokenizer of the story models, about 6 KB
+/dslm/models/littlekedi_q80.bin   the chat model, int8, about 2.2 MB (experimental)
+/dslm/models/littlekedi.tok       its tokenizer, about 170 KB (must sit next to it)
 ```
 
 Developers build this tree with `python tools/dslm.py stage <card root>` (`docs/building.md`). If a file is missing, the DS shows which one and stops.
@@ -64,5 +66,8 @@ Typing is touch-only for now; without the stylus, L/R pick an example prompt and
 | `stories260K_q80` (default) | about 7 tokens/s | 1.4 MB | Quick, simple stories |
 | `tiny1m_q80` | about 4.5 tokens/s | 2.4 MB | Longer, more varied stories with dialogue |
 | `stories260K` (fp32) | about 1.6 tokens/s | 1.8 MB | Testing only (exact reference) |
+| `littlekedi_q80` (chat) | to be measured on a DS (about 3 tokens/s in melonDS) | 3.4 MB | Asking questions; answers are often wrong |
+
+**Chat mode.** With `littlekedi_q80` the prompt is a question ("What causes the seasons?"); L/R cycle example questions. The top screen shows your question after `>` and the answer below it; the answer ends by itself, and Steps only caps its length. Each question starts a new chat (the model does not remember earlier ones). DSLM always applies the model author's repeat penalty (1.15) so the answer does not loop; temperature and top-p work as for stories. The model has 2M parameters: expect confident nonsense.
 
 Switch on the Settings screen (row `Model`, then START). The choice is saved in `/dslm/dslm.ini`, so the DS starts with it next time. To add your own model, copy a `llama2.c` checkpoint (fp32 or int8 v2, made with `python tools/dslm.py quantize`) into `/dslm/models/`; it must use the same tokenizer and fit in about 3.5 MB of RAM, or the DS refuses it and keeps the current model.

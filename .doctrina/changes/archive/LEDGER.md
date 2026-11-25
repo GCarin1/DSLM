@@ -21,3 +21,4 @@ One line per archived change, newest last. Appended by
 - 2026-11-25 — 0016-tiny1m-in-the-package — tiny1m in the package (specs: fixed-point-inference MODIFIED, pc-toolchain MODIFIED)
 - 2026-11-25 — 0017-m8-littlekedi-reference-engine — M8 LittleKedi reference engine (specs: inference-engine MODIFIED)
 - 2026-11-25 — 0018-m8-fixed-point-mla-engine — M8 fixed-point MLA engine (specs: fixed-point-inference MODIFIED)
+- 2026-11-25 — 0019-m8-littlekedi-chat-on-the-ds — M8 LittleKedi chat on the DS (specs: ds-interface MODIFIED, model-loading MODIFIED)

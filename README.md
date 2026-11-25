@@ -4,7 +4,7 @@
 
 # DSLM
 
-A tiny LLM running **100% offline on a Nintendo DS**, launched from an **R4** flashcart. DSLM is a port of [`llama2.c`](https://github.com/karpathy/llama2.c) running small story models (`stories260K` and `tiny1m`) that write short, simple stories in English.
+A tiny LLM running **100% offline on a Nintendo DS**, launched from an **R4** flashcart. DSLM is a port of [`llama2.c`](https://github.com/karpathy/llama2.c) running small story models (`stories260K` and `tiny1m`) that write short, simple stories in English, plus an experimental chat model (LittleKedi) that answers questions.
 
 > **Status:** v1.1.0 — two models in the package, picked on the DS; up to **6.9 tokens/s** on real hardware (int8 fixed point), token-for-token parity with the PC reference.
 
@@ -18,13 +18,14 @@ Controls, settings and troubleshooting: [`docs/user-guide.md`](docs/user-guide.m
 
 ### Models in the package
 
-All run offline; pick one on the Settings screen (SELECT, row `Model`). They share the tokenizer `tok512.bin`.
+All run offline; pick one on the Settings screen (SELECT, row `Model`). The story models share the tokenizer `tok512.bin`; LittleKedi brings its own. With LittleKedi the prompt is a question: DSLM wraps it in the model's chat format and stops at the end of the answer ([`docs/littlekedi.md`](docs/littlekedi.md)).
 
 | Model | File | Size | On a real DS | Stories | Source |
 |---|---|---|---|---|---|
 | **stories260K** (default) | `stories260K_q80.bin` | 0.5 MB | 6.9 tokens/s, 1.4 MB RAM | Simple, repetitive | [karpathy/tinyllamas](https://huggingface.co/karpathy/tinyllamas) (MIT) |
 | **tiny1m** | `tiny1m_q80.bin` | 1.0 MB | 4.4 tokens/s, 2.4 MB RAM | Richer: dialogue, more varied plots | [shibatch/tiny1m](https://huggingface.co/shibatch/tiny1m) (MIT) |
 | stories260K fp32 | `stories260K.bin` | 1.0 MB | 1.6 tokens/s | Same as stories260K; exact reference for testing | karpathy/tinyllamas (MIT) |
+| **LittleKedi** (chat, experimental) | `littlekedi_q80.bin` + `littlekedi.tok` | 2.4 MB | to be measured (about 3 tokens/s in melonDS), 3.4 MB RAM | Answers questions; often wrong or off-topic | [edededdy/LittleKedi-tiny-instruct](https://huggingface.co/edededdy/LittleKedi-tiny-instruct) (Apache-2.0) |
 
 Both int8 models run the integer-only engine and match their PC build token for token. tiny1m is about four times larger, so it is slower and leaves the float reference (`runq.c`) earlier: at least 6 identical tokens on every test prompt, often more than 100 (`tests/parity/int8-stories260k.md`). Other `llama2.c` checkpoints that fit in about 3.5 MB can be dropped into `/dslm/models/` (`docs/user-guide.md`).
 
@@ -60,7 +61,7 @@ Emulator first (melonDS), real R4 second. Success criteria SC1–SC6 are defined
 | **M5 — Fixed point / int8** | int8 format in the contract, quantizer, ITCM matmul, fixed-point RMSNorm/softmax/SiLU | Parity vs `runq.c`; ≥ 3 tok/s on hardware (provisional) | SC3, SC6 | ✅ Done (6.55 tok/s on the R4, 4.1x fp32) |
 | **M6 — Interface** | On-screen keyboard, token streaming, B to cancel, settings from `dslm.ini` | UI acceptance criteria pass on hardware | SC4 | ✅ Done (melonDS and R4) |
 | **M7 — v1.0 release** | Release `.nds` + staging script, complete docs, benchmark and cart-compatibility tables | Every spec `verified`; release notes with hardware numbers | SC5, SC6 | ✅ Done (v1.0.0) |
-| **M8 — Beyond v1.0** *(optional)* | Custom 100K–1M parameter models; DSi-mode bonus via TWiLight Menu++ | — | — | Optional |
+| **M8 — Chat model** | LittleKedi (MLA + MoE): fp32 reference = llama.cpp, int8 integer engine, GPT-2 tokenizer, chat mode, package | Parity with the host build in melonDS and on the R4 | — | 🚧 In melonDS (40/40 parity); hardware next |
 
 ## Project map
 

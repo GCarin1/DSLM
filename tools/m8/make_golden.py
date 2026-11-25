@@ -32,7 +32,7 @@ def main():
         raise SystemExit(f"error: {out} exists; pass --force")
     dslm.ensure_littlekedi()
     hf = dslm.CACHE / "models" / "littlekedi-hf"
-    entry = dslm.load_pins()["experimental"]["littlekedi"]
+    entry = dslm.load_pins()["chat"]["littlekedi"]
     runs = []
     for p in PROMPTS:
         ids, tokens, text = ref.generate(str(hf), p, STEPS)

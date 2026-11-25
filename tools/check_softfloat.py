@@ -13,7 +13,7 @@ import sys
 
 ELF = sys.argv[1] if len(sys.argv) > 1 else "build/dslm.elf"
 OBJDUMP = os.environ.get("OBJDUMP", "/opt/wonderful/toolchain/gcc-arm-none-eabi/bin/arm-none-eabi-objdump")
-ROOTS = tuple(os.environ.get("CHECK_ROOTS", "fx_forward,fx_sample,fxk_matmul").split(","))
+ROOTS = tuple(os.environ.get("CHECK_ROOTS", "fx_forward,fx_sample,fxk_matmul,mlq_generate").split(","))
 SOFTFLOAT = re.compile(r"^(__aeabi_[fd]\w*|__aeabi_[iu]2[fd]|__aeabi_l2[fd]|__aeabi_ul2[fd]|__\w*[sd]f\d?\w*)$")
 INTEGER_OK = {"__aeabi_ldivmod", "__aeabi_uldivmod", "__aeabi_idiv", "__aeabi_uidiv", "__aeabi_idivmod",
               "__aeabi_uidivmod", "__aeabi_lmul", "__aeabi_llsl", "__aeabi_llsr", "__aeabi_lasr"}

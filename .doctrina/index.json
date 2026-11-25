@@ -15,7 +15,7 @@
         "id": "ds-interface",
         "path": ".doctrina/specs/ds-interface/spec.md",
         "status": "active",
-        "version": "0.4.1",
+        "version": "0.5.0",
         "last_updated": "2026-11-25",
         "implementation": "verified — screens, keyboard, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS and the reference R4",
         "realizes": [
@@ -59,7 +59,7 @@
         "id": "model-loading",
         "path": ".doctrina/specs/model-loading/spec.md",
         "status": "active",
-        "version": "0.6.1",
+        "version": "0.7.0",
         "last_updated": "2026-11-25",
         "implementation": "verified — header check, RAM budget, chunked reads, error paths (`src/main.c`, `src/storage/`); melonDS and the reference R4",
         "realizes": [
@@ -190,8 +190,8 @@
         "title": "LittleKedi int8: full-precision router, drift measured teacher-forced against the fp32 engine",
         "status": "accepted",
         "date": "2026-11-25",
-        "summary": "The MLQ1 file keeps the expert router (`gate_w`, 8×128) in fp32.",
-        "landed": "2026-11-25 — `src/engine/mlq_fixed.arm.c`, `tools/tests/test_mlq_host.py`"
+        "landed": "2026-11-25 — `src/engine/mlq_fixed.arm.c`, `tools/tests/test_mlq_host.py`",
+        "summary": "The MLQ1 file keeps the expert router (`gate_w`, 8×128) in fp32."
       }
     ],
     "changes": [],
@@ -503,6 +503,24 @@
           }
         ],
         "lane": "capability"
+      },
+      {
+        "id": "0019-m8-littlekedi-chat-on-the-ds",
+        "title": "M8 LittleKedi chat on the DS",
+        "path": ".doctrina/changes/archive/2026-11-25-0019-m8-littlekedi-chat-on-the-ds",
+        "status": "applied",
+        "applied": "2026-11-25",
+        "specs_affected": [
+          {
+            "capability": "ds-interface",
+            "operation": "MODIFIED"
+          },
+          {
+            "capability": "model-loading",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "capability"
       }
     ],
     "skills": [
@@ -530,7 +548,7 @@
         "id": "model-file-format",
         "path": ".doctrina/contracts/model-file-format.md",
         "status": "active",
-        "last_updated": "2026-11-24"
+        "last_updated": "2026-11-25"
       }
     ],
     "entrypoint": {

@@ -6,7 +6,7 @@
 **Realizes:** SC4
 **Depends on:** inference-engine
 **Last updated:** 2026-11-25
-**Version:** 0.4.1
+**Version:** 0.5.0
 
 ## Purpose
 
@@ -29,6 +29,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - When the user presses L or R on the prompt screen, the interface shall replace the prompt with the previous or next example prompt.
 - When the user saves the settings screen, the interface shall write the settings to /dslm/dslm.ini and apply them to the next generation.
 - When the user picks another model on the Settings screen and saves, the interface shall unload the current model, load the chosen one with the loading progress, and save it to /dslm/dslm.ini.
+- When the loaded model is a chat model, the interface shall send the typed text as a question in the model's chat format, show the question above the answer, stop at the end-of-answer marker and offer example questions on L/R.
 
 ### State-driven
 
@@ -52,6 +53,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 5. [verified] Wrapped lines never exceed the width and keep words whole — verified by `tests/host/test_textview.c`
 6. [verified] Stopping generation keeps the tokens produced so far — verified by `tools/tests/test_engine_host.py`
 7. [verified] Picking another model on the Settings screen switches models without a restart, and a model that does not fit is refused with the previous one restored — verified by `tests/hw/model-picker.md`
+8. [verified] With LittleKedi loaded, START on the first example question shows the question and the answer and the run matches the host golden token for token in melonDS — verified by `tests/parity/littlekedi-chat.md`
 
 ## Maturity
 

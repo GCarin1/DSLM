@@ -179,11 +179,12 @@ def read_mla_header(raw):
     return dict(zip(keys, v))
 
 
-def quantize_mla(src, dst, group_size=None):
+def quantize_mla(src, dst, group_size=None, tokenizer="littlekedi.tok"):
     """MLA1 (fp32) -> MLQ1: vectors and the expert router stay fp32, other matrices become int8 + one
     fp32 scale per group (the router decides top-k between near-equal scores, so it keeps full precision).
 
-    The group size is written at header offset 76; it must divide every matrix's input size."""
+    The group size is written at header offset 76; it must divide every matrix's input size. The file
+    name of the matching tokenizer (same folder on the card) goes at offset 80, NUL-padded to 48 bytes."""
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
     import dslm
     raw = pathlib.Path(src).read_bytes()
@@ -198,6 +199,10 @@ def quantize_mla(src, dst, group_size=None):
     header = bytearray(raw[:128])
     header[:4] = b"MLQ1"
     header[76:80] = struct.pack("<i", gs)
+    name = tokenizer.encode()
+    if not 0 < len(name) < 48 or b"/" in name:
+        raise SystemExit(f"error: tokenizer name {tokenizer!r} must be a bare file name under 48 bytes")
+    header[80:128] = name.ljust(48, b"\0")
     out = bytearray(header)
     pos = 128
     for name, rows, cols in tensors:
