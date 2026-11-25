@@ -185,7 +185,16 @@
         "summary": "Reference cart."
       }
     ],
-    "changes": [],
+    "changes": [
+      {
+        "id": "0014-v1-0-0-release",
+        "title": "v1.0.0 release",
+        "path": ".doctrina/changes/0014-v1-0-0-release",
+        "status": "proposed",
+        "opened": "2026-11-25",
+        "lane": "runtime (confident; signals: github actions, tag) — opened anyway (--force)"
+      }
+    ],
     "changes_archive": [
       {
         "id": "0001-r4-research-and-delivery-roadmap",

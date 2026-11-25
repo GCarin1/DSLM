@@ -13,3 +13,4 @@ tests/host/test_textview
 tests/host/test_textview.exe
 tests/host/test_fxmath
 tests/host/test_fxmath.exe
+dist/

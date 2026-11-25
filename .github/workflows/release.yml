@@ -1,0 +1,69 @@
+name: release
+
+# Builds, tests and publishes a DSLM release when a version tag (v1.2.3) is
+# pushed. The release body is docs/releases/<tag>.md; the assets are the
+# install package, the standalone .nds and their SHA-256 sums.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build, e.g. v1.0.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # Same BlocksDS image as docker/Dockerfile, pinned by digest (docs/building.md).
+    container:
+      image: skylyrac/blocksds@sha256:c5f19b95d9c2f312e6a68ea244d2ed5120203b4b82af9785937a349096f8e5e4
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - name: Install host tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends build-essential python3 git ca-certificates
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Check the tag matches DSLM_VERSION
+        run: |
+          version=$(sed -n 's/^#define DSLM_VERSION "\(.*\)"/\1/p' src/version.h)
+          test "v$version" = "$TAG" || { echo "tag $TAG does not match DSLM_VERSION $version"; exit 1; }
+          test -f "docs/releases/$TAG.md" || { echo "missing docs/releases/$TAG.md"; exit 1; }
+
+      - name: Host unit tests
+        run: make host-test
+
+      - name: Toolchain and engine parity tests
+        run: make tools-test
+
+      - name: Build dslm.nds
+        run: make nds
+
+      - name: No soft-float in the int8 forward pass, matmul in ITCM
+        run: python3 tools/check_softfloat.py
+
+      - name: Assemble assets
+        run: |
+          mkdir -p dist
+          python3 tools/dslm.py package --out "dist/dslm-$TAG.zip" --force
+          cp dslm.nds dist/dslm.nds
+          cd dist && sha256sum "dslm-$TAG.zip" dslm.nds > SHA256SUMS.txt && cat SHA256SUMS.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: DSLM ${{ env.TAG }}
+          body_path: docs/releases/${{ env.TAG }}.md
+          files: |
+            dist/dslm-${{ env.TAG }}.zip
+            dist/dslm.nds
+            dist/SHA256SUMS.txt

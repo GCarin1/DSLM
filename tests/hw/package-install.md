@@ -1,6 +1,6 @@
 # Manual test: package-install
 
-**Status:** runnable on melonDS since the install package; the real R4 half is M4. Proves `pc-toolchain`: the package alone, unzipped at the card root, is a working install.
+**Status:** run on melonDS and on the reference R4 (ADR 0009). Proves `pc-toolchain`: the package alone, unzipped at the card root, is a working install.
 
 ## Steps and expected result
 
@@ -13,3 +13,4 @@
 | Date | Target | Package | Result | emulated |
 |------|--------|---------|--------|----------|
 | 2026-11-25 | melonDS 1.1, fresh card folder | 1,095,384 bytes; model SHA-256 matches the pin | booted from the unzipped `dslm.nds`, loaded, generated (15/256 tokens at the capture), stopped with B | yes |
+| 2026-11-25 | R4 clone / YSMenu (hardware) | install package unzipped at the card root | booted, loaded and generated; fp32 153/153 and int8 257/257 parity (`benchmarks/2026-11-25-r4-ysmenu*.txt`) | no |

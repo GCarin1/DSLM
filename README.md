@@ -6,7 +6,24 @@
 
 A tiny LLM running **100% offline on a Nintendo DS**, launched from an **R4** flashcart. DSLM is a port of [`llama2.c`](https://github.com/karpathy/llama2.c) running the `stories260K` model, which writes short, simple stories in English.
 
-> **Status:** M0 (planning) complete. No code yet. Next up: M1, toolchain and card I/O.
+> **Status:** v1.0.0 — runs on real hardware at **6.55 tokens/s** (int8 fixed point), token-for-token parity with the PC reference.
+
+## Play it
+
+1. Download **`dslm-v1.0.0.zip`** from [Releases](https://github.com/GCarin1/DSLM/releases/latest).
+2. Unzip it at the root of your flashcart's microSD card (the kernel must already be installed).
+3. Launch `dslm.nds`, type the start of a story (or press L/R for an example) and press START.
+
+Controls, settings and troubleshooting: [`docs/user-guide.md`](docs/user-guide.md). Tested carts and emulators: [`docs/compatibility.md`](docs/compatibility.md). What changed: [`CHANGELOG.md`](CHANGELOG.md).
+
+| Build | Time per token on a DS | Tokens/s |
+|---|---|---|
+| int8 fixed point (default) | 152.7 ms | 6.55 |
+| fp32 reference | 627.5 ms | 1.59 |
+
+## Build it
+
+Everything builds in Docker (`docs/building.md`): `make all` runs the tests and builds `dslm.nds`; `make package` builds the install zip. Pushing a `v*` tag runs `.github/workflows/release.yml`, which tests, builds and publishes the release assets.
 
 ## Why it's hard
 
@@ -35,7 +52,7 @@ Emulator first (melonDS), real R4 second. Success criteria SC1–SC6 are defined
 | **M4 — Hardware bring-up** | Same build on the reference R4; DLDI fallback documented; first `benchmarks/` file | Parity on hardware; fp32 baseline recorded | SC1, SC2, SC6 | ✅ Done (153/153 tokens, 627.5 ms/token fp32) |
 | **M5 — Fixed point / int8** | int8 format in the contract, quantizer, ITCM matmul, fixed-point RMSNorm/softmax/SiLU | Parity vs `runq.c`; ≥ 3 tok/s on hardware (provisional) | SC3, SC6 | ✅ Done (6.55 tok/s on the R4, 4.1x fp32) |
 | **M6 — Interface** | On-screen keyboard, token streaming, B to cancel, settings from `dslm.ini` | UI acceptance criteria pass on hardware | SC4 | ✅ Done (melonDS and R4) |
-| **M7 — v1.0 release** | Release `.nds` + staging script, complete docs, benchmark and cart-compatibility tables | Every spec `verified`; release notes with hardware numbers | SC5, SC6 | 🔄 Install package done |
+| **M7 — v1.0 release** | Release `.nds` + staging script, complete docs, benchmark and cart-compatibility tables | Every spec `verified`; release notes with hardware numbers | SC5, SC6 | ✅ Done (v1.0.0) |
 | **M8 — Beyond v1.0** *(optional)* | Custom 100K–1M parameter models; DSi-mode bonus via TWiLight Menu++ | — | — | Optional |
 
 ## Project map
