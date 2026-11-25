@@ -66,7 +66,7 @@ Typing is touch-only for now; without the stylus, L/R pick an example prompt and
 | `stories260K_q80` (default) | about 7 tokens/s | 1.4 MB | Quick, simple stories |
 | `tiny1m_q80` | about 4.5 tokens/s | 2.4 MB | Longer, more varied stories with dialogue |
 | `stories260K` (fp32) | about 1.6 tokens/s | 1.8 MB | Testing only (exact reference) |
-| `littlekedi_q80` (chat) | to be measured on a DS (about 3 tokens/s in melonDS) | 3.4 MB | Asking questions; answers are often wrong |
+| `littlekedi_q80` (chat) | about 2.8 tokens/s | 3.4 MB | Asking questions; answers are often wrong |
 
 **Chat mode.** With `littlekedi_q80` the prompt is a question ("What causes the seasons?"); L/R cycle example questions. The top screen shows your question after `>` and the answer below it; the answer ends by itself, and Steps only caps its length. Each question starts a new chat (the model does not remember earlier ones). DSLM always applies the model author's repeat penalty (1.15) so the answer does not loop; temperature and top-p work as for stories. The model has 2M parameters: expect confident nonsense.
 

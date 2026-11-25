@@ -25,7 +25,7 @@ All run offline; pick one on the Settings screen (SELECT, row `Model`). The stor
 | **stories260K** (default) | `stories260K_q80.bin` | 0.5 MB | 6.9 tokens/s, 1.4 MB RAM | Simple, repetitive | [karpathy/tinyllamas](https://huggingface.co/karpathy/tinyllamas) (MIT) |
 | **tiny1m** | `tiny1m_q80.bin` | 1.0 MB | 4.4 tokens/s, 2.4 MB RAM | Richer: dialogue, more varied plots | [shibatch/tiny1m](https://huggingface.co/shibatch/tiny1m) (MIT) |
 | stories260K fp32 | `stories260K.bin` | 1.0 MB | 1.6 tokens/s | Same as stories260K; exact reference for testing | karpathy/tinyllamas (MIT) |
-| **LittleKedi** (chat, experimental) | `littlekedi_q80.bin` + `littlekedi.tok` | 2.4 MB | to be measured (about 3 tokens/s in melonDS), 3.4 MB RAM | Answers questions; often wrong or off-topic | [edededdy/LittleKedi-tiny-instruct](https://huggingface.co/edededdy/LittleKedi-tiny-instruct) (Apache-2.0) |
+| **LittleKedi** (chat, experimental) | `littlekedi_q80.bin` + `littlekedi.tok` | 2.4 MB | 2.8 tokens/s, 3.4 MB RAM | Answers questions; often wrong or off-topic | [edededdy/LittleKedi-tiny-instruct](https://huggingface.co/edededdy/LittleKedi-tiny-instruct) (Apache-2.0) |
 
 Both int8 models run the integer-only engine and match their PC build token for token. tiny1m is about four times larger, so it is slower and leaves the float reference (`runq.c`) earlier: at least 6 identical tokens on every test prompt, often more than 100 (`tests/parity/int8-stories260k.md`). Other `llama2.c` checkpoints that fit in about 3.5 MB can be dropped into `/dslm/models/` (`docs/user-guide.md`).
 
@@ -61,7 +61,7 @@ Emulator first (melonDS), real R4 second. Success criteria SC1–SC6 are defined
 | **M5 — Fixed point / int8** | int8 format in the contract, quantizer, ITCM matmul, fixed-point RMSNorm/softmax/SiLU | Parity vs `runq.c`; ≥ 3 tok/s on hardware (provisional) | SC3, SC6 | ✅ Done (6.55 tok/s on the R4, 4.1x fp32) |
 | **M6 — Interface** | On-screen keyboard, token streaming, B to cancel, settings from `dslm.ini` | UI acceptance criteria pass on hardware | SC4 | ✅ Done (melonDS and R4) |
 | **M7 — v1.0 release** | Release `.nds` + staging script, complete docs, benchmark and cart-compatibility tables | Every spec `verified`; release notes with hardware numbers | SC5, SC6 | ✅ Done (v1.0.0) |
-| **M8 — Chat model** | LittleKedi (MLA + MoE): fp32 reference = llama.cpp, int8 integer engine, GPT-2 tokenizer, chat mode, package | Parity with the host build in melonDS and on the R4 | — | 🚧 In melonDS (40/40 parity); hardware next |
+| **M8 — Chat model** | LittleKedi (MLA + MoE): fp32 reference = llama.cpp, int8 integer engine, GPT-2 tokenizer, chat mode, package | Parity with the host build in melonDS and on the R4 | — | ✅ Done on the R4 (263/263 tokens, 2.8 tok/s); release next |
 
 ## Project map
 

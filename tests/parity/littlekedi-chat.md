@@ -19,3 +19,4 @@ The top screen shows `> What causes the seasons?` and the answer below it; the t
 | Date | Target | Build | Steps | Result | gen_ms | emulated |
 |------|--------|-------|-------|--------|--------|----------|
 | 2026-11-25 | melonDS 1.1 | chat-int8 (change 0019) | 128 | 40 tokens identical to the host build (9 prompt + 31 answer, stopped at `<|end|>`); heap peak 3,420,400 B | 13114 | yes |
+| 2026-11-25 | R4 clone / YSMenu (hardware) | chat-int8 (commit 07da4a9) | 256 | 263 tokens identical to the host build on "Once upon a time" asked as a question (no golden file holds it; compared with `tests/host/mlq_main.c` at the DS defaults); 2.81 tokens/s, heap peak 3,420,420 B (`benchmarks/2026-11-25-r4-ysmenu-littlekedi-chat-int8.txt`) | 92931 | no |

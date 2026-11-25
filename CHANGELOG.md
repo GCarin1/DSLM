@@ -11,9 +11,17 @@ All notable changes to DSLM are listed here. The format follows [Keep a Changelo
 - File formats MLQ1 and BPE1 (`contracts/model-file-format`); the context is sized from the free RAM at load (up to 1024 tokens).
 - `THIRD_PARTY.txt` carries the Apache License 2.0 for the chat model.
 
-### Emulator results (not hardware)
+### Fixed
 
-- melonDS: LittleKedi parity 40/40 tokens against the host build on "What causes the seasons?", about 3 tokens/s, heap peak 3.4 MB. Real-DS numbers come with the next release.
+- Opening Settings from the story screen and switching between a story and a chat model kept the old prompt; the prompt now switches to the new model's first example from either screen.
+
+### Hardware results
+
+| Model | Tokens/s | Heap peak | Parity | File |
+|---|---|---|---|---|
+| LittleKedi (chat, int8) | 2.81 | 3,420,420 B | 263/263 vs host build | `benchmarks/2026-11-25-r4-ysmenu-littlekedi-chat-int8.txt` |
+
+melonDS also matched the golden on "What causes the seasons?" (40/40 tokens).
 
 ## [1.1.0] - 2026-11-25
 

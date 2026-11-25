@@ -611,6 +611,7 @@ static const char *switch_model(app *a, const dslm_settings *edit)
 /* Returns when the user leaves the settings screen. */
 static void settings_screen(app *a)
 {
+    model_kind entry_kind = a->kind;
     dslm_settings edit = a->settings;
     model_entry models[MAX_MODELS];
     int n_models = scan_models(models, MAX_MODELS);
@@ -672,6 +673,10 @@ static void settings_screen(app *a)
             }
             break;
         case UI_EV_BACK:
+            if (a->kind != entry_kind) { /* story starters and questions do not mix */
+                a->example = 0;
+                strcpy(a->prompt, examples[a->kind][0]);
+            }
             return;
         default:
             continue;
@@ -720,16 +725,10 @@ int main(void)
             if (a.story_len)
                 scroll_story(&a, e.type == UI_EV_DOWN ? 1 : -1);
             break;
-        case UI_EV_SETTINGS: {
-            model_kind before = a.kind;
+        case UI_EV_SETTINGS:
             settings_screen(&a);
-            if (a.kind != before) { /* story starters and questions do not mix */
-                a.example = 0;
-                strcpy(a.prompt, examples[a.kind][0]);
-            }
             enter_prompt(&a, 1);
             break;
-        }
         case UI_EV_GO:
             /* Story loop: generate, then New / Again / Settings. */
             for (int again = 1; again;) {

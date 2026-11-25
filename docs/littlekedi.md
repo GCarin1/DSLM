@@ -38,6 +38,6 @@ Chain of evidence: llama.cpp ≡ numpy oracle ≡ C engine.
 - melonDS: 40/40 tokens identical to the host golden on "What causes the seasons?" (`tests/golden/littlekedi_q80.json`, run by `tests/parity/run_melonds.py --model littlekedi`), about 3 tokens/s emulated.
 - The package ships `littlekedi_q80.bin` and `littlekedi.tok` with the Apache License 2.0 in `THIRD_PARTY.txt`.
 
-## Next steps
+## Step 4: hardware (done)
 
-1. **Hardware**: parity and tokens per second on the reference R4, then a release.
+On the reference R4 (YSMenu) the DS generated 256 answer tokens at **2.81 tokens/s**, heap peak 3,420,420 bytes, load 0.56 s, and all 263 tokens matched the host build (`benchmarks/2026-11-25-r4-ysmenu-littlekedi-chat-int8.txt`, `tests/parity/littlekedi-chat.md`). The estimate in the M8 plan was 2 to 3 tokens/s.
