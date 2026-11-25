@@ -1,6 +1,6 @@
 # Manual test: benchmark-int8
 
-**Status:** runnable on the reference R4 since M5a (int8 matmul); the fully fixed-point build is M5b. Proves `fixed-point-inference` criterion 1.
+**Status:** run on the reference R4 (M5b). Proves `fixed-point-inference` criterion 1.
 
 ## Steps and expected result
 
@@ -12,3 +12,4 @@
 
 | Date | Cart / kernel | Build | Steps | gen_ms | ms per position | vs fp32 |
 |------|---------------|-------|-------|--------|-----------------|---------|
+| 2026-11-25 | R4 clone / YSMenu | M5b fixed point | 256 | 39080 | 152.7 (6.55 tokens/s, `benchmarks/2026-11-25-r4-ysmenu-int8.txt`) | 4.1x faster than fp32 (627.5) |

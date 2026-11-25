@@ -29,9 +29,9 @@
         "id": "fixed-point-inference",
         "path": ".doctrina/specs/fixed-point-inference/spec.md",
         "status": "active",
-        "version": "0.3.0",
+        "version": "0.3.1",
         "last_updated": "2026-11-24",
-        "implementation": "implemented — integer-only int8 engine (`src/engine/llama2_fixed.arm.c`, `src/engine/fxmath.arm.c`, ADR 0008), matmul in ITCM, verified on the host and melonDS; the R4 benchmark is pending",
+        "implementation": "verified — integer-only int8 engine (`src/engine/llama2_fixed.arm.c`, ADR 0008); 6.55 tokens/s on the reference R4 with 257/257 parity (`benchmarks/2026-11-25-r4-ysmenu-int8.txt`)",
         "realizes": [
           "SC3"
         ],
@@ -372,6 +372,20 @@
           }
         ],
         "lane": "chore (confident; signals: readme)"
+      },
+      {
+        "id": "0012-m5-hardware-results",
+        "title": "M5 hardware results",
+        "path": ".doctrina/changes/archive/2026-11-25-0012-m5-hardware-results",
+        "status": "applied",
+        "applied": "2026-11-25",
+        "specs_affected": [
+          {
+            "capability": "fixed-point-inference",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "product (confident; signals: build, record)"
       }
     ],
     "skills": [

@@ -27,5 +27,6 @@ Proves `fixed-point-inference` criterion 3. Since M5b the int8 model runs the fi
 | 2026-11-25 | melonDS 1.1 | M5a int8 (float scales, GS 4) | 128 | 129 tokens identical to runq.c | 72658 | yes |
 | 2026-11-25 | melonDS 1.1 | M5a int8 + per-token RoPE table | 128 | 129 tokens identical to runq.c | 69605 | yes |
 | 2026-11-25 | melonDS 1.1 | M5b fixed point | 128 | 129 tokens identical to the host build | 16546 | yes |
+| 2026-11-25 | R4 clone / YSMenu (hardware) | M5b fixed point | 256 | 257 tokens identical to the host build (`benchmarks/2026-11-25-r4-ysmenu-int8.txt`) | 39080 | no |
 
 For comparison, fp32 on melonDS took 87480 ms for the same run. Emulator timings are indicative only; hardware numbers go to `tests/hw/benchmark-int8.md`.

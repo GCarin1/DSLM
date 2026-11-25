@@ -33,7 +33,7 @@ Emulator first (melonDS), real R4 second. Success criteria SC1–SC6 are defined
 | **M2 — PC toolchain** | `tools/`: download, inspect + memory budget, stage card, golden outputs from a pinned `llama2.c` commit | `stories260K` budget < 3.5 MB; golden outputs reproducible | SC2, SC5 | ✅ Done |
 | **M3 — fp32 skeleton (emulator)** | `run.c` port: loader, forward pass, tokenizer, sampler; fixed prompt on the console; headless melonDS parity script | Zero divergence vs golden output in melonDS | SC2 (emulated) | ✅ Done |
 | **M4 — Hardware bring-up** | Same build on the reference R4; DLDI fallback documented; first `benchmarks/` file | Parity on hardware; fp32 baseline recorded | SC1, SC2, SC6 | ✅ Done (153/153 tokens, 627.5 ms/token fp32) |
-| **M5 — Fixed point / int8** | int8 format in the contract, quantizer, ITCM matmul, fixed-point RMSNorm/softmax/SiLU | Parity vs `runq.c`; ≥ 3 tok/s on hardware (provisional) | SC3, SC6 | 🔄 Done on melonDS (7.7 tok/s); R4 benchmark pending |
+| **M5 — Fixed point / int8** | int8 format in the contract, quantizer, ITCM matmul, fixed-point RMSNorm/softmax/SiLU | Parity vs `runq.c`; ≥ 3 tok/s on hardware (provisional) | SC3, SC6 | ✅ Done (6.55 tok/s on the R4, 4.1x fp32) |
 | **M6 — Interface** | On-screen keyboard, token streaming, B to cancel, settings from `dslm.ini` | UI acceptance criteria pass on hardware | SC4 | ✅ Done (melonDS and R4) |
 | **M7 — v1.0 release** | Release `.nds` + staging script, complete docs, benchmark and cart-compatibility tables | Every spec `verified`; release notes with hardware numbers | SC5, SC6 | 🔄 Install package done |
 | **M8 — Beyond v1.0** *(optional)* | Custom 100K–1M parameter models; DSi-mode bonus via TWiLight Menu++ | — | — | Optional |
@@ -64,7 +64,7 @@ DSLM uses [Doctrina](https://github.com/GCarin1/Doctrina) for spec-driven develo
 
 ## Open questions
 
-- SC3: the fixed-point build reaches about 7.7 tok/s on melonDS; the R4 measurement decides it (`tests/hw/benchmark-int8.md`).
+- None blocking. Next candidates: v1.0 release notes and compatibility table (M7), D-pad typing (ADR 0006), the DS hardware divider for more speed.
 
 ## Documentation gates
 

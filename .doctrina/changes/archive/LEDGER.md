@@ -14,3 +14,4 @@ One line per archived change, newest last. Appended by
 - 2026-11-25 — 0009-spec-sync-for-stop-format-probe-and-tokens-txt — Spec sync for stop, format probe and tokens.txt (specs: inference-engine MODIFIED, model-loading MODIFIED)
 - 2026-11-25 — 0010-m5b-fixed-point-engine — M5b fixed-point engine (specs: fixed-point-inference MODIFIED, pc-toolchain MODIFIED)
 - 2026-11-25 — 0011-mit-license — MIT license (specs: pc-toolchain MODIFIED)
+- 2026-11-25 — 0012-m5-hardware-results — M5 hardware results (specs: fixed-point-inference MODIFIED)

@@ -2,11 +2,11 @@
 
 **Capability:** fixed-point-inference
 **Status:** active
-**Implementation:** implemented — integer-only int8 engine (`src/engine/llama2_fixed.arm.c`, `src/engine/fxmath.arm.c`, ADR 0008), matmul in ITCM, verified on the host and melonDS; the R4 benchmark is pending
+**Implementation:** verified — integer-only int8 engine (`src/engine/llama2_fixed.arm.c`, ADR 0008); 6.55 tokens/s on the reference R4 with 257/257 parity (`benchmarks/2026-11-25-r4-ysmenu-int8.txt`)
 **Realizes:** SC3
 **Depends on:** inference-engine, model-loading
 **Last updated:** 2026-11-24
-**Version:** 0.3.0
+**Version:** 0.3.1
 
 ## Purpose
 
@@ -40,7 +40,7 @@ The performance build. It replaces software-emulated `float` with integer arithm
 
 ## Acceptance criteria
 
-1. [unverified] The time per token measured on a real R4 is recorded and compared with the fp32 baseline — verified by `tests/hw/benchmark-int8.md`.
+1. [verified] The time per token measured on a real R4 is recorded and compared with the fp32 baseline — verified by `tests/hw/benchmark-int8.md`.
 2. [verified] No software-float symbol (`__aeabi_fmul`, `__aeabi_fadd`, ...) appears in the forward pass call map — verified by `tests/build/no-softfloat-in-forward.md`.
 3. [verified] At temperature 0, the first generated tokens match the PC int8 golden output (`runq.c` running the same quantized checkpoint) — verified by `tests/parity/int8-stories260k.md`.
 4. [verified] The int8 checkpoint the `pc-toolchain` quantizer generates is read by the reference `runq.c` — verified by `tools/tests/test_quantize.py`.
