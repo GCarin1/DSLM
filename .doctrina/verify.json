@@ -30,6 +30,13 @@
       }
     },
     {
+      "name": "tools-test",
+      "run": "docker compose -f docker/docker-compose.yml run --rm shell make tools-test",
+      "expect": {
+        "require_output_matches": "OK"
+      }
+    },
+    {
       "name": "nds-build",
       "run": "docker compose -f docker/docker-compose.yml run --rm shell bash -c \"make nds && test -s dslm.nds && echo nds ok\"",
       "expect": {

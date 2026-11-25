@@ -74,9 +74,9 @@
         "id": "pc-toolchain",
         "path": ".doctrina/specs/pc-toolchain/spec.md",
         "status": "active",
-        "version": "0.2.0",
+        "version": "0.3.0",
         "last_updated": "2026-11-24",
-        "implementation": "planned — current phase is documentation and planning only; no code yet",
+        "implementation": "partial — fetch, inspect, stage and fp32 golden outputs (`tools/dslm.py`); int8 quantization waits for the format in M5",
         "realizes": [
           "SC2",
           "SC5"
@@ -184,6 +184,20 @@
           }
         ],
         "lane": "product"
+      },
+      {
+        "id": "0003-m2-pc-toolchain",
+        "title": "M2 PC toolchain",
+        "path": ".doctrina/changes/archive/2026-11-25-0003-m2-pc-toolchain",
+        "status": "applied",
+        "applied": "2026-11-25",
+        "specs_affected": [
+          {
+            "capability": "pc-toolchain",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "product (confident; signals: build)"
       }
     ],
     "skills": [

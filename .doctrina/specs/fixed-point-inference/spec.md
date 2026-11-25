@@ -40,6 +40,7 @@ The performance build. It replaces software-emulated `float` with integer arithm
 1. [unverified] The time per token measured on a real R4 is recorded and compared with the fp32 baseline — verified by `tests/hw/benchmark-int8.md`.
 2. [unverified] No software-float symbol (`__aeabi_fmul`, `__aeabi_fadd`, ...) appears in the forward pass call map — verified by `tests/build/no-softfloat-in-forward.md`.
 3. [unverified] At temperature 0, the first generated tokens match the PC int8 golden output (`runq.c` running the same quantized checkpoint) — verified by `tests/parity/int8-stories260k.md`.
+4. [unverified] The int8 checkpoint the `pc-toolchain` quantizer generates is read by the reference `runq.c` — verified by `tools/tests/test_quantize.py`.
 
 ## Maturity
 

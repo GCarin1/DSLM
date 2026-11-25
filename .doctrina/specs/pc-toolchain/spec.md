@@ -2,10 +2,10 @@
 
 **Capability:** pc-toolchain
 **Status:** active
-**Implementation:** planned — current phase is documentation and planning only; no code yet
+**Implementation:** partial — fetch, inspect, stage and fp32 golden outputs (`tools/dslm.py`); int8 quantization waits for the format in M5
 **Realizes:** SC2, SC5
 **Last updated:** 2026-11-24
-**Version:** 0.2.0
+**Version:** 0.3.0
 
 ## Purpose
 
@@ -36,10 +36,9 @@ Python scripts that run on the PC and prepare everything that goes onto the R4's
 
 ## Acceptance criteria
 
-1. [unverified] Inspecting `stories260K.bin` shows the header and a memory budget below 4 MB — verified by `tools/tests/test_inspect.py`.
-2. [unverified] Golden outputs built twice from the same `llama2.c` commit are identical — verified by `tools/tests/test_golden.py`.
-3. [unverified] The generated int8 checkpoint is read by the reference `runq.c` — verified by `tools/tests/test_quantize.py`.
-4. [unverified] The staged directory boots in melonDS (DLDI sync folder) and, copied as-is, on a real R4 — verified by `tools/tests/test_stage.py`.
+1. [verified] Inspecting `stories260K.bin` shows the header and a memory budget below 4 MB — verified by `tools/tests/test_inspect.py`.
+2. [verified] Golden outputs built twice from the same `llama2.c` commit are identical — verified by `tools/tests/test_golden.py`.
+3. [unverified] The staged directory boots in melonDS (DLDI sync folder) and, copied as-is, on a real R4 — verified by `tools/tests/test_stage.py`.
 
 ## Maturity
 

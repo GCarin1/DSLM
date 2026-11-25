@@ -1,0 +1,7 @@
+# Golden-output prompts, one per line. Blank lines and # comments are skipped.
+# The empty prompt is written as <empty>.
+<empty>
+Once upon a time
+The little dog
+Lily wanted to
+Tom and his mom went to the park

@@ -33,6 +33,19 @@ skylyrac/blocksds@sha256:c5f19b95d9c2f312e6a68ea244d2ed5120203b4b82af9785937a349
 
 Install BlocksDS as described in its documentation, set `BLOCKSDS`, then run `make nds`. `make host-test` needs only a C99 compiler (`cc`).
 
+## PC toolchain (models, card, golden outputs)
+
+`tools/dslm.py` uses only the Python standard library. `fetch`, `inspect` and `stage` also run directly on the host; `golden` compiles C, so run it in Docker.
+
+```bash
+python tools/dslm.py fetch               # pinned stories260K + tok512 into .cache/models/
+python tools/dslm.py inspect             # header and DS memory budget
+python tools/dslm.py stage .tools/card   # /dslm tree for melonDS or the R4 microSD root
+docker compose -f docker/docker-compose.yml run --rm shell make tools-test golden
+```
+
+`stage` keeps an existing `dslm.ini` unless `--force` is given. `golden` refuses to overwrite `tests/golden/stories260K.json` unless `--force` (`make golden FORCE=1`). Pins (URLs, sizes, SHA-256, `llama2.c` commit) live in `tools/models.json`.
+
 ## Local emulator (melonDS, optional)
 
 Used for the manual runbooks in `tests/hw/`. It is installed portably under `.tools/` (git-ignored), so nothing touches the system:

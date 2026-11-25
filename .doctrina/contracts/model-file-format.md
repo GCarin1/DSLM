@@ -44,6 +44,7 @@ Not applicable: hardware tests are manual scripts under `tests/hw/`.
 /dslm/models/stories260K.bin
 /dslm/models/tok512.bin
 /dslm/bench.txt       written by the harness after each run
+/dslm/manifest.txt    written by pc-toolchain: "<card path> <size> <sha256>" per staged file
 ```
 
 The same tree, minus the kernel files, is the melonDS "Sync SD to folder" directory. `pc-toolchain` stages it.
