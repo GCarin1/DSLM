@@ -21,3 +21,4 @@ python tools/dslm.py parity E:/dslm/tokens.txt
 
 | Date | Cart / kernel | Build | tok/s | load_ms | heap_peak_bytes | File |
 |------|---------------|-------|-------|---------|-----------------|------|
+| 2026-11-25 | R4 clone / YSMenu | int8 (1.0.0) | 6.87 | 124 | 1,372,492 | `benchmarks/2026-11-25-r4-ysmenu-v1.0.0-int8.txt` (parity 197/197) |
