@@ -2,11 +2,11 @@
 
 **Capability:** inference-engine
 **Status:** active
-**Implementation:** implemented — fp32 engine (`src/engine/llama2.c`), parity on melonDS and on the reference R4 (`benchmarks/2026-11-25-r4-ysmenu.txt`)
+**Implementation:** verified — fp32 engine (`src/engine/llama2.c`), parity with run.c on melonDS and the reference R4
 **Realizes:** SC1, SC2
 **Depends on:** model-loading
 **Last updated:** 2026-11-24
-**Version:** 0.3.0
+**Version:** 0.3.1
 
 ## Purpose
 

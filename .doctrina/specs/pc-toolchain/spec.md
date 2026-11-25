@@ -2,10 +2,10 @@
 
 **Capability:** pc-toolchain
 **Status:** active
-**Implementation:** implemented — fetch, inspect, quantize (int8 v2), stage, fp32 and int8 golden outputs, parity and install package (`tools/dslm.py`)
+**Implementation:** verified — `tools/dslm.py` (fetch, inspect, quantize, stage, golden, parity, package, bench); packages verified on melonDS and the reference R4
 **Realizes:** SC2, SC5
 **Last updated:** 2026-11-25
-**Version:** 0.6.1
+**Version:** 0.7.0
 
 ## Purpose
 
@@ -31,6 +31,7 @@ Python scripts that run on the PC and prepare everything that goes onto the R4's
 - When asked to package, the toolchain shall write a zip with dslm.nds, the /dslm tree with the pinned model and tokenizer, a user README, a manifest and the third-party license notices, laid out to unzip at the microSD root.
 - When asked to build golden outputs for the int8 model, the toolchain shall run the pinned runq.c on the quantized checkpoint and save them separately from the fp32 golden outputs.
 - When asked for the exact int8 DS reference, the toolchain shall build the DS engine for the host and save its outputs as the int8 golden, keeping the runq.c outputs as a separate quality reference.
+- When a version tag is pushed, the release workflow shall run the tests, build dslm.nds and publish the install package, the standalone .nds and their SHA-256 sums with the release notes for that version.
 
 ### Unwanted-behavior (must-not)
 
@@ -45,9 +46,10 @@ Python scripts that run on the PC and prepare everything that goes onto the R4's
 
 1. [verified] Inspecting `stories260K.bin` shows the header and a memory budget below 4 MB — verified by `tools/tests/test_inspect.py`.
 2. [verified] Golden outputs built twice from the same `llama2.c` commit are identical — verified by `tools/tests/test_golden.py`.
-3. [unverified] The staged directory boots in melonDS (DLDI sync folder) and, copied as-is, on a real R4 — verified by `tools/tests/test_stage.py`.
+3. [verified] The staged directory boots in melonDS (DLDI sync folder) and, copied as-is, on a real R4 — verified by `tools/tests/test_stage.py`.
 4. [verified] The package has the card-root layout, the licenses and no kernel or DLDI files, and two builds are byte-identical — verified by `tools/tests/test_package.py`
 5. [verified] The unzipped package alone boots and generates on a fresh melonDS card folder — verified by `tests/hw/package-install.md`
+6. [verified] The release workflow's steps run end to end in the pinned BlocksDS image and produce the three assets — verified by `.github/workflows/release.yml`
 
 ## Maturity
 

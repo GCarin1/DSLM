@@ -19,3 +19,4 @@ Put more than one checkpoint in `/dslm/models/` (for example `stories260K_q80.bi
 |------|--------|-------|--------|----------|
 | 2026-11-25 | melonDS 1.1 | 1.0.0 + picker | steps 1-3: switched to `tiny1m_q80`, saved, 129/129 tokens vs the host build | yes |
 | 2026-11-25 | melonDS 1.1 | 1.0.0 + picker | step 4: `tiny1m_fp32` refused (needs 4,903,053 bytes, 3,992,896 free after unloading), previous model reloaded, ini unchanged, next story generated | yes |
+| 2026-11-25 | R4 clone / YSMenu (hardware) | 1.0.0 + picker | switched to `tiny1m_q80` on the DS, saved to dslm.ini; 4.44 tokens/s over 256 steps, heap peak 2,420,420 bytes; prompt `oi` 60/60 tokens vs the host build (`benchmarks/2026-11-25-r4-ysmenu-tiny1m-int8.txt`) | no |

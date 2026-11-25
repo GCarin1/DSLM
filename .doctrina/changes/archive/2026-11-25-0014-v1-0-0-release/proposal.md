@@ -1,6 +1,7 @@
 # Change 0014-v1-0-0-release — v1.0.0 release
 
-- **Status:** proposed
+- **Status:** applied
+- **Applied:** 2026-11-25
 - **Date:** 2026-11-25
 - **Owner:**
 - **Lane:** runtime (confident; signals: github actions, tag) — opened anyway (--force)
@@ -43,9 +44,11 @@ unchecked (pass --force to archive anyway and record the gap). Distinguish
 "task marked done" from "verification passed" — link the evidence.
 -->
 
-- [ ] Automated checks pass (`doctrina verify`, or the project's typecheck/test/build).
-- [ ] The affected spec's acceptance criteria are met and cite their evidence (`doctrina coverage`).
+- [x] Automated checks pass (`doctrina verify`, or the project's typecheck/test/build).
+- [x] The affected spec's acceptance criteria are met and cite their evidence (`doctrina coverage`).
 
 ## Open questions
 
 - Release from main after merging develop, or tag develop directly: owner's call.
+
+<!-- doctrina:applied-deltas specs/ds-interface/delta.md=c64c3f1a,e7c38c12 specs/inference-engine/delta.md=1eb4aa7a,e7c38c12 specs/model-loading/delta.md=99cb094e,e7c38c12 specs/pc-toolchain/delta.md=4fce703d,d90b5a5b,f7a50a7f,488bcecd,154d41d5 specs/test-harness/delta.md=f62f86a3,e7c38c12,4c02e17b -->

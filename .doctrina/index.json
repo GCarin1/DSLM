@@ -15,9 +15,9 @@
         "id": "ds-interface",
         "path": ".doctrina/specs/ds-interface/spec.md",
         "status": "active",
-        "version": "0.4.0",
+        "version": "0.4.1",
         "last_updated": "2026-11-25",
-        "implementation": "implemented — screens, keyboard, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, real R4 run is M4",
+        "implementation": "verified — screens, keyboard, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS and the reference R4",
         "realizes": [
           "SC4"
         ],
@@ -44,9 +44,9 @@
         "id": "inference-engine",
         "path": ".doctrina/specs/inference-engine/spec.md",
         "status": "active",
-        "version": "0.3.0",
+        "version": "0.3.1",
         "last_updated": "2026-11-24",
-        "implementation": "implemented — fp32 engine (`src/engine/llama2.c`), parity on melonDS and on the reference R4 (`benchmarks/2026-11-25-r4-ysmenu.txt`)",
+        "implementation": "verified — fp32 engine (`src/engine/llama2.c`), parity with run.c on melonDS and the reference R4",
         "realizes": [
           "SC1",
           "SC2"
@@ -59,9 +59,9 @@
         "id": "model-loading",
         "path": ".doctrina/specs/model-loading/spec.md",
         "status": "active",
-        "version": "0.6.0",
+        "version": "0.6.1",
         "last_updated": "2026-11-25",
-        "implementation": "implemented — header check, RAM budget, chunked reads and error paths (`src/main.c`, `src/storage/`); loads on melonDS and on the reference R4 in 249 ms",
+        "implementation": "verified — header check, RAM budget, chunked reads, error paths (`src/main.c`, `src/storage/`); melonDS and the reference R4",
         "realizes": [
           "SC1",
           "SC5"
@@ -74,9 +74,9 @@
         "id": "pc-toolchain",
         "path": ".doctrina/specs/pc-toolchain/spec.md",
         "status": "active",
-        "version": "0.6.1",
+        "version": "0.7.0",
         "last_updated": "2026-11-25",
-        "implementation": "implemented — fetch, inspect, quantize (int8 v2), stage, fp32 and int8 golden outputs, parity and install package (`tools/dslm.py`)",
+        "implementation": "verified — `tools/dslm.py` (fetch, inspect, quantize, stage, golden, parity, package, bench); packages verified on melonDS and the reference R4",
         "realizes": [
           "SC2",
           "SC5"
@@ -86,9 +86,9 @@
         "id": "test-harness",
         "path": ".doctrina/specs/test-harness/spec.md",
         "status": "active",
-        "version": "0.2.0",
+        "version": "0.2.1",
         "last_updated": "2026-11-24",
-        "implementation": "implemented — bench.txt with heap peak (`src/main.c`), import into benchmarks/ (`tools/dslm.py bench`), unattended melonDS parity (`tests/parity/run_melonds.py`), golden and parity tools; the v1.0 hardware bench run is pending",
+        "implementation": "verified — bench.txt with heap peak, bench import, unattended melonDS parity; hardware bench of 1.0.0 imported (`benchmarks/2026-11-25-r4-ysmenu-v1.0.0-int8.txt`)",
         "realizes": [
           "SC1",
           "SC2",
@@ -185,16 +185,7 @@
         "summary": "Reference cart."
       }
     ],
-    "changes": [
-      {
-        "id": "0014-v1-0-0-release",
-        "title": "v1.0.0 release",
-        "path": ".doctrina/changes/0014-v1-0-0-release",
-        "status": "proposed",
-        "opened": "2026-11-25",
-        "lane": "runtime (confident; signals: github actions, tag) — opened anyway (--force)"
-      }
-    ],
+    "changes": [],
     "changes_archive": [
       {
         "id": "0001-r4-research-and-delivery-roadmap",
@@ -409,6 +400,36 @@
           }
         ],
         "lane": "product (uncertain)"
+      },
+      {
+        "id": "0014-v1-0-0-release",
+        "title": "v1.0.0 release",
+        "path": ".doctrina/changes/archive/2026-11-25-0014-v1-0-0-release",
+        "status": "applied",
+        "applied": "2026-11-25",
+        "specs_affected": [
+          {
+            "capability": "ds-interface",
+            "operation": "MODIFIED"
+          },
+          {
+            "capability": "inference-engine",
+            "operation": "MODIFIED"
+          },
+          {
+            "capability": "model-loading",
+            "operation": "MODIFIED"
+          },
+          {
+            "capability": "pc-toolchain",
+            "operation": "MODIFIED"
+          },
+          {
+            "capability": "test-harness",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "runtime (confident; signals: github actions, tag) — opened anyway (--force)"
       },
       {
         "id": "0015-model-picker",

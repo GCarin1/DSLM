@@ -2,11 +2,11 @@
 
 **Capability:** test-harness
 **Status:** active
-**Implementation:** implemented — bench.txt with heap peak (`src/main.c`), import into benchmarks/ (`tools/dslm.py bench`), unattended melonDS parity (`tests/parity/run_melonds.py`), golden and parity tools; the v1.0 hardware bench run is pending
+**Implementation:** verified — bench.txt with heap peak, bench import, unattended melonDS parity; hardware bench of 1.0.0 imported (`benchmarks/2026-11-25-r4-ysmenu-v1.0.0-int8.txt`)
 **Realizes:** SC1, SC2, SC3, SC6
 **Depends on:** pc-toolchain, inference-engine
 **Last updated:** 2026-11-24
-**Version:** 0.2.0
+**Version:** 0.2.1
 
 ## Purpose
 
@@ -39,7 +39,7 @@ How DSLM is tested and measured, emulator first and real hardware second. melonD
 
 ## Acceptance criteria
 
-1. [unverified] A real R4 run produces a `benchmarks/` file with load time, tokens per second and peak heap — verified by `tests/hw/runbook.md`.
+1. [verified] A real R4 run produces a `benchmarks/` file with load time, tokens per second and peak heap — verified by `tests/hw/runbook.md`.
 2. [verified] An unattended melonDS run of the fp32 and of the int8 build reports zero divergence against their golden outputs — verified by `tests/parity/run_melonds.py`
 3. [verified] bench.txt blocks are parsed and imported with the header, and emulator runs are refused — verified by `tools/tests/test_bench.py`
 

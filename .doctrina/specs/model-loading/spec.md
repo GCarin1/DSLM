@@ -2,11 +2,11 @@
 
 **Capability:** model-loading
 **Status:** active
-**Implementation:** implemented — header check, RAM budget, chunked reads and error paths (`src/main.c`, `src/storage/`); loads on melonDS and on the reference R4 in 249 ms
+**Implementation:** verified — header check, RAM budget, chunked reads, error paths (`src/main.c`, `src/storage/`); melonDS and the reference R4
 **Realizes:** SC1, SC5
 **Depends on:** pc-toolchain
 **Last updated:** 2026-11-25
-**Version:** 0.6.0
+**Version:** 0.6.1
 
 ## Purpose
 

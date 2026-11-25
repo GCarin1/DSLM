@@ -2,11 +2,11 @@
 
 **Capability:** ds-interface
 **Status:** active
-**Implementation:** implemented — screens, keyboard, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, real R4 run is M4
+**Implementation:** verified — screens, keyboard, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS and the reference R4
 **Realizes:** SC4
 **Depends on:** inference-engine
 **Last updated:** 2026-11-25
-**Version:** 0.4.0
+**Version:** 0.4.1
 
 ## Purpose
 
