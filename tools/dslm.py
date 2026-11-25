@@ -327,6 +327,17 @@ def ensure_littlekedi():
     return model, tok
 
 
+def ensure_littlekedi_q():
+    """The int8 MLQ1 copy of LittleKedi (built from the fp32 MLA1 file)."""
+    model, tok = ensure_littlekedi()
+    q = CACHE / "models" / "littlekedi_q.bin"
+    if not q.exists() or q.stat().st_mtime < model.stat().st_mtime:
+        sys.path.insert(0, str(TOOLS / "m8"))
+        import convert_littlekedi
+        convert_littlekedi.quantize_mla(model, q)
+    return q, tok
+
+
 # ---- stage ---------------------------------------------------------------
 
 def stage(target, checkpoint, tokenizer, force=False, extra=()):
@@ -374,8 +385,8 @@ def build_golden_binary(cc="cc", quantized=False):
     return exe
 
 
-def run_golden(exe, checkpoint, tokenizer, prompt, steps):
-    out = subprocess.run([str(exe), str(checkpoint), str(tokenizer), str(steps), prompt],
+def run_golden(exe, checkpoint, tokenizer, prompt, steps, extra=()):
+    out = subprocess.run([str(exe), str(checkpoint), str(tokenizer), str(steps), prompt, *map(str, extra)],
                          check=True, capture_output=True, text=True).stdout
     rec = {}
     for line in out.splitlines():
@@ -390,7 +401,19 @@ def run_golden(exe, checkpoint, tokenizer, prompt, steps):
     }
 
 
-ENGINE_SOURCES = ["src/engine/llama2.c", "src/engine/llama2_fixed.arm.c", "src/engine/fxmath.arm.c"]
+ENGINE_SOURCES = ["src/engine/llama2.c", "src/engine/llama2_fixed.arm.c", "src/engine/fxkern.arm.c",
+                  "src/engine/fxmath.arm.c"]
+MLQ_SOURCES = ENGINE_SOURCES + ["src/engine/mlq_fixed.arm.c", "src/engine/mla.c", "src/engine/bpe.c"]
+
+# sampling settings of the LittleKedi golden runs: temperature, top-p, repeat penalty, seed
+MLQ_SAMPLED = (0.7, 0.9, 1.15, 42)
+
+
+def build_host(main, out, sources):
+    """Compile a host driver against the engine sources (needs cc; run under make tools-test)."""
+    subprocess.run(["cc", "-O2", "-std=c99", "-Wall", "-Wextra", "-Werror", "-ffp-contract=off",
+                    f"-I{ROOT / 'src' / 'engine'}", "-o", str(out), str(ROOT / main),
+                    *[str(ROOT / s) for s in sources], "-lm"], check=True)
 
 # kind -> (golden file suffix, checkpoint, reference that produces it)
 GOLDEN_KINDS = {

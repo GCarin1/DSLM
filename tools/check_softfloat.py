@@ -13,7 +13,7 @@ import sys
 
 ELF = sys.argv[1] if len(sys.argv) > 1 else "build/dslm.elf"
 OBJDUMP = os.environ.get("OBJDUMP", "/opt/wonderful/toolchain/gcc-arm-none-eabi/bin/arm-none-eabi-objdump")
-ROOTS = tuple(os.environ.get("CHECK_ROOTS", "fx_forward,fx_sample,matmul_fx").split(","))
+ROOTS = tuple(os.environ.get("CHECK_ROOTS", "fx_forward,fx_sample,fxk_matmul").split(","))
 SOFTFLOAT = re.compile(r"^(__aeabi_[fd]\w*|__aeabi_[iu]2[fd]|__aeabi_l2[fd]|__aeabi_ul2[fd]|__\w*[sd]f\d?\w*)$")
 INTEGER_OK = {"__aeabi_ldivmod", "__aeabi_uldivmod", "__aeabi_idiv", "__aeabi_uidiv", "__aeabi_idivmod",
               "__aeabi_uidivmod", "__aeabi_lmul", "__aeabi_llsl", "__aeabi_llsr", "__aeabi_lasr"}
@@ -82,12 +82,12 @@ def main():
     print("no soft-float in the fixed-point forward pass")
 
     # fixed-point-inference: the matmul inner loop runs from ITCM (mirrored at 0x01000000, 32 KB)
-    if "matmul_fx" in ROOTS:
-        addr = next((a for a, n in symbols(ELF).items() if n.split(".")[0] == "matmul_fx"), None)
+    if "fxk_matmul" in ROOTS:
+        addr = next((a for a, n in symbols(ELF).items() if n.split(".")[0] == "fxk_matmul"), None)
         if addr is None or not 0x01000000 <= addr < 0x01008000:
-            print(f"matmul_fx is not in ITCM (address {addr and hex(addr)})")
+            print(f"fxk_matmul is not in ITCM (address {addr and hex(addr)})")
             return 1
-        print(f"matmul_fx in ITCM at {addr:#010x}")
+        print(f"matmul_fx in ITCM at {addr:#010x} (fxk_matmul)")
     return 0
 
 

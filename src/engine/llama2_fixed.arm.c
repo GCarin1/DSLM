@@ -15,45 +15,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "fxkern.h"
 #include "fxmath.h"
 #include "fxtables.h"
 
-#if defined(__NDS__)
-#include <nds/ndstypes.h>
-#define FX_ITCM ITCM_CODE /* matmul inner loop runs from ITCM */
-#else
-#define FX_ITCM
-#endif
 
-#define FX_EPS_Q32 42950 /* 1e-5, run.c's rmsnorm epsilon */
 
-unsigned int llama2_rand_u32(unsigned long long *state);
 
 /* ---- load time (float allowed) ----------------------------------------- */
 
-/* Round half away from zero; v * 2^bits is exact in double. */
-static int32_t to_fixed(float v, int bits)
-{
-    double d = (double)v * (double)(1LL << bits);
-    d = d >= 0 ? d + 0.5 : d - 0.5;
-    if (d > 2147483647.0)
-        d = 2147483647.0;
-    if (d < -2147483648.0)
-        d = -2147483648.0;
-    return (int32_t)d;
-}
-
-/* Rewrite n floats as fixed point in the same memory. */
-static void floats_to_fixed(void *p, size_t n, int bits)
-{
-    unsigned char *b = p;
-    for (size_t i = 0; i < n; i++) {
-        float v;
-        memcpy(&v, b + 4 * i, 4);
-        int32_t r = to_fixed(v, bits);
-        memcpy(b + 4 * i, &r, 4);
-    }
-}
+#define to_fixed fxk_to_fixed
+#define floats_to_fixed fxk_floats_to_fixed
 
 static void scales_to_q30(llama2_qtensor *t, int n, size_t size_each, int gs)
 {
@@ -113,76 +85,17 @@ void fx_begin(llama2 *m)
 
 static void rmsnorm_fx(int32_t *o, const int32_t *x, const int32_t *weight, int size)
 {
-    int64_t ss = 0;
-    for (int j = 0; j < size; j++)
-        ss += (int64_t)x[j] * x[j]; /* Q32 */
-    ss /= size;
-    ss += FX_EPS_Q32;
-    uint32_t r = fx_isqrt64((uint64_t)ss); /* sqrt, Q16 */
-    if (r == 0)
-        r = 1;
-    int64_t inv = ((int64_t)1 << 32) / r; /* 1 / sqrt, Q16 */
-    for (int j = 0; j < size; j++)
-        o[j] = (int32_t)(((int64_t)weight[j] * ((inv * x[j]) >> 16)) >> 16);
+    fxk_rmsnorm(o, x, weight, size, FXK_EPS_1E5_Q32);
 }
 
-/* runq.c quantize(): q = round(127 * x / max|x|) per group; scale = max / 127 in Q24. */
-static void quantize_fx(int8_t *q, int32_t *xs, const int32_t *x, int n, int gs)
+static void matmul_fx(int32_t *xout, const int8_t *xq, const int32_t *xs, const llama2_qtensor *w, int n, int d,
+                      int gs)
 {
-    for (int g = 0; g < n / gs; g++) {
-        const int32_t *xg = x + g * gs;
-        uint32_t mx = 0;
-        for (int i = 0; i < gs; i++) {
-            uint32_t a = xg[i] < 0 ? (uint32_t)(-(int64_t)xg[i]) : (uint32_t)xg[i];
-            if (a > mx)
-                mx = a;
-        }
-        xs[g] = (int32_t)(((int64_t)mx << 8) / 127);
-        if (mx == 0) {
-            memset(q + g * gs, 0, (size_t)gs);
-            continue;
-        }
-        int64_t rcp = ((int64_t)127 << 32) / mx;
-        for (int i = 0; i < gs; i++)
-            q[g * gs + i] = (int8_t)(((int64_t)xg[i] * rcp + ((int64_t)1 << 31)) >> 32);
-    }
+    fxk_matmul(xout, xq, xs, w->q, (const int32_t *)w->s, n, d, gs);
 }
 
-/* runq.c matmul(): int8 dot products per group, scaled by w (Q30) and x (Q24). */
-FX_ITCM static void matmul_fx(int32_t *xout, const int8_t *xq, const int32_t *xs,
-                              const llama2_qtensor *w, int n, int d, int gs)
-{
-    const int32_t *ws = (const int32_t *)w->s;
-    for (int i = 0; i < d; i++) {
-        const int8_t *wr = w->q + i * n;
-        const int32_t *wsr = ws + (i * n) / gs;
-        int64_t val = 0;
-        for (int j = 0, g = 0; j <= n - gs; j += gs, g++) {
-            int32_t acc = 0;
-            for (int k = 0; k < gs; k++)
-                acc += xq[j + k] * wr[j + k];
-            int64_t t = ((int64_t)acc * wsr[g]) >> 14; /* Q16 */
-            val += t * xs[g];                          /* Q40 */
-        }
-        xout[i] = (int32_t)(val >> 24);
-    }
-}
-
-static void softmax_fx(int32_t *x, int size)
-{
-    int32_t max_val = x[0];
-    for (int i = 1; i < size; i++)
-        if (x[i] > max_val)
-            max_val = x[i];
-    int64_t sum = 0;
-    for (int i = 0; i < size; i++) {
-        x[i] = fx_exp_neg(x[i] - max_val);
-        sum += x[i];
-    }
-    int64_t rcp = ((int64_t)1 << 32) / sum; /* sum >= 1.0 because the max contributes 1 */
-    for (int i = 0; i < size; i++)
-        x[i] = (int32_t)((x[i] * rcp) >> 16);
-}
+#define quantize_fx fxk_quantize
+#define softmax_fx fxk_softmax
 
 int32_t *fx_forward(llama2 *m, int token, int pos)
 {
@@ -271,16 +184,7 @@ int32_t *fx_forward(llama2 *m, int token, int pos)
         matmul_fx(hb, xq, xs, w->w1 + l, dim, hidden_dim, gs);
         matmul_fx(hb2, xq, xs, w->w3 + l, dim, hidden_dim, gs);
 
-        /* SwiGLU: silu(x) = x * sigmoid(x), with exp only of non-positive values */
-        for (int i = 0; i < hidden_dim; i++) {
-            int32_t val = hb[i];
-            int32_t ax = val < 0 ? -val : val;
-            int64_t e = fx_exp_neg(-ax);
-            int64_t den = FX_ONE + e;
-            int64_t sig = val >= 0 ? ((int64_t)FX_ONE << 16) / den : (e << 16) / den;
-            int64_t out = ((int64_t)val * sig) >> 16;
-            hb[i] = (int32_t)((out * hb2[i]) >> 16);
-        }
+        fxk_silu_mul(hb, hb2, hidden_dim); /* SwiGLU */
 
         quantize_fx(hq, hs, hb, hidden_dim, gs);
         matmul_fx(xb, hq, hs, w->w2 + l, hidden_dim, dim, gs);
@@ -297,76 +201,8 @@ int32_t *fx_forward(llama2 *m, int token, int pos)
 
 /* ---- sampler: integers only -------------------------------------------- */
 
-typedef struct {
-    int32_t prob; /* unnormalised, Q16 */
-    int index;
-} fx_prob;
-
-/* Descending probability; ties by index so every qsort gives the same order. */
-static int compare_fx(const void *a, const void *b)
-{
-    const fx_prob *x = a, *y = b;
-    if (x->prob != y->prob)
-        return x->prob > y->prob ? -1 : 1;
-    return x->index - y->index;
-}
-
 int fx_sample(llama2 *m, int32_t *logits)
 {
-    int n = m->config.vocab_size;
-    int max_i = 0;
-    for (int i = 1; i < n; i++)
-        if (logits[i] > logits[max_i])
-            max_i = i;
-    if (m->fx_inv_temp == 0)
-        return max_i;
-
-    /* softmax(logits / temperature), unnormalised: p_i = exp((l_i - max) / T) */
-    int32_t max_val = logits[max_i];
-    int64_t sum = 0;
-    for (int i = 0; i < n; i++) {
-        int64_t z = ((int64_t)(logits[i] - max_val) * m->fx_inv_temp) >> 16;
-        logits[i] = fx_exp_neg(z < -(1 << 30) ? -(1 << 30) : (int32_t)z);
-        sum += logits[i];
-    }
-    int64_t coin = llama2_rand_u32(&m->rng_state) >> 8; /* [0, 2^24), like random_f32() */
-    int32_t topp = m->fx_topp;
-
-    if (topp <= 0 || topp >= FX_ONE) {
-        int64_t target = (coin * sum) >> 24, cdf = 0;
-        for (int i = 0; i < n; i++) {
-            cdf += logits[i];
-            if (target < cdf)
-                return i;
-        }
-        return n - 1;
-    }
-
-    /* top-p: keep p_i / sum >= (1 - topp) / (n - 1), sort, cut where the sum passes topp */
-    fx_prob *cand = (fx_prob *)m->probindex;
-    int n0 = 0;
-    for (int i = 0; i < n; i++) {
-        if ((int64_t)logits[i] * (n - 1) * FX_ONE >= (int64_t)(FX_ONE - topp) * sum) {
-            cand[n0].prob = logits[i];
-            cand[n0].index = i;
-            n0++;
-        }
-    }
-    qsort(cand, n0, sizeof(fx_prob), compare_fx);
-    int64_t cum = 0;
-    int last = n0 - 1;
-    for (int i = 0; i < n0; i++) {
-        cum += cand[i].prob;
-        if (cum * FX_ONE > (int64_t)topp * sum) {
-            last = i;
-            break;
-        }
-    }
-    int64_t target = (coin * cum) >> 24, cdf = 0;
-    for (int i = 0; i <= last; i++) {
-        cdf += cand[i].prob;
-        if (target < cdf)
-            return cand[i].index;
-    }
-    return cand[last].index;
+    return fxk_sample(logits, m->config.vocab_size, m->fx_inv_temp, m->fx_topp, &m->rng_state,
+                      (fxk_prob *)m->probindex);
 }

@@ -23,9 +23,16 @@ The cache keeps only the latent and the RoPE key: 48 values per token per layer,
 
 Chain of evidence: llama.cpp ≡ numpy oracle ≡ C engine.
 
+## Step 2: fixed-point engine (done)
+
+- `tools/m8/convert_littlekedi.py --quantize` writes `littlekedi_q.bin` (MLQ1, 2.25 MB): every matrix int8 with one fp32 scale per group of 32, the tied embedding included; vectors and the expert router stay fp32 and become Q16 at load.
+- `src/engine/mlq_fixed.arm.c` is the integer forward pass. It shares its kernels (`src/engine/fxkern.arm.c`: RMSNorm, activation quantization, the ITCM matmul, softmax, sigmoid, sampler) with the llama2 int8 engine, whose goldens stay bit-exact.
+- The sampler applies llama.cpp's repeat penalty (positive logits divided, negative multiplied, each recent token once) before temperature and top-p; without it the model loops ("a cat's cat's cat's…").
+- **Fidelity** (ADR 0010): reading the fp32 golden sequences, the int8 engine picks the same token as the fp32 engine at 96.2% of positions, with 2.4% mean logit error. Exact sequences can still split early: a mixture-of-experts router can face two experts 0.001 apart, and any 8-bit rounding flips the choice. llama.cpp's Q8_0 file splits on the same prompts and gives the same answers as this engine.
+- Runtime memory beyond the model: about 115 KB plus 768 bytes per context token (the latent and RoPE-key cache of 4 layers), 904 KB at the full 1024 tokens.
+
 ## Next steps
 
-1. **Fixed point for the DS**: int8 weights with group-wise scales like the existing engine; the embedding table stays int8 (expanded to Q16 it would take 4.2 MB); integer exp and sigmoid for attention and the router.
-2. **Sampler**: temperature, top-p and the repeat penalty (without it the model loops).
-3. **Chat mode in the interface**: wrap the typed text as `<|user|>…<|end|><|assistant|>`, stop at `<|end|>`, keep the conversation on screen.
-4. **Hardware**: expected around 2 to 3 tokens/s and about 3 MB of RAM, to be measured.
+1. **Chat mode in the interface**: wrap the typed text as `<|user|>…<|end|><|assistant|>`, stop at `<|end|>`, keep the conversation on screen.
+2. **Loader and picker**: detect MLQ1 files next to their tokenizer, cap the context to fit RAM, show the model in Settings; package with its Apache-2.0 notice.
+3. **Hardware**: expected around 2 to 3 tokens/s and about 3 MB of RAM, to be measured.

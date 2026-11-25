@@ -29,7 +29,7 @@
         "id": "fixed-point-inference",
         "path": ".doctrina/specs/fixed-point-inference/spec.md",
         "status": "active",
-        "version": "0.4.0",
+        "version": "0.5.0",
         "last_updated": "2026-11-24",
         "implementation": "verified — integer-only int8 engine (`src/engine/llama2_fixed.arm.c`, ADR 0008); 6.55 tokens/s on the reference R4 with 257/257 parity (`benchmarks/2026-11-25-r4-ysmenu-int8.txt`)",
         "realizes": [
@@ -183,6 +183,15 @@
         "supersedes": "0005",
         "landed": "2026-11-25 — `benchmarks/2026-11-25-r4-ysmenu.txt`, `tests/hw/offline-run.md`",
         "summary": "Reference cart."
+      },
+      {
+        "id": "0010",
+        "path": ".doctrina/decisions/0010-littlekedi-int8-full-precision-router-drift-measured-teacher-forced-against-the-fp32-engine.md",
+        "title": "LittleKedi int8: full-precision router, drift measured teacher-forced against the fp32 engine",
+        "status": "accepted",
+        "date": "2026-11-25",
+        "summary": "The MLQ1 file keeps the expert router (`gate_w`, 8×128) in fp32.",
+        "landed": "2026-11-25 — `src/engine/mlq_fixed.arm.c`, `tools/tests/test_mlq_host.py`"
       }
     ],
     "changes": [],
@@ -480,6 +489,20 @@
           }
         ],
         "lane": "product (uncertain)"
+      },
+      {
+        "id": "0018-m8-fixed-point-mla-engine",
+        "title": "M8 fixed-point MLA engine",
+        "path": ".doctrina/changes/archive/2026-11-25-0018-m8-fixed-point-mla-engine",
+        "status": "applied",
+        "applied": "2026-11-25",
+        "specs_affected": [
+          {
+            "capability": "fixed-point-inference",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "capability"
       }
     ],
     "skills": [

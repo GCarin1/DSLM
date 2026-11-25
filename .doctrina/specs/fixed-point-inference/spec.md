@@ -6,7 +6,7 @@
 **Realizes:** SC3
 **Depends on:** inference-engine, model-loading
 **Last updated:** 2026-11-24
-**Version:** 0.4.0
+**Version:** 0.5.0
 
 ## Purpose
 
@@ -19,6 +19,8 @@ The performance build. It replaces software-emulated `float` with integer arithm
 - The fixed-point build shall run the forward pass with integer arithmetic only, using int8 weights with per-group scales and fixed-point activations.
 - The fixed-point build shall load the quantized checkpoint format produced by `pc-toolchain`, as defined in `contracts/model-file-format`.
 - The fixed-point build shall produce bit-identical results on the DS and in its host build, using no libm and no float after the model is loaded.
+- The fixed-point build shall also run LittleKedi from the int8 MLQ1 file (group-wise int8 matrices and embedding, fp32 expert router converted to Q16 at load) with integer arithmetic only, sharing the integer kernels of the llama2 engine (ADR 0010).
+- The LittleKedi sampler shall apply a llama.cpp-style repeat penalty over the recent tokens before temperature and top-p, in integer arithmetic.
 
 ### Event-driven
 
@@ -49,6 +51,7 @@ The performance build. It replaces software-emulated `float` with integer arithm
 7. [verified] The integer exp, sin/cos and square root stay within 3e-5 of libm over their working ranges — verified by `tests/host/test_fxmath.c`
 8. [verified] Both packaged int8 models (stories260K, tiny1m) match their host-build golden exactly and stay within their drift bound against runq.c — verified by `tools/tests/test_engine_host.py`
 9. [verified] tiny1m runs on the reference R4 with token parity against the host build — verified by `tests/hw/model-picker.md`
+10. [verified] The fixed-point LittleKedi engine matches its host-build golden greedy and sampled, agrees with the fp32 engine's argmax on at least 93% of teacher-forced positions with mean relative logit error at most 0.04, and its repeat penalty breaks the greedy loop — verified by `tools/tests/test_mlq_host.py`
 
 ## Maturity
 

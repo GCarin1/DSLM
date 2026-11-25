@@ -147,7 +147,76 @@ def convert_tokenizer(hf, out):
     return n_vocab, len(merges), len(special)
 
 
+def mla_tensors(c):
+    """(name, rows, cols) of every tensor in file order; cols == 0 marks a vector."""
+    dim, nh, nope, rope, vd, kv = c["dim"], c["nh"], c["nope"], c["rope"], c["vd"], c["kv"]
+    out = []
+    for l in range(c["layers"]):
+        out += [("attn_norm", dim, 0), ("wq", nh * (nope + rope), dim), ("wkv_a", kv + rope, dim),
+                ("kv_norm", kv, 0), ("wkv_b", nh * (nope + vd), kv), ("wo", dim, nh * vd), ("ffn_norm", dim, 0)]
+        if l < c["dense"]:
+            hd = c["dense_hidden"]
+            out += [("w1", hd, dim), ("w2", dim, hd), ("w3", hd, dim)]
+        else:
+            ne, mh = c["experts"], c["moe_hidden"]
+            out += [("gate_w", ne, dim), ("gate_b", ne, 0)]
+            for _ in range(ne):
+                out += [("e_gate", mh, dim), ("e_up", mh, dim), ("e_down", dim, mh)]
+            out += [("s_w1", mh, dim), ("s_w2", dim, mh), ("s_w3", mh, dim)]
+    out += [("norm", dim, 0), ("embed", c["vocab"], dim)]
+    return out
+
+
+FP32_MATRICES = ("gate_w",)
+
+
+def read_mla_header(raw):
+    if raw[:4] not in (b"MLA1", b"MLQ1"):
+        raise SystemExit("error: not an MLA1/MLQ1 file")
+    v = struct.unpack("<15i", raw[4:64])
+    keys = ["version", "dim", "layers", "dense", "nh", "nope", "rope", "vd", "kv", "dense_hidden", "experts",
+            "active", "moe_hidden", "vocab", "max_seq"]
+    return dict(zip(keys, v))
+
+
+def quantize_mla(src, dst, group_size=None):
+    """MLA1 (fp32) -> MLQ1: vectors and the expert router stay fp32, other matrices become int8 + one
+    fp32 scale per group (the router decides top-k between near-equal scores, so it keeps full precision).
+
+    The group size is written at header offset 76; it must divide every matrix's input size."""
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+    import dslm
+    raw = pathlib.Path(src).read_bytes()
+    c = read_mla_header(raw)
+    tensors = mla_tensors(c)
+    inner = sorted({cols for _, _, cols in tensors if cols})
+    gs = group_size or 64
+    while gs > 1 and any(n % gs for n in inner):
+        gs //= 2
+    if any(n % gs for n in inner):
+        raise SystemExit(f"error: group size {gs} does not divide {inner}")
+    header = bytearray(raw[:128])
+    header[:4] = b"MLQ1"
+    header[76:80] = struct.pack("<i", gs)
+    out = bytearray(header)
+    pos = 128
+    for name, rows, cols in tensors:
+        n = rows * (cols or 1)
+        vals = array("f")
+        vals.frombytes(raw[pos:pos + 4 * n])
+        pos += 4 * n
+        out += vals.tobytes() if cols == 0 or name in FP32_MATRICES else dslm._quantize_tensor(vals, gs)
+    if pos != len(raw):
+        raise SystemExit(f"error: {src} has {len(raw) - pos} unexpected trailing bytes")
+    pathlib.Path(dst).write_bytes(bytes(out))
+    return gs, len(out)
+
+
 def main():
+    if len(sys.argv) == 4 and sys.argv[1] == "--quantize":
+        gs, size = quantize_mla(sys.argv[2], sys.argv[3])
+        print(f"wrote {sys.argv[3]} ({size} bytes, group size {gs})")
+        return
     hf, out = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
     out.mkdir(parents=True, exist_ok=True)
     size = convert_model(hf, out)
