@@ -1,6 +1,6 @@
 # Manual test: offline-run
 
-**Status:** not runnable yet — needs the reference R4 (M4). Proves `inference-engine` criterion 2.
+**Status:** run on the reference R4 (M4). Proves `inference-engine` criterion 2.
 
 ## Steps and expected result
 
@@ -12,3 +12,4 @@
 
 | Date | Cart / kernel | Result | Parity |
 |------|---------------|--------|--------|
+| 2026-11-25 | R4 clone / YSMenu | typed prompt `hi`, text streamed, stopped with B after 153 tokens, no network | 153/153 identical to `run.c` (`benchmarks/2026-11-25-r4-ysmenu.txt`) |

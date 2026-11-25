@@ -9,3 +9,4 @@ One line per archived change, newest last. Appended by
 - 2026-11-25 — 0004-m3-fp32-skeleton — M3 fp32 skeleton (specs: inference-engine MODIFIED, model-loading MODIFIED)
 - 2026-11-25 — 0005-m6-interface — M6 interface (specs: ds-interface MODIFIED)
 - 2026-11-25 — 0006-install-package — Install package (specs: pc-toolchain MODIFIED)
+- 2026-11-25 — 0008-m4-hardware-results — M4 hardware results (specs: inference-engine MODIFIED, model-loading MODIFIED)

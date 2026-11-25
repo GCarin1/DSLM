@@ -44,9 +44,9 @@
         "id": "inference-engine",
         "path": ".doctrina/specs/inference-engine/spec.md",
         "status": "active",
-        "version": "0.2.0",
+        "version": "0.2.1",
         "last_updated": "2026-11-24",
-        "implementation": "partial — fp32 forward pass, tokenizer and sampler (`src/engine/llama2.c`), parity on melonDS; real-R4 run and benchmark are M4",
+        "implementation": "implemented — fp32 engine (`src/engine/llama2.c`), parity on melonDS and on the reference R4 (`benchmarks/2026-11-25-r4-ysmenu.txt`)",
         "realizes": [
           "SC1",
           "SC2"
@@ -59,9 +59,9 @@
         "id": "model-loading",
         "path": ".doctrina/specs/model-loading/spec.md",
         "status": "active",
-        "version": "0.4.0",
+        "version": "0.4.1",
         "last_updated": "2026-11-25",
-        "implementation": "partial — header check, RAM budget, 32 KB chunked reads with progress and error paths (`src/main.c`, `src/storage/`); real-R4 load and load time are M4",
+        "implementation": "implemented — header check, RAM budget, chunked reads and error paths (`src/main.c`, `src/storage/`); loads on melonDS and on the reference R4 in 249 ms",
         "realizes": [
           "SC1",
           "SC5"
@@ -252,6 +252,24 @@
           }
         ],
         "lane": "chore (confident; signals: readme)"
+      },
+      {
+        "id": "0008-m4-hardware-results",
+        "title": "M4 hardware results",
+        "path": ".doctrina/changes/archive/2026-11-25-0008-m4-hardware-results",
+        "status": "applied",
+        "applied": "2026-11-25",
+        "specs_affected": [
+          {
+            "capability": "inference-engine",
+            "operation": "MODIFIED"
+          },
+          {
+            "capability": "model-loading",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "product (confident; signals: record)"
       }
     ],
     "skills": [

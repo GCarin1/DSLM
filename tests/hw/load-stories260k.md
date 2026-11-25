@@ -1,6 +1,6 @@
 # Manual test: load-stories260k
 
-**Status:** melonDS half runnable since M3; the real R4 half is M4. Proves `model-loading` criterion 1.
+**Status:** run on melonDS (M3) and on the reference R4 (M4). Proves `model-loading` criterion 1.
 
 ## Setup
 
@@ -17,3 +17,4 @@
 | Date | Target | Build | Result | emulated |
 |------|--------|-------|--------|----------|
 | 2026-11-25 | melonDS 1.1 | M3 | both files found, progress shown, loaded in 321 ms (emulated) | yes |
+| 2026-11-25 | R4 clone / YSMenu | M6 package | both files found and loaded in 249 ms; generation followed (`benchmarks/2026-11-25-r4-ysmenu.txt`) | no |

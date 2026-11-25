@@ -1,6 +1,6 @@
 # Manual test: benchmark-fp32
 
-**Status:** not runnable yet — needs the reference R4 and `/dslm/bench.txt` (M4). Proves `inference-engine` criterion 3.
+**Status:** run on the reference R4 (M4). Proves `inference-engine` criterion 3.
 
 ## Steps and expected result
 
@@ -13,3 +13,4 @@ This is the baseline the fixed-point build is compared against. melonDS numbers 
 
 | Date | Cart / kernel | Steps | gen_ms | ms per position |
 |------|---------------|-------|--------|-----------------|
+| 2026-11-25 | R4 clone / YSMenu | 256 (stopped at 152 positions) | 95380 | 627.5 (`benchmarks/2026-11-25-r4-ysmenu.txt`) |

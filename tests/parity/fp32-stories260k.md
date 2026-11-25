@@ -20,5 +20,6 @@ Two layers:
 |------|--------|-------|-------|--------|--------|----------|
 | 2026-11-25 | melonDS 1.1 | M3 fp32 (`-O2`, BlocksDS digest in `docs/building.md`) | 32 | parity ok, 33 tokens | 17783 | yes |
 | 2026-11-25 | melonDS 1.1 | M3 fp32 | 128 | parity ok, 129 tokens | 87480 | yes |
+| 2026-11-25 | R4 clone / YSMenu (hardware) | M6 package | 256 (stopped) | parity ok, 153 tokens vs `run.c` for prompt `hi` | 95380 | no |
 
-Emulator timings are indicative only. Hardware parity is milestone M4.
+Emulator timings are indicative only; the hardware row is from the reference R4 (M4).
