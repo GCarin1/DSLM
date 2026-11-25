@@ -2,7 +2,7 @@
 BLOCKSDS	?= /opt/wonderful/thirdparty/blocksds/core
 
 NAME		:= dslm
-GAME_TITLE	:= DSLM 1.0.0
+GAME_TITLE	:= DSLM 1.1.0
 GAME_SUBTITLE1	:= Llama 2 on the Nintendo DS
 
 # Sources are listed explicitly and sorted, so the link order (and so the

@@ -11,7 +11,10 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 import dslm  # noqa: E402
 
 GOLDEN = dslm.GOLDEN_DIR / "stories260K.json"
-MIN_MATCH = 64  # generated tokens; measured minimum is 82 (ADR 0008)
+# Generated tokens that must match runq.c, per packaged model (ADR 0008).
+# stories260K: measured minimum 82. tiny1m (wider, dim 128): measured minimum 7
+# ("Lily wanted to"); its stories stay coherent but leave runq.c's path early.
+MIN_MATCH = {"stories260K": 64, "tiny1m": 6}
 
 
 class EngineHost(unittest.TestCase):
@@ -36,23 +39,25 @@ class EngineHost(unittest.TestCase):
 
     def test_int8_matches_its_golden_exactly(self):
         """The DS reference: the fixed-point engine is integer-only, so any change shows here."""
-        q, tok = dslm.ensure_q80()
-        golden = json.loads((dslm.GOLDEN_DIR / "stories260K_q80.json").read_text(encoding="utf-8"))
-        for run in golden["runs"]:
-            got = dslm.run_golden(self.exe, q, tok, run["prompt"], golden["steps"])
-            self.assertEqual(got["tokens"], run["tokens"], run["prompt"])
-            self.assertEqual(got["text"], run["text"], run["prompt"])
+        for model in MIN_MATCH:
+            q, tok = dslm.ensure_q80(model)
+            golden = json.loads((dslm.GOLDEN_DIR / f"{model}_q80.json").read_text(encoding="utf-8"))
+            for run in golden["runs"]:
+                got = dslm.run_golden(self.exe, q, tok, run["prompt"], golden["steps"])
+                self.assertEqual(got["tokens"], run["tokens"], (model, run["prompt"]))
+                self.assertEqual(got["text"], run["text"], (model, run["prompt"]))
 
     def test_int8_drift_against_runq_is_bounded(self):
         """Quality: the fixed-point engine follows float runq.c for at least MIN_MATCH generated tokens."""
-        q, tok = dslm.ensure_q80()
-        ref = json.loads((dslm.GOLDEN_DIR / "stories260K_q80_runq.json").read_text(encoding="utf-8"))
-        for run in ref["runs"]:
-            got = dslm.run_golden(self.exe, q, tok, run["prompt"], ref["steps"])
-            n, bad = dslm.compare_tokens(got["tokens"], run["tokens"])
-            matching = (n if bad is None else bad) - run["prompt_tokens"]
-            self.assertGreaterEqual(matching, min(MIN_MATCH, len(run["tokens"]) - run["prompt_tokens"]),
-                                    run["prompt"])
+        for model, bound in MIN_MATCH.items():
+            q, tok = dslm.ensure_q80(model)
+            ref = json.loads((dslm.GOLDEN_DIR / f"{model}_q80_runq.json").read_text(encoding="utf-8"))
+            for run in ref["runs"]:
+                got = dslm.run_golden(self.exe, q, tok, run["prompt"], ref["steps"])
+                n, bad = dslm.compare_tokens(got["tokens"], run["tokens"])
+                matching = (n if bad is None else bad) - run["prompt_tokens"]
+                self.assertGreaterEqual(matching, min(bound, len(run["tokens"]) - run["prompt_tokens"]),
+                                        (model, run["prompt"]))
 
     def sample_run(self, ckpt, tok, temperature, topp, seed):
         out = subprocess.run([str(self.exe), str(ckpt), str(tok), "48", "Once upon a time", "0",

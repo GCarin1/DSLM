@@ -6,7 +6,7 @@ Where DSLM has been run, and how. Hardware results come from the DS's own timers
 
 | Cart | Kernel | microSD | DLDI | Result | Evidence |
 |---|---|---|---|---|---|
-| R4 clone booting `R4.dat`/`TTMenu.dat` (DSONEi SDHC / R4i-SDHC YSMenu package) — **reference** (ADR 0009) | YSMenu | 3.8 GB FAT32 partition (card reports 64 GB, probably counterfeit) | Auto-patched by YSMenu (`ttdldi.dat`) | ✅ Loads, generates, fp32 and int8 parity | `benchmarks/2026-11-25-r4-ysmenu.txt`, `benchmarks/2026-11-25-r4-ysmenu-int8.txt` |
+| R4 clone booting `R4.dat`/`TTMenu.dat` (DSONEi SDHC / R4i-SDHC YSMenu package) — **reference** (ADR 0009) | YSMenu | 3.8 GB FAT32 partition (card reports 64 GB, probably counterfeit) | Auto-patched by YSMenu (`ttdldi.dat`) | ✅ Loads, generates, fp32 and int8 parity; stories260K and tiny1m | `benchmarks/2026-11-25-r4-ysmenu*.txt` |
 | Original R4 (r4ds.com) / M3 Simply | Wood R4 1.62 | ≤ 2 GB FAT | `r4tf.dldi` | Not tested yet | — |
 | DSTTi "DEMON"/timebomb clones | Pico-Launcher, AKMenu-Next, YSMenu | — | Kernel auto-patch | Not tested yet; avoid R4iMenu | — |
 

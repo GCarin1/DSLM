@@ -2,6 +2,26 @@
 
 All notable changes to DSLM are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/). Each entry links to the Doctrina change that delivered it (`.doctrina/changes/archive/`).
 
+## [1.1.0] - 2026-11-25
+
+### Added
+
+- **tiny1m in the package**: [shibatch/tiny1m](https://huggingface.co/shibatch/tiny1m) (about 0.9M parameters, MIT), quantized to int8 (`tiny1m_q80.bin`, 1.0 MB). Richer stories than stories260K at 4.4 tokens/s on a real DS, 2.4 MB of RAM; pick it on the Settings screen (change 0016).
+- **Model picker** on the Settings screen, already described under 1.0.0, now ships with two int8 models to choose from.
+- Toolchain: `tools/models.json` lists every packaged model with its author and license; `quantize`, `stage`, `package` and `golden --model` handle them all; `THIRD_PARTY.txt` lists each model.
+
+### Changed
+
+- The default model stays `stories260K_q80.bin` (fastest).
+- Parity tests run per model: exact against the engine's host build for both, and a drift bound against `runq.c` of 64 generated tokens for stories260K and 6 for tiny1m (measured minimum 7; its stories stay coherent but leave the float path earlier).
+
+### Hardware results
+
+| Model | Tokens/s | Heap peak | Parity | File |
+|---|---|---|---|---|
+| tiny1m (int8) | 4.44 | 2,420,420 B | 60/60 vs host build | `benchmarks/2026-11-25-r4-ysmenu-tiny1m-int8.txt` |
+| stories260K (int8) | 6.87 | 1,372,492 B | 197/197 vs host build | `benchmarks/2026-11-25-r4-ysmenu-v1.0.0-int8.txt` |
+
 ## [1.0.0] - 2026-11-25
 
 First release: a tiny Llama 2 language model that runs 100% offline on a Nintendo DS launched from an R4 flashcart.
@@ -42,4 +62,5 @@ First release: a tiny Llama 2 language model that runs 100% offline on a Nintend
 | int8 fixed point | 124 ms | 152.7 ms | 6.55 | 257/257 vs host build | `benchmarks/2026-11-25-r4-ysmenu-int8.txt` |
 | fp32 reference | 249 ms | 627.5 ms | 1.59 | 153/153 vs `run.c` | `benchmarks/2026-11-25-r4-ysmenu.txt` |
 
+[1.1.0]: https://github.com/GCarin1/DSLM/releases/tag/v1.1.0
 [1.0.0]: https://github.com/GCarin1/DSLM/releases/tag/v1.0.0

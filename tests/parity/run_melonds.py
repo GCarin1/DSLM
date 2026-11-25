@@ -56,7 +56,8 @@ def press_start(hwnd):
     user32.PostMessageW(hwnd, WM_KEYUP, VK_RETURN, down | (3 << 30))
 
 
-CHECKPOINTS = {"int8": "/dslm/models/stories260K_q80.bin", "fp32": "/dslm/models/stories260K.bin"}
+CHECKPOINTS = {"int8": "/dslm/models/stories260K_q80.bin", "fp32": "/dslm/models/stories260K.bin",
+               "tiny1m": "/dslm/models/tiny1m_q80.bin"}
 
 
 def set_run(ini, steps, model):
@@ -84,7 +85,7 @@ def main():
     original = set_run(ini, args.steps, args.model)
     if tokens.exists():
         tokens.unlink()
-    wait = args.wait if args.wait is not None else 15 + args.steps * (0.8 if args.model == "fp32" else 0.2)
+    wait = args.wait if args.wait is not None else 15 + args.steps * {"fp32": 0.8, "tiny1m": 0.3}.get(args.model, 0.2)
     proc = subprocess.Popen([str(MELON), str(NDS)])
     try:
         hwnd = find_window(proc.pid)

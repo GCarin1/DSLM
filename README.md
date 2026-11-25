@@ -4,22 +4,29 @@
 
 # DSLM
 
-A tiny LLM running **100% offline on a Nintendo DS**, launched from an **R4** flashcart. DSLM is a port of [`llama2.c`](https://github.com/karpathy/llama2.c) running the `stories260K` model, which writes short, simple stories in English.
+A tiny LLM running **100% offline on a Nintendo DS**, launched from an **R4** flashcart. DSLM is a port of [`llama2.c`](https://github.com/karpathy/llama2.c) running small story models (`stories260K` and `tiny1m`) that write short, simple stories in English.
 
-> **Status:** v1.0.0 — runs on real hardware at **6.55 tokens/s** (int8 fixed point), token-for-token parity with the PC reference.
+> **Status:** v1.1.0 — two models in the package, picked on the DS; up to **6.9 tokens/s** on real hardware (int8 fixed point), token-for-token parity with the PC reference.
 
 ## Play it
 
-1. Download **`dslm-v1.0.0.zip`** from [Releases](https://github.com/GCarin1/DSLM/releases/latest).
+1. Download the latest **`dslm-vX.Y.Z.zip`** from [Releases](https://github.com/GCarin1/DSLM/releases/latest).
 2. Unzip it at the root of your flashcart's microSD card (the kernel must already be installed).
 3. Launch `dslm.nds`, type the start of a story (or press L/R for an example) and press START.
 
 Controls, settings and troubleshooting: [`docs/user-guide.md`](docs/user-guide.md). Tested carts and emulators: [`docs/compatibility.md`](docs/compatibility.md). What changed: [`CHANGELOG.md`](CHANGELOG.md).
 
-| Build | Time per token on a DS | Tokens/s |
-|---|---|---|
-| int8 fixed point (default) | 152.7 ms | 6.55 |
-| fp32 reference | 627.5 ms | 1.59 |
+### Models in the package
+
+All run offline; pick one on the Settings screen (SELECT, row `Model`). They share the tokenizer `tok512.bin`.
+
+| Model | File | Size | On a real DS | Stories | Source |
+|---|---|---|---|---|---|
+| **stories260K** (default) | `stories260K_q80.bin` | 0.5 MB | 6.9 tokens/s, 1.4 MB RAM | Simple, repetitive | [karpathy/tinyllamas](https://huggingface.co/karpathy/tinyllamas) (MIT) |
+| **tiny1m** | `tiny1m_q80.bin` | 1.0 MB | 4.4 tokens/s, 2.4 MB RAM | Richer: dialogue, more varied plots | [shibatch/tiny1m](https://huggingface.co/shibatch/tiny1m) (MIT) |
+| stories260K fp32 | `stories260K.bin` | 1.0 MB | 1.6 tokens/s | Same as stories260K; exact reference for testing | karpathy/tinyllamas (MIT) |
+
+Both int8 models run the integer-only engine and match their PC build token for token. tiny1m is about four times larger, so it is slower and leaves the float reference (`runq.c`) earlier: at least 6 identical tokens on every test prompt, often more than 100 (`tests/parity/int8-stories260k.md`). Other `llama2.c` checkpoints that fit in about 3.5 MB can be dropped into `/dslm/models/` (`docs/user-guide.md`).
 
 ## Build it
 
@@ -98,4 +105,4 @@ Built on [`llama2.c`](https://github.com/karpathy/llama2.c) by Andrej Karpathy (
 
 ## License
 
-MIT, see [`LICENSE`](LICENSE). The inference code is ported from [`llama2.c`](https://github.com/karpathy/llama2.c) and the stories260K model comes from `karpathy/tinyllamas`, both MIT ([`third_party/llama2.c/LICENSE`](third_party/llama2.c/LICENSE)).
+MIT, see [`LICENSE`](LICENSE). The inference code is ported from [`llama2.c`](https://github.com/karpathy/llama2.c) the stories260K model comes from `karpathy/tinyllamas` and the tiny1m model from `shibatch/tiny1m`, all MIT ([`third_party/llama2.c/LICENSE`](third_party/llama2.c/LICENSE)).

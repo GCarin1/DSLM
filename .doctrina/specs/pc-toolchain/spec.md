@@ -5,7 +5,7 @@
 **Implementation:** verified — `tools/dslm.py` (fetch, inspect, quantize, stage, golden, parity, package, bench); packages verified on melonDS and the reference R4
 **Realizes:** SC2, SC5
 **Last updated:** 2026-11-25
-**Version:** 0.7.0
+**Version:** 0.8.0
 
 ## Purpose
 
@@ -21,6 +21,7 @@ Python scripts that run on the PC and prepare everything that goes onto the R4's
 - The toolchain shall choose an int8 group size that divides both dim and hidden_dim.
 - The toolchain shall generate the fixed-point constant tables from a script and fail verification when the committed header is stale.
 - The toolchain shall put DSLM's own license (LICENSE, MIT) in every install package next to the third-party notices.
+- The toolchain shall pin every packaged model (URL, size, SHA-256, author, license) in tools/models.json and ship each as int8, plus fp32 only when it fits the DS.
 
 ### Event-driven
 
@@ -50,6 +51,7 @@ Python scripts that run on the PC and prepare everything that goes onto the R4's
 4. [verified] The package has the card-root layout, the licenses and no kernel or DLDI files, and two builds are byte-identical — verified by `tools/tests/test_package.py`
 5. [verified] The unzipped package alone boots and generates on a fresh melonDS card folder — verified by `tests/hw/package-install.md`
 6. [verified] The release workflow's steps run end to end in the pinned BlocksDS image and produce the three assets — verified by `.github/workflows/release.yml`
+7. [verified] The install package carries stories260K (int8 and fp32) and tiny1m (int8) with a notice per model — verified by `tools/tests/test_package.py`
 
 ## Maturity
 

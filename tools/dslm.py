@@ -441,8 +441,9 @@ Install
    files. Keep the dslm folder exactly as it is:
        dslm/dslm.ini
        dslm/models/stories260K_q80.bin   (int8, the fast default)
-       dslm/models/stories260K.bin       (fp32 reference, slower)
-       dslm/models/tok512.bin
+       dslm/models/tiny1m_q80.bin        (int8, better stories, slower)
+       dslm/models/stories260K.bin       (fp32 reference, slowest)
+       dslm/models/tok512.bin            (tokenizer shared by all three)
    (dslm.nds may also go in another folder your kernel lists, but the
    dslm folder must stay at the root.)
 2. Put the card back in the flashcart, boot the DS and launch dslm.nds
@@ -456,7 +457,9 @@ Every action works with buttons or with the stylus.
   Generating:  hold B or touch STOP to stop and keep the text.
   Story:       Up/Down scroll, A new prompt, Y same prompt again.
   Settings:    Up/Down choose, Left/Right change, START saves, B back.
-               The Model row picks any checkpoint in dslm/models.
+               The Model row picks any checkpoint in dslm/models:
+               stories260K_q80 (about 7 tokens/s) or tiny1m_q80
+               (about 4.5 tokens/s, richer stories).
 Each token takes about half a second; a 256-token story takes minutes.
 
 Troubleshooting
@@ -484,23 +487,42 @@ def _zip_entry(zf, name, data):
     zf.writestr(info, data)
 
 
-def third_party_notice(model=DEFAULT_MODEL):
+def third_party_notice():
     pins = load_pins()
-    entry = pins["models"][model]
     license_text = (ROOT / "third_party" / "llama2.c" / "LICENSE").read_text(encoding="utf-8")
-    return (
-        "Third-party components\n"
-        "======================\n\n"
-        f"Model {model} ({entry['checkpoint']['file']}, {entry['tokenizer']['file']})\n"
-        f"  Source: {entry['checkpoint']['url']}\n"
-        f"          {entry['tokenizer']['url']}\n"
-        "  Author: Andrej Karpathy (karpathy/tinyllamas). License: MIT.\n"
-        f"  {model}_q80.bin is the same model quantized to int8 by DSLM's tools/dslm.py.\n\n"
+    parts = ["Third-party components\n======================\n\n"]
+    for model in packaged_models():
+        entry = pins["models"][model]
+        files = [f"{model}_q80.bin"] + ([entry["checkpoint"]["file"]] if entry.get("ship_fp32") else [])
+        parts.append(
+            f"Model {model} ({', '.join(files)}, {entry['tokenizer']['file']})\n"
+            f"  Source: {entry['checkpoint']['url']}\n"
+            f"          {entry['tokenizer']['url']}\n"
+            f"  Author: {entry['author']}. License: {entry['license']} (per its model card).\n"
+            f"  {model}_q80.bin is the same model quantized to int8 by DSLM's tools/dslm.py.\n\n")
+    parts.append(
         "llama2.c (the inference code dslm.nds is ported from)\n"
         f"  Source: https://github.com/karpathy/llama2.c (commit {pins['llama2c']['commit']})\n"
-        "  License: MIT, text below. The same MIT terms cover the model files.\n\n"
-        + license_text
-    )
+        "  License: MIT, text below. The models above are published under the same MIT terms.\n\n")
+    return "".join(parts) + license_text
+
+
+def packaged_models():
+    return load_pins().get("packaged", [DEFAULT_MODEL])
+
+
+def package_checkpoints():
+    """(default int8 checkpoint, tokenizer, other checkpoints) for stage and package."""
+    pins = load_pins()["models"]
+    default_q, tok = ensure_q80(DEFAULT_MODEL)
+    extra = []
+    for model in packaged_models():
+        q, _ = ensure_q80(model)
+        if model != DEFAULT_MODEL:
+            extra.append(q)
+        if pins[model].get("ship_fp32"):
+            extra.append(model_paths(model)[0])
+    return default_q, tok, extra
 
 
 def package(out_path, nds_path, checkpoint, tokenizer, force=False, extra=()):
@@ -654,6 +676,7 @@ def main(argv=None):
     p = sub.add_parser("golden")
     p.add_argument("--force", action="store_true", help="overwrite an existing golden file")
     p.add_argument("--out")
+    p.add_argument("--model", default=DEFAULT_MODEL, help="a model from tools/models.json")
     p.add_argument("--kind", choices=sorted(GOLDEN_KINDS), default="fp32",
                    help="fp32 (run.c), q80-runq (runq.c, quality reference) or q80 (DS engine, exact DS reference)")
     p = sub.add_parser("package")
@@ -681,22 +704,21 @@ def main(argv=None):
             fetch()
         inspect(args.checkpoint, args.tokenizer)
     elif args.cmd == "quantize":
-        q, _ = ensure_q80()
-        ckpt, _ = model_paths()
-        print(f"fp32 {ckpt.relative_to(ROOT)}  {ckpt.stat().st_size} bytes")
-        print(f"int8 {q.relative_to(ROOT)}  {q.stat().st_size} bytes  group_size {read_q80_header(q)['group_size']}"
-              f"  sha256 {sha256_file(q)}")
+        for model in packaged_models():
+            q, _ = ensure_q80(model)
+            ckpt, _ = model_paths(model)
+            print(f"fp32 {ckpt.relative_to(ROOT)}  {ckpt.stat().st_size} bytes")
+            print(f"int8 {q.relative_to(ROOT)}  {q.stat().st_size} bytes  group_size "
+                  f"{read_q80_header(q)['group_size']}  sha256 {sha256_file(q)}")
     elif args.cmd == "stage":
-        ckpt, _ = fetch()
-        q, tok = ensure_q80()
-        for line in stage(args.target, q, tok, args.force, extra=[ckpt]):
+        q, tok, extra = package_checkpoints()
+        for line in stage(args.target, q, tok, args.force, extra=extra):
             print(f"staged {line}")
     elif args.cmd == "golden":
-        print(f"wrote {golden(args.out, args.force, kind=args.kind)}")
+        print(f"wrote {golden(args.out, args.force, model=args.model, kind=args.kind)}")
     elif args.cmd == "package":
-        ckpt, _ = fetch()
-        q, tok = ensure_q80()
-        out, names = package(args.out, args.nds, q, tok, args.force, extra=[ckpt])
+        q, tok, extra = package_checkpoints()
+        out, names = package(args.out, args.nds, q, tok, args.force, extra=extra)
         print(f"wrote {out} ({out.stat().st_size} bytes)")
         for n in names:
             print(f"  {n}")

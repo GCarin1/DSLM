@@ -1,7 +1,11 @@
 {
   "$comment": "Pinned model files. fetch refuses any download whose size or SHA-256 differs.",
+  "packaged": ["stories260K", "tiny1m"],
   "models": {
     "stories260K": {
+      "author": "Andrej Karpathy (karpathy/tinyllamas)",
+      "license": "MIT",
+      "ship_fp32": true,
       "checkpoint": {
         "file": "stories260K.bin",
         "url": "https://huggingface.co/karpathy/tinyllamas/resolve/main/stories260K/stories260K.bin",
@@ -11,6 +15,24 @@
       "tokenizer": {
         "file": "tok512.bin",
         "url": "https://huggingface.co/karpathy/tinyllamas/resolve/main/stories260K/tok512.bin",
+        "size": 6227,
+        "sha256": "037cb335abb25d1fa9e8ecae30ed2a3a8ace9302862ebcdc05d51a6bbb10c312"
+      }
+    },
+    "tiny1m": {
+      "author": "shibatch (shibatch/tiny1m)",
+      "license": "MIT",
+      "ship_fp32": false,
+      "$comment": "fp32 is 3.8 MB and does not fit the DS heap with its KV cache; only the int8 copy ships.",
+      "checkpoint": {
+        "file": "tiny1m.bin",
+        "url": "https://huggingface.co/shibatch/tiny1m/resolve/main/model.bin",
+        "size": 3805724,
+        "sha256": "80ba15bd7feed5f78c13c33bac83992617ff030661f16abbfed8fba0a6e335c1"
+      },
+      "tokenizer": {
+        "file": "tok512.bin",
+        "url": "https://huggingface.co/shibatch/tiny1m/resolve/main/tokenizer.bin",
         "size": 6227,
         "sha256": "037cb335abb25d1fa9e8ecae30ed2a3a8ace9302862ebcdc05d51a6bbb10c312"
       }
