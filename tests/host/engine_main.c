@@ -1,0 +1,81 @@
+/*
+ * Host driver for src/engine/llama2.c. Prints the same record as
+ * tools/golden/golden.c so tools/tests/test_engine_host.py can compare them.
+ */
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "llama2.h"
+
+static void *slurp(const char *path, size_t *size)
+{
+    FILE *f = fopen(path, "rb");
+    if (!f) {
+        fprintf(stderr, "cannot open %s\n", path);
+        exit(1);
+    }
+    fseek(f, 0, SEEK_END);
+    long n = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    void *buf = malloc((size_t)n);
+    if (!buf || fread(buf, 1, (size_t)n, f) != (size_t)n) {
+        fprintf(stderr, "cannot read %s\n", path);
+        exit(1);
+    }
+    fclose(f);
+    *size = (size_t)n;
+    return buf;
+}
+
+static void on_token(int token, const char *piece, void *user)
+{
+    (void)token;
+    for (const unsigned char *p = (const unsigned char *)piece; *p; p++)
+        fprintf((FILE *)user, "%02x", *p);
+}
+
+int main(int argc, char **argv)
+{
+    if (argc != 5) {
+        fprintf(stderr, "usage: engine_main <checkpoint> <tokenizer> <steps> <prompt>\n");
+        return 2;
+    }
+    size_t ckpt_size, tok_size;
+    void *ckpt = slurp(argv[1], &ckpt_size);
+    void *tok = slurp(argv[2], &tok_size);
+
+    llama2 m;
+    llama2_status st = llama2_init(&m, ckpt, ckpt_size, tok, tok_size, 0.0f, 0.9f, 0);
+    if (st != LLAMA2_OK) {
+        fprintf(stderr, "llama2_init failed: %d\n", (int)st);
+        return 1;
+    }
+    free(tok);
+
+    int steps = atoi(argv[3]);
+    int *out = malloc((size_t)(m.config.seq_len + 1) * sizeof(int));
+    int n_prompt = 0;
+
+    /* Text first into a temp file, so the token line can come before it. */
+    FILE *text = tmpfile();
+    int n = llama2_generate(&m, argv[4], steps, out, m.config.seq_len + 1, &n_prompt, on_token, text);
+    if (n < 0) {
+        fprintf(stderr, "prompt too long\n");
+        return 1;
+    }
+
+    printf("P %d\nT", n_prompt);
+    for (int i = 0; i < n; i++)
+        printf(" %d", out[i]);
+    printf("\nS ");
+    rewind(text);
+    for (int c; (c = fgetc(text)) != EOF;)
+        putchar(c);
+    printf("\n");
+
+    fclose(text);
+    free(out);
+    llama2_free(&m);
+    free(ckpt);
+    return 0;
+}

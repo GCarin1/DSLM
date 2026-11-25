@@ -2,11 +2,11 @@
 
 **Capability:** inference-engine
 **Status:** active
-**Implementation:** planned — current phase is documentation and planning only; no code yet
+**Implementation:** partial — fp32 forward pass, tokenizer and sampler (`src/engine/llama2.c`), parity on melonDS; real-R4 run and benchmark are M4
 **Realizes:** SC1, SC2
 **Depends on:** model-loading
 **Last updated:** 2026-11-24
-**Version:** 0.1.0
+**Version:** 0.2.0
 
 ## Purpose
 
@@ -39,9 +39,10 @@ A port of the core of `llama2.c`'s `run.c` to the Nintendo DS ARM9. It covers th
 
 ## Acceptance criteria
 
-1. [unverified] With `stories260K`, temperature 0 and the skeleton's fixed prompt, the token sequence on the DS is identical to the PC golden output — verified by `tests/parity/fp32-stories260k.md`.
+1. [verified] With `stories260K`, temperature 0 and the skeleton's fixed prompt, the token sequence on the DS is identical to the PC golden output — verified by `tests/parity/fp32-stories260k.md`.
 2. [unverified] The same `.nds` generates text on a real R4 with no network — verified by `tests/hw/offline-run.md`.
 3. [unverified] The fp32 build's time per token is measured and recorded (baseline for the fixed-point build) — verified by `tests/hw/benchmark-fp32.md`.
+4. [verified] The engine built for the host reproduces every golden prompt token for token — verified by `tools/tests/test_engine_host.py`
 
 ## Maturity
 

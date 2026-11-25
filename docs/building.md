@@ -42,6 +42,7 @@ python tools/dslm.py fetch               # pinned stories260K + tok512 into .cac
 python tools/dslm.py inspect             # header and DS memory budget
 python tools/dslm.py stage .tools/card   # /dslm tree for melonDS or the R4 microSD root
 docker compose -f docker/docker-compose.yml run --rm shell make tools-test golden
+python tools/dslm.py parity .tools/card/dslm/tokens.txt   # after a DS run (tests/parity/)
 ```
 
 `stage` keeps an existing `dslm.ini` unless `--force` is given. `golden` refuses to overwrite `tests/golden/stories260K.json` unless `--force` (`make golden FORCE=1`). Pins (URLs, sizes, SHA-256, `llama2.c` commit) live in `tools/models.json`.

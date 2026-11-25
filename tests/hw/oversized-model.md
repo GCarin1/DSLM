@@ -1,6 +1,6 @@
 # Manual test: oversized-model
 
-**Status:** not runnable yet — needs the memory-budget check in the loader (M3). Proves `model-loading` criterion 2.
+**Status:** runnable on melonDS since M3. Proves `model-loading` criterion 2.
 
 ## Setup
 
@@ -14,3 +14,4 @@
 
 | Date | Target | Build | Result | emulated |
 |------|--------|-------|--------|----------|
+| 2026-11-25 | melonDS 1.1 | M3 | refused before allocating: needs 16353673 bytes, 4038656 available (synthetic 14.2 MB checkpoint, dim 256) | yes |

@@ -1,6 +1,6 @@
 # Manual test: load-stories260k
 
-**Status:** not runnable yet — needs model loading (M3). Proves `model-loading` criterion 1.
+**Status:** melonDS half runnable since M3; the real R4 half is M4. Proves `model-loading` criterion 1.
 
 ## Setup
 
@@ -16,3 +16,4 @@
 
 | Date | Target | Build | Result | emulated |
 |------|--------|-------|--------|----------|
+| 2026-11-25 | melonDS 1.1 | M3 | both files found, progress shown, loaded in 321 ms (emulated) | yes |

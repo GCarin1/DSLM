@@ -5,6 +5,7 @@
     python tools/dslm.py inspect [checkpoint]   header and DS memory budget
     python tools/dslm.py stage <dir> [--force]  write the /dslm card tree
     python tools/dslm.py golden [--force]       fp32 golden outputs (needs cc)
+    python tools/dslm.py parity <tokens.txt>    compare a DS run with the golden
 
 Standard library only. golden compiles C, so run it in the Docker image.
 """
@@ -258,6 +259,46 @@ def golden(out_path=None, force=False, steps=GOLDEN_STEPS, model=DEFAULT_MODEL):
     return out_path
 
 
+# ---- parity --------------------------------------------------------------
+
+def read_ds_tokens(path):
+    """Parse /dslm/tokens.txt (key=value lines) written by the DS skeleton."""
+    rec = {}
+    for line in pathlib.Path(path).read_text(encoding="utf-8").splitlines():
+        key, sep, value = line.partition("=")
+        if sep:
+            rec[key] = value
+    rec["tokens"] = [int(t) for t in rec.get("tokens", "").split()]
+    return rec
+
+
+def compare_tokens(ds, golden_tokens):
+    """(compared, first diverging index or None)."""
+    n = min(len(ds), len(golden_tokens))
+    for i in range(n):
+        if ds[i] != golden_tokens[i]:
+            return n, i
+    return n, None
+
+
+def parity(tokens_path, golden_path=None):
+    golden_path = pathlib.Path(golden_path or GOLDEN_DIR / f"{DEFAULT_MODEL}.json")
+    ds = read_ds_tokens(tokens_path)
+    doc = json.loads(golden_path.read_text(encoding="utf-8"))
+    runs = [r for r in doc["runs"] if r["prompt"] == ds.get("prompt")]
+    if not runs:
+        raise SystemExit(f"error: no golden run for prompt {ds.get('prompt')!r}")
+    gold = runs[0]["tokens"]
+    n, bad = compare_tokens(ds["tokens"], gold)
+    if bad is not None:
+        print(f"DIVERGED at index {bad}: ds={ds['tokens'][bad]} golden={gold[bad]} ({n} compared)")
+        return False
+    if len(ds["tokens"]) > len(gold):
+        print(f"note: the DS ran {len(ds['tokens'])} tokens, the golden has {len(gold)}; compared the prefix")
+    print(f"parity ok: {n} tokens identical (prompt {ds['prompt']!r})")
+    return True
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -271,6 +312,9 @@ def main(argv=None):
     p = sub.add_parser("golden")
     p.add_argument("--force", action="store_true", help="overwrite an existing golden file")
     p.add_argument("--out")
+    p = sub.add_parser("parity")
+    p.add_argument("tokens", help="path to tokens.txt written by the DS (e.g. .tools/card/dslm/tokens.txt)")
+    p.add_argument("--golden")
     args = ap.parse_args(argv)
 
     if args.cmd == "fetch":
@@ -286,6 +330,8 @@ def main(argv=None):
             print(f"staged {line}")
     elif args.cmd == "golden":
         print(f"wrote {golden(args.out, args.force)}")
+    elif args.cmd == "parity":
+        return 0 if parity(args.tokens, args.golden) else 1
     return 0
 
 

@@ -1,6 +1,6 @@
 # Manual test: missing-files
 
-**Status:** not runnable yet — needs model loading (M3); the FAT-failure half is covered today by `hello-card.md` step 3. Proves `model-loading` criterion 3.
+**Status:** runnable on melonDS since M3. Proves `model-loading` criterion 3.
 
 ## Steps and expected result
 
@@ -11,3 +11,4 @@
 
 | Date | Target | Build | Result | emulated |
 |------|--------|-------|--------|----------|
+| 2026-11-25 | melonDS 1.1 | M3 | step 1: `FAT mount failed` + dlditool hint (see `hello-card.md`); step 2: `/dslm/models/nope.bin: file not found`, nothing runs | yes |
