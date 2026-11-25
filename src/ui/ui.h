@@ -10,6 +10,9 @@ void ui_init(void);
 /* printf-style line on the top screen. */
 void ui_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
+/* Stop without an error. Never returns. */
+void ui_halt(void) __attribute__((noreturn));
+
 /* Show an error and stop. Never returns. */
 void ui_fatal(const char *fmt, ...)
     __attribute__((format(printf, 1, 2), noreturn));

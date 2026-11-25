@@ -23,11 +23,25 @@ The image defaults to `skylyrac/blocksds:slim-latest`, which moves over time. Fo
 docker compose -f docker/docker-compose.yml build --build-arg BLOCKSDS_IMAGE=<image>:<tag>
 ```
 
-Pinned tag: **not yet recorded** (the image has not been built on a machine with Docker; see change 0002, open questions).
+Last known-good digest (built and verified 2026-11-25, BlocksDS image `slim-latest`):
+
+```
+skylyrac/blocksds@sha256:c5f19b95d9c2f312e6a68ea244d2ed5120203b4b82af9785937a349096f8e5e4
+```
 
 ## Without Docker
 
 Install BlocksDS as described in its documentation, set `BLOCKSDS`, then run `make nds`. `make host-test` needs only a C99 compiler (`cc`).
+
+## Local emulator (melonDS, optional)
+
+Used for the manual runbooks in `tests/hw/`. It is installed portably under `.tools/` (git-ignored), so nothing touches the system:
+
+- `.tools/melonds/`: the melonDS 1.1 Windows x86_64 release; `melonDS.toml` next to the exe holds the config (portable mode). DLDI is enabled with "Sync SD to folder".
+- `.tools/card/`: the virtual SD card (`/dslm/dslm.ini`, later the models). Edit it only while melonDS is closed.
+- `.tools/sd.img`: the image melonDS generates from `card/`.
+
+To uninstall everything: delete the `.tools/` folder. Docker images are removed with `docker image rm docker-build docker-test docker-shell`.
 
 ## Layout
 

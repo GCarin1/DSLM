@@ -3,3 +3,7 @@ node_modules/
 *.nds
 *.elf
 build/
+*.map
+tests/host/test_ini
+tests/host/test_ini.exe
+.tools/

@@ -1,5 +1,5 @@
 {
-  "$comment": "doctrina verify runs each check in order. Phase 0 has no code, so the checks are documentation gates; the BlocksDS build and the parity tests join here in M1/M3.",
+  "$comment": "doctrina verify runs each check in order. The first three are documentation gates; host-test and nds-build run in the Docker image (docs/building.md); the parity tests join here in M3.",
   "checks": [
     {
       "name": "clarify",
@@ -17,9 +17,23 @@
     },
     {
       "name": "links",
-      "run": "python3 -c \"import re,pathlib,sys;bad=[(str(f),l) for f in list(pathlib.Path('.').glob('*.md'))+list(pathlib.Path('docs').glob('*.md')) for l in re.findall(r'\\]\\(((?!https?:)[^)#]+)',f.read_text()) if not (f.parent/l).exists()];print('broken links:',bad) if bad else print('links ok');sys.exit(1 if bad else 0)\"",
+      "run": "python3 tests/check_links.py || python tests/check_links.py",
       "expect": {
         "require_output_matches": "links ok"
+      }
+    },
+    {
+      "name": "host-test",
+      "run": "docker compose -f docker/docker-compose.yml run --rm test",
+      "expect": {
+        "require_output_matches": "all ini tests passed"
+      }
+    },
+    {
+      "name": "nds-build",
+      "run": "docker compose -f docker/docker-compose.yml run --rm shell bash -c \"make nds && test -s dslm.nds && echo nds ok\"",
+      "expect": {
+        "require_output_matches": "nds ok"
       }
     }
   ]

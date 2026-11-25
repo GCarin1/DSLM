@@ -2,11 +2,11 @@
 
 **Capability:** ds-interface
 **Status:** active
-**Implementation:** planned — current phase is documentation and planning only; no code yet
+**Implementation:** partial — `ui.h` boundary and libnds console backend (`src/ui/`); keyboard, streaming and cancel still planned
 **Realizes:** SC4
 **Depends on:** inference-engine
-**Last updated:** 2026-11-24
-**Version:** 0.1.0
+**Last updated:** 2026-11-25
+**Version:** 0.2.0
 
 ## Purpose
 
@@ -17,6 +17,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 ### Ubiquitous
 
 - The interface shall show generated text on the top screen and the on-screen keyboard on the bottom touch screen.
+- The firmware shall confine all screen and input handling to the ui layer behind `src/ui/ui.h`, so the storage and engine layers build and test without libnds.
 
 ### Event-driven
 
@@ -40,6 +41,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 
 1. [unverified] A prompt typed on the on-screen keyboard generates text that appears token by token on the top screen — verified by `tests/hw/ui-streaming.md`.
 2. [unverified] Pressing B stops generation and keeps the text produced so far — verified by `tests/hw/ui-cancel.md`.
+3. [verified] The storage layer compiles and passes its tests on the host with no libnds header on the include path — verified by `tests/host/test_ini.c`
 
 ## Maturity
 

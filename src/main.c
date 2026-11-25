@@ -37,5 +37,6 @@ int main(void)
            (int)(s.topp * 1000));
     ui_log("steps: %d  seed: %u", s.steps, (unsigned)s.seed);
 
-    ui_fatal("M1 done: nothing more to run yet.");
+    ui_log("\nM1 done: nothing more to run yet.");
+    ui_halt();
 }

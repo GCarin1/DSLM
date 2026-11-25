@@ -26,3 +26,11 @@ seed        = 7
 3. Run with DLDI disabled. The screen shows `FAT mount failed` with the dlditool hint, and nothing else runs.
 
 Record the emulator and version used. Emulator results are labelled `emulated=yes`.
+
+## Results
+
+| Date | Emulator | Build | Step 1 | Step 2 | Step 3 | emulated |
+|------|----------|-------|--------|--------|--------|----------|
+| 2026-11-25 | melonDS 1.1 (Windows x86_64, portable) | BlocksDS `slim-latest` (digest in `docs/building.md`) | pass | pass | pass | yes |
+
+Not yet run on a real R4 (milestone M4).

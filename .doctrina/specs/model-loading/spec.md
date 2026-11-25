@@ -2,11 +2,11 @@
 
 **Capability:** model-loading
 **Status:** active
-**Implementation:** planned — current phase is documentation and planning only; no code yet
+**Implementation:** partial — `/dslm/dslm.ini` parser and FAT mount (`src/storage/`); model reading still planned
 **Realizes:** SC1, SC5
 **Depends on:** pc-toolchain
-**Last updated:** 2026-11-24
-**Version:** 0.2.0
+**Last updated:** 2026-11-25
+**Version:** 0.3.0
 
 ## Purpose
 
@@ -43,10 +43,12 @@ Read the checkpoint (`model.bin`) and the tokenizer (`tok.bin`) from the R4 flas
 
 ## Acceptance criteria
 
-1. [unverified] `stories260K.bin` and `tok512.bin` load from the microSD card on melonDS (with a FAT/DLDI image) and on a real R4 — verified by `tests/hw/load-stories260k.md`.
-2. [unverified] With an oversized checkpoint (e.g. `stories15M.bin`), the loader refuses and shows the required and available bytes — verified by `tests/hw/oversized-model.md`.
+1. [unverified] stories260K.bin and tok512.bin load from the microSD card on melonDS (with a FAT/DLDI image) and on a real R4 — verified by `tests/hw/load-stories260k.md`.
+2. [unverified] With an oversized checkpoint (e.g. stories15M.bin), the loader refuses and shows the required and available bytes — verified by `tests/hw/oversized-model.md`.
 3. [unverified] With no microSD card or no files, the screen shows the error and nothing runs — verified by `tests/hw/missing-files.md`.
 4. [unverified] The stories260K load time on a real R4 is measured with a DS hardware timer and recorded — verified by `tests/hw/load-time.md`.
+5. [verified] The `/dslm/dslm.ini` parser applies the contract defaults for missing files, missing keys and unknown keys — verified by `tests/host/test_ini.c`
+6. [verified] The hello-world `.nds` mounts the card and prints the settings read from `/dslm/dslm.ini` on melonDS — verified by `tests/hw/hello-card.md`
 
 ## Maturity
 

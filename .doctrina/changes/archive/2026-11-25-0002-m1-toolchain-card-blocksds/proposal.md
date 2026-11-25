@@ -1,6 +1,7 @@
 # Change 0002-m1-toolchain-card-blocksds — M1 toolchain and card I/O: BlocksDS project skeleton with a UI-ready layered architecture (ui/engine/storage separation) and a hello-world .nds that reads /dslm/dslm.ini via DLDI
 
-- **Status:** proposed
+- **Status:** applied
+- **Applied:** 2026-11-25
 - **Date:** 2026-11-25
 - **Owner:**
 - **Lane:** product
@@ -43,10 +44,12 @@ unchecked (pass --force to archive anyway and record the gap). Distinguish
 "task marked done" from "verification passed" — link the evidence.
 -->
 
-- [ ] Automated checks pass (`doctrina verify`, or the project's typecheck/test/build).
-- [ ] The affected spec's acceptance criteria are met and cite their evidence (`doctrina coverage`).
+- [x] Automated checks pass (`doctrina verify`, or the project's typecheck/test/build).
+- [x] The affected spec's acceptance criteria are met and cite their evidence (`doctrina coverage`).
 
 ## Open questions
 
 - Which BlocksDS release (or Docker image tag) to pin; needs a machine that has it installed.
 - The Makefile template name (`rom_combo` assumed) is unverified until a BlocksDS build runs.
+
+<!-- doctrina:applied-deltas specs/ds-interface/delta.md=56e992ae,d90b5a5b,9a2651ba,44f74dc3 specs/model-loading/delta.md=0994218e,d90b5a5b,272d9334,bbf39bfb -->

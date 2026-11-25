@@ -23,6 +23,12 @@ void ui_log(const char *fmt, ...)
     putchar('\n');
 }
 
+void ui_halt(void)
+{
+    for (;;)
+        swiWaitForVBlank();
+}
+
 void ui_fatal(const char *fmt, ...)
 {
     va_list ap;
@@ -31,6 +37,5 @@ void ui_fatal(const char *fmt, ...)
     vprintf(fmt, ap);
     va_end(ap);
     putchar('\n');
-    for (;;)
-        swiWaitForVBlank();
+    ui_halt();
 }

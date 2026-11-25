@@ -15,9 +15,9 @@
         "id": "ds-interface",
         "path": ".doctrina/specs/ds-interface/spec.md",
         "status": "active",
-        "version": "0.1.0",
-        "last_updated": "2026-11-24",
-        "implementation": "planned — current phase is documentation and planning only; no code yet",
+        "version": "0.2.0",
+        "last_updated": "2026-11-25",
+        "implementation": "partial — `ui.h` boundary and libnds console backend (`src/ui/`); keyboard, streaming and cancel still planned",
         "realizes": [
           "SC4"
         ],
@@ -59,9 +59,9 @@
         "id": "model-loading",
         "path": ".doctrina/specs/model-loading/spec.md",
         "status": "active",
-        "version": "0.2.0",
-        "last_updated": "2026-11-24",
-        "implementation": "planned — current phase is documentation and planning only; no code yet",
+        "version": "0.3.0",
+        "last_updated": "2026-11-25",
+        "implementation": "partial — `/dslm/dslm.ini` parser and FAT mount (`src/storage/`); model reading still planned",
         "realizes": [
           "SC1",
           "SC5"
@@ -143,16 +143,7 @@
         "summary": "Reference cart."
       }
     ],
-    "changes": [
-      {
-        "id": "0002-m1-toolchain-card-blocksds",
-        "title": "M1 toolchain and card I/O: BlocksDS project skeleton with a UI-ready layered architecture (ui/engine/storage separation) and a hello-world .nds that reads /dslm/dslm.ini via DLDI",
-        "path": ".doctrina/changes/0002-m1-toolchain-card-blocksds",
-        "status": "proposed",
-        "opened": "2026-11-25",
-        "lane": "product"
-      }
-    ],
+    "changes": [],
     "changes_archive": [
       {
         "id": "0001-r4-research-and-delivery-roadmap",
@@ -175,6 +166,24 @@
           }
         ],
         "lane": "docs (planning only; no runtime code exists yet)"
+      },
+      {
+        "id": "0002-m1-toolchain-card-blocksds",
+        "title": "M1 toolchain and card I/O: BlocksDS project skeleton with a UI-ready layered architecture (ui/engine/storage separation) and a hello-world .nds that reads /dslm/dslm.ini via DLDI",
+        "path": ".doctrina/changes/archive/2026-11-25-0002-m1-toolchain-card-blocksds",
+        "status": "applied",
+        "applied": "2026-11-25",
+        "specs_affected": [
+          {
+            "capability": "ds-interface",
+            "operation": "MODIFIED"
+          },
+          {
+            "capability": "model-loading",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "product"
       }
     ],
     "skills": [
