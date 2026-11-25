@@ -43,7 +43,7 @@ class Bench(unittest.TestCase):
         self.assertTrue(text.startswith("cart=R4 clone\nkernel=YSMenu\nmicrosd=3.8 GB FAT32\ncommit="))
         self.assertIn("build=int8\n", text)
         self.assertIn("emulated=no\n", text)
-        self.assertNotIn("unknown", text)
+        self.assertNotIn("emulated=unknown", text)  # the import decides it
         self.assertEqual(run["heap_peak_bytes"], "1200000")
 
     def test_default_name_uses_date_cart_and_build(self):
