@@ -1,4 +1,7 @@
 {
+  "name": "dslm",
+  "private": true,
+  "license": "MIT",
   "dependencies": {
     "doctrina-cli": "^0.22.1"
   }

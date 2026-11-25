@@ -74,7 +74,7 @@
         "id": "pc-toolchain",
         "path": ".doctrina/specs/pc-toolchain/spec.md",
         "status": "active",
-        "version": "0.6.0",
+        "version": "0.6.1",
         "last_updated": "2026-11-25",
         "implementation": "implemented — fetch, inspect, quantize (int8 v2), stage, fp32 and int8 golden outputs, parity and install package (`tools/dslm.py`)",
         "realizes": [
@@ -108,8 +108,8 @@
         "title": "Base the inference engine on llama2.c",
         "status": "accepted",
         "date": "2026-11-24",
-        "summary": "The inference engine is a port of `llama2.c`'s `run.c` (fp32) and, for the performance build, `runq.c` (int8).",
-        "landed": "2026-11-25 — `src/engine/llama2.c`, `tests/parity/fp32-stories260k.md`, `benchmarks/2026-11-25-r4-ysmenu.txt`"
+        "landed": "2026-11-25 — `src/engine/llama2.c`, `tests/parity/fp32-stories260k.md`, `benchmarks/2026-11-25-r4-ysmenu.txt`",
+        "summary": "The inference engine is a port of `llama2.c`'s `run.c` (fp32) and, for the performance build, `runq.c` (int8)."
       },
       {
         "id": "0002",
@@ -117,8 +117,8 @@
         "title": "Load the whole model into the 4 MB main RAM",
         "status": "accepted",
         "date": "2026-11-24",
-        "summary": "The whole model (weights + KV cache + buffers) lives in main RAM, loaded once at startup.",
-        "landed": "2026-11-25 — `src/main.c`, `tests/hw/oversized-model.md`, `tests/hw/load-stories260k.md`"
+        "landed": "2026-11-25 — `src/main.c`, `tests/hw/oversized-model.md`, `tests/hw/load-stories260k.md`",
+        "summary": "The whole model (weights + KV cache + buffers) lives in main RAM, loaded once at startup."
       },
       {
         "id": "0003",
@@ -126,8 +126,8 @@
         "title": "Fixed-point int8 as the performance path, fp32 as the reference",
         "status": "accepted",
         "date": "2026-11-24",
-        "summary": "The project keeps two builds:",
-        "landed": "2026-11-25 — `src/engine/llama2.c`, `src/engine/llama2_fixed.arm.c`, `tests/parity/int8-stories260k.md`"
+        "landed": "2026-11-25 — `src/engine/llama2.c`, `src/engine/llama2_fixed.arm.c`, `tests/parity/int8-stories260k.md`",
+        "summary": "The project keeps two builds:"
       },
       {
         "id": "0004",
@@ -135,8 +135,8 @@
         "title": "Use BlocksDS as the DS toolchain",
         "status": "accepted",
         "date": "2026-11-24",
-        "summary": "DSLM is built with BlocksDS, with DLDI in its default ARM9 mode.",
-        "landed": "2026-11-25 — `docker/Dockerfile`, `nds.mk`, `docs/building.md`"
+        "landed": "2026-11-25 — `docker/Dockerfile`, `nds.mk`, `docs/building.md`",
+        "summary": "DSLM is built with BlocksDS, with DLDI in its default ARM9 mode."
       },
       {
         "id": "0005",
@@ -144,8 +144,8 @@
         "title": "R4 hardware target and kernel policy",
         "status": "superseded by 0009",
         "date": "2026-11-24",
-        "summary": "Reference cart.",
-        "superseded_by": "0009"
+        "superseded_by": "0009",
+        "summary": "Reference cart."
       },
       {
         "id": "0006",
@@ -153,8 +153,8 @@
         "title": "Console UI with the libnds keyboard; every action on buttons and touch",
         "status": "accepted",
         "date": "2026-11-25",
-        "summary": "The interface is built on the libnds text console (32x24 cells per screen) with ANSI colours, plus the default libnds touch keyboard on the bottom screen's BG3, shown only on the prompt screen and with its slide anima...",
-        "landed": "2026-11-25 — `src/ui/ui_console.c`, `docs/user-guide.md`, `tests/hw/ui-navigation.md`"
+        "landed": "2026-11-25 — `src/ui/ui_console.c`, `docs/user-guide.md`, `tests/hw/ui-navigation.md`",
+        "summary": "The interface is built on the libnds text console (32x24 cells per screen) with ANSI colours, plus the default libnds touch keyboard on the bottom screen's BG3, shown only on the prompt screen and with its slide anima..."
       },
       {
         "id": "0007",
@@ -162,8 +162,8 @@
         "title": "int8 checkpoints use llama2.c v2 with a group size dividing dim and hidden_dim; int8 is the default model",
         "status": "accepted",
         "date": "2026-11-25",
-        "summary": "int8 checkpoints are the `llama2.c` v2 format, byte for byte, so the stock `runq.c` is the oracle (contract `model-file-format`).",
-        "landed": "2026-11-25 — `tools/dslm.py`, `tools/tests/test_quantize.py`"
+        "landed": "2026-11-25 — `tools/dslm.py`, `tools/tests/test_quantize.py`",
+        "summary": "int8 checkpoints are the `llama2.c` v2 format, byte for byte, so the stock `runq.c` is the oracle (contract `model-file-format`)."
       },
       {
         "id": "0008",
@@ -171,8 +171,8 @@
         "title": "Fixed-point int8 engine: integer-only and deterministic, exact against its host build, drift against runq.c bounded",
         "status": "accepted",
         "date": "2026-11-25",
-        "summary": "The int8 checkpoint runs a fixed-point engine with no float after load: Q16 activations, norms, RoPE and logits; weight scales converted in place to Q30 at load; activation scales Q24; int8 dot products in int32 per g...",
-        "landed": "2026-11-25 — `src/engine/llama2_fixed.arm.c`, `tools/check_softfloat.py`, `tests/build/no-softfloat-in-forward.md`"
+        "landed": "2026-11-25 — `src/engine/llama2_fixed.arm.c`, `tools/check_softfloat.py`, `tests/build/no-softfloat-in-forward.md`",
+        "summary": "The int8 checkpoint runs a fixed-point engine with no float after load: Q16 activations, norms, RoPE and logits; weight scales converted in place to Q30 at load; activation scales Q24; int8 dot products in int32 per g..."
       },
       {
         "id": "0009",
@@ -181,8 +181,8 @@
         "status": "accepted",
         "date": "2026-11-25",
         "supersedes": "0005",
-        "summary": "Reference cart.",
-        "landed": "2026-11-25 — `benchmarks/2026-11-25-r4-ysmenu.txt`, `tests/hw/offline-run.md`"
+        "landed": "2026-11-25 — `benchmarks/2026-11-25-r4-ysmenu.txt`, `tests/hw/offline-run.md`",
+        "summary": "Reference cart."
       }
     ],
     "changes": [],
@@ -358,6 +358,20 @@
           }
         ],
         "lane": "product (confident; signals: build)"
+      },
+      {
+        "id": "0011-mit-license",
+        "title": "MIT license",
+        "path": ".doctrina/changes/archive/2026-11-25-0011-mit-license",
+        "status": "applied",
+        "applied": "2026-11-25",
+        "specs_affected": [
+          {
+            "capability": "pc-toolchain",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "chore (confident; signals: readme)"
       }
     ],
     "skills": [

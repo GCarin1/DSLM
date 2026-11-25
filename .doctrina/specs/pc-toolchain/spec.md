@@ -5,7 +5,7 @@
 **Implementation:** implemented — fetch, inspect, quantize (int8 v2), stage, fp32 and int8 golden outputs, parity and install package (`tools/dslm.py`)
 **Realizes:** SC2, SC5
 **Last updated:** 2026-11-25
-**Version:** 0.6.0
+**Version:** 0.6.1
 
 ## Purpose
 
@@ -20,6 +20,7 @@ Python scripts that run on the PC and prepare everything that goes onto the R4's
 - The toolchain shall record the size in bytes and the SHA-256 of every staged model and tokenizer file.
 - The toolchain shall choose an int8 group size that divides both dim and hidden_dim.
 - The toolchain shall generate the fixed-point constant tables from a script and fail verification when the committed header is stale.
+- The toolchain shall put DSLM's own license (LICENSE, MIT) in every install package next to the third-party notices.
 
 ### Event-driven
 

@@ -34,7 +34,7 @@ class Package(unittest.TestCase):
     def test_layout_unzips_at_the_card_root(self):
         _, names = self.build()
         self.assertEqual(names, sorted([
-            "MANIFEST.txt", "README-DSLM.txt", "THIRD_PARTY.txt", "dslm.nds",
+            "LICENSE.txt", "MANIFEST.txt", "README-DSLM.txt", "THIRD_PARTY.txt", "dslm.nds",
             "dslm/dslm.ini", "dslm/models/stories260K.bin", "dslm/models/stories260K_q80.bin",
             "dslm/models/tok512.bin"]))
 
@@ -60,6 +60,8 @@ class Package(unittest.TestCase):
             notice = zf.read("THIRD_PARTY.txt").decode()
             readme = zf.read("README-DSLM.txt").decode()
         self.assertIn("MIT License", notice)
+        with zipfile.ZipFile(self.out) as zf:
+            self.assertIn("MIT License", zf.read("LICENSE.txt").decode())
         self.assertIn("karpathy/tinyllamas", notice)
         self.assertIn("ROOT of the flashcart's microSD card", readme)
 

@@ -469,6 +469,7 @@ Troubleshooting
 Files in this package
 ---------------------
 MANIFEST.txt lists every file with its size and SHA-256.
+LICENSE.txt is DSLM's license (MIT).
 THIRD_PARTY.txt has the licenses of the model and of llama2.c.
 """
 
@@ -525,6 +526,7 @@ def package(out_path, nds_path, checkpoint, tokenizer, force=False, extra=()):
     files["MANIFEST.txt"] = manifest.encode()
     files["README-DSLM.txt"] = PACKAGE_README.encode()
     files["THIRD_PARTY.txt"] = third_party_notice().encode()
+    files["LICENSE.txt"] = (ROOT / "LICENSE").read_bytes()
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(out_path, "w") as zf:

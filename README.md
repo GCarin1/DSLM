@@ -65,7 +65,6 @@ DSLM uses [Doctrina](https://github.com/GCarin1/Doctrina) for spec-driven develo
 ## Open questions
 
 - SC3: the fixed-point build reaches about 7.7 tok/s on melonDS; the R4 measurement decides it (`tests/hw/benchmark-int8.md`).
-- Project license: MIT would match `llama2.c` (no license file yet).
 
 ## Documentation gates
 
@@ -79,3 +78,7 @@ The same gates run in GitHub Actions on every push.
 ## Credits
 
 Built on [`llama2.c`](https://github.com/karpathy/llama2.c) by Andrej Karpathy (MIT). Informed by chatds, ds-llm, the C64, PSP, PS Vita and DOS ports, the [flashcard archive](https://github.com/flashcarts/flashcard-archive) and the [BlocksDS](https://blocksds.skylyrac.net/) docs.
+
+## License
+
+MIT, see [`LICENSE`](LICENSE). The inference code is ported from [`llama2.c`](https://github.com/karpathy/llama2.c) and the stories260K model comes from `karpathy/tinyllamas`, both MIT ([`third_party/llama2.c/LICENSE`](third_party/llama2.c/LICENSE)).
