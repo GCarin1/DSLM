@@ -1,0 +1,16 @@
+cart=R4 clone (R4.dat/TTMenu.dat, DSONEi SDHC / R4i-SDHC YSMenu package)
+kernel=YSMenu
+microsd=3.8 GB FAT32 partition (card reports 64 GB)
+commit=bee88d2
+version=1.0.0
+build=int8
+emulated=no
+checkpoint=/dslm/models/stories260K_q80.bin
+prompt=Tom and his mom went to the park
+steps=256
+stopped=0
+load_ms=124
+tokens=197
+gen_ms=28500
+tok_per_s=6.87
+heap_peak_bytes=1372492

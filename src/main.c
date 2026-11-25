@@ -4,10 +4,13 @@
  * from buttons or touch alike (ui.h). Each run also writes /dslm/tokens.txt
  * so a prompt from the golden list can be checked with `dslm.py parity`.
  */
+#include <dirent.h>
+#include <malloc.h>
 #include <nds.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 #include "engine/llama2.h"
 #include "storage/ini.h"
@@ -42,6 +45,7 @@ typedef struct {
     size_t story_len;
     int scroll;          /* first story line shown on the top screen */
 
+    void *ckpt;          /* checkpoint buffer (weights used in place) */
     int *tokens;         /* last run, BOS first */
     int n_tokens;
     int n_prompt_tokens;
@@ -91,72 +95,155 @@ static const char *model_label(const char *path)
     return label;
 }
 
-static void load(app *a)
+/* Free memory for a new allocation: never-claimed heap plus blocks malloc holds free. */
+static size_t heap_available(void)
 {
+    struct mallinfo mi = mallinfo();
+    return (size_t)(getHeapLimit() - getHeapEnd()) + (size_t)mi.fordblks;
+}
+
+static void unload_model(app *a)
+{
+    llama2_free(&a->model);
+    free(a->ckpt);
+    free(a->tokens);
+    a->ckpt = NULL;
+    a->tokens = NULL;
+}
+
+/*
+ * Load settings.checkpoint and settings.tokenizer. Returns NULL, or an error
+ * message (and leaves nothing allocated) so the caller can recover.
+ */
+static const char *load_model(app *a)
+{
+    static char err[320];
     unsigned char header[LLAMA2_PROBE_BYTES], tok_head[4];
     size_t ckpt_size, tok_size;
     llama2_config cfg;
     llama2_format fmt;
     dslm_settings *s = &a->settings;
 
+    a->model_name = model_label(s->checkpoint);
+    ui_title(a->model_name, "loading");
+
+    sd_status st = sd_read_head(s->checkpoint, header, sizeof header, &ckpt_size);
+    if (st != SD_OK) {
+        snprintf(err, sizeof err, "%s: %s. Copy the model to /dslm/models/ on the microSD card (see README).",
+                 s->checkpoint, sd_status_text(st));
+        return err;
+    }
+    st = sd_read_head(s->tokenizer, tok_head, sizeof tok_head, &tok_size);
+    if (st != SD_OK) {
+        snprintf(err, sizeof err, "%s: %s. Copy the tokenizer to /dslm/models/ on the microSD card (see README).",
+                 s->tokenizer, sd_status_text(st));
+        return err;
+    }
+    ui_log("found %s", s->checkpoint);
+
+    if (llama2_probe(header, sizeof header, &cfg, &fmt) != LLAMA2_OK) {
+        snprintf(err, sizeof err, "%s is not a llama2.c checkpoint (fp32 or int8 v2).", s->checkpoint);
+        return err;
+    }
+    if (llama2_file_bytes(&cfg, &fmt) != ckpt_size) {
+        snprintf(err, sizeof err, "%s: %u bytes, but its header implies %u.", s->checkpoint,
+                 (unsigned)ckpt_size, (unsigned)llama2_file_bytes(&cfg, &fmt));
+        return err;
+    }
+    ui_log("%s, dim %d layers %d vocab %d seq %d", fmt.quantized ? "int8" : "fp32", cfg.dim,
+           cfg.n_layers, cfg.vocab_size, cfg.seq_len);
+
+    size_t need = ckpt_size + 1 + tok_size + 1 + llama2_runtime_bytes(&cfg, &fmt, tok_size) +
+                  (size_t)(cfg.seq_len + 1) * sizeof(int);
+    size_t avail = heap_available();
+    ui_log("RAM need %u / free %u", (unsigned)need, (unsigned)avail);
+    if (need > avail) {
+        snprintf(err, sizeof err, "Model does not fit: needs %u bytes, %u available.", (unsigned)need,
+                 (unsigned)avail);
+        return err;
+    }
+
+    void *tok;
+    cpuStartTiming(0);
+    st = sd_read_file_progress(s->checkpoint, ckpt_size, &a->ckpt, &ckpt_size, load_progress, "model");
+    if (st != SD_OK) {
+        snprintf(err, sizeof err, "%s: %s", s->checkpoint, sd_status_text(st));
+        a->ckpt = NULL;
+        return err;
+    }
+    st = sd_read_file_progress(s->tokenizer, tok_size, &tok, &tok_size, load_progress, "tokenizer");
+    if (st != SD_OK) {
+        snprintf(err, sizeof err, "%s: %s", s->tokenizer, sd_status_text(st));
+        unload_model(a);
+        return err;
+    }
+    a->load_ms = ticks_to_ms(cpuGetTiming());
+
+    llama2_status ls = llama2_init(&a->model, a->ckpt, ckpt_size, tok, tok_size, s->temperature, s->topp,
+                                   s->seed ? s->seed : 1);
+    free(tok);
+    if (ls != LLAMA2_OK) {
+        snprintf(err, sizeof err, "Model init failed (%d); is %s the right tokenizer?", (int)ls, s->tokenizer);
+        unload_model(a);
+        return err;
+    }
+    a->tokens = malloc((size_t)(cfg.seq_len + 1) * sizeof(int));
+    if (!a->tokens) {
+        unload_model(a);
+        return "No memory for the token buffer.";
+    }
+    ui_log("loaded in %u ms", a->load_ms);
+    return NULL;
+}
+
+static void boot(app *a)
+{
     ui_title("", "loading");
     ui_hint("Reading the microSD card...");
     if (!sd_mount())
         ui_fatal("FAT mount failed. The binary may need a manual DLDI patch (dlditool).");
     ui_log("DSLM %s - FAT mounted", DSLM_VERSION);
-    read_settings(s);
-    a->model_name = model_label(s->checkpoint);
-    ui_title(a->model_name, "loading");
+    read_settings(&a->settings);
+    const char *err = load_model(a);
+    if (err)
+        ui_fatal("%s", err);
+}
 
-    sd_status st = sd_read_head(s->checkpoint, header, sizeof header, &ckpt_size);
-    if (st != SD_OK)
-        ui_fatal("%s: %s. Copy the model to /dslm/models/ on the microSD card (see README).",
-                 s->checkpoint, sd_status_text(st));
-    st = sd_read_head(s->tokenizer, tok_head, sizeof tok_head, &tok_size);
-    if (st != SD_OK)
-        ui_fatal("%s: %s. Copy the tokenizer to /dslm/models/ on the microSD card (see README).",
-                 s->tokenizer, sd_status_text(st));
-    ui_log("found %s", s->checkpoint);
-    ui_log("found %s", s->tokenizer);
+/* Checkpoints in /dslm/models that the loader accepts (header and size checked). */
+#define MODELS_DIR "/dslm/models"
+#define MAX_MODELS 16
 
-    if (llama2_probe(header, sizeof header, &cfg, &fmt) != LLAMA2_OK)
-        ui_fatal("%s is not a llama2.c checkpoint (fp32 or int8 v2).", s->checkpoint);
-    if (llama2_file_bytes(&cfg, &fmt) != ckpt_size)
-        ui_fatal("%s: %u bytes, but its header implies %u.", s->checkpoint, (unsigned)ckpt_size,
-                 (unsigned)llama2_file_bytes(&cfg, &fmt));
-    if (fmt.quantized)
-        ui_log("int8 checkpoint, group size %d", fmt.group_size);
-    else
-        ui_log("fp32 checkpoint");
+typedef struct {
+    char path[DSLM_PATH_MAX];
+    int quantized;
+} model_entry;
 
-    size_t need = ckpt_size + 1 + tok_size + 1 + llama2_runtime_bytes(&cfg, &fmt, tok_size) +
-                  (size_t)(cfg.seq_len + 1) * sizeof(int);
-    size_t avail = (size_t)(getHeapLimit() - getHeapEnd());
-    ui_log("dim %d layers %d heads %d vocab %d seq %d", cfg.dim, cfg.n_layers, cfg.n_heads,
-           cfg.vocab_size, cfg.seq_len);
-    ui_log("RAM need %u / free %u", (unsigned)need, (unsigned)avail);
-    if (need > avail)
-        ui_fatal("Model does not fit: needs %u bytes, %u available.", (unsigned)need, (unsigned)avail);
-
-    void *ckpt, *tok;
-    cpuStartTiming(0);
-    st = sd_read_file_progress(s->checkpoint, ckpt_size, &ckpt, &ckpt_size, load_progress, "model");
-    if (st != SD_OK)
-        ui_fatal("%s: %s", s->checkpoint, sd_status_text(st));
-    st = sd_read_file_progress(s->tokenizer, tok_size, &tok, &tok_size, load_progress, "tokenizer");
-    if (st != SD_OK)
-        ui_fatal("%s: %s", s->tokenizer, sd_status_text(st));
-    a->load_ms = ticks_to_ms(cpuGetTiming());
-
-    llama2_status ls = llama2_init(&a->model, ckpt, ckpt_size, tok, tok_size, s->temperature, s->topp,
-                                   s->seed ? s->seed : 1);
-    free(tok);
-    if (ls != LLAMA2_OK)
-        ui_fatal("Model init failed (%d).", (int)ls);
-    a->tokens = malloc((size_t)(cfg.seq_len + 1) * sizeof(int));
-    if (!a->tokens)
-        ui_fatal("No memory for the token buffer.");
-    ui_log("loaded in %u ms", a->load_ms);
+static int scan_models(model_entry *list, int max)
+{
+    DIR *dir = opendir(MODELS_DIR);
+    int n = 0;
+    if (!dir)
+        return 0;
+    for (struct dirent *e; n < max && (e = readdir(dir)) != NULL;) {
+        size_t len = strlen(e->d_name);
+        if (len < 5 || strcasecmp(e->d_name + len - 4, ".bin") != 0)
+            continue;
+        char path[DSLM_PATH_MAX];
+        if (snprintf(path, sizeof path, "%s/%s", MODELS_DIR, e->d_name) >= (int)sizeof path)
+            continue;
+        unsigned char head[LLAMA2_PROBE_BYTES];
+        size_t size;
+        llama2_config cfg;
+        llama2_format fmt;
+        if (sd_read_head(path, head, sizeof head, &size) != SD_OK ||
+            llama2_probe(head, sizeof head, &cfg, &fmt) != LLAMA2_OK || llama2_file_bytes(&cfg, &fmt) != size)
+            continue; /* the tokenizer and anything else that is not a checkpoint */
+        strcpy(list[n].path, path);
+        list[n].quantized = fmt.quantized;
+        n++;
+    }
+    closedir(dir);
+    return n;
 }
 
 /* ---- generation --------------------------------------------------------- */
@@ -311,12 +398,53 @@ static void adjust(dslm_settings *s, int row, int dir, int seq_len)
     }
 }
 
+static const char *model_note(const model_entry *m)
+{
+    static char note[40];
+    const char *slash = strrchr(m->path, '/');
+    snprintf(note, sizeof note, "%.26s %s", slash ? slash + 1 : m->path, m->quantized ? "int8" : "fp32");
+    return note;
+}
+
+/* Swap to edit's checkpoint; on failure reload the previous one. Returns the note to show. */
+static const char *switch_model(app *a, const dslm_settings *edit)
+{
+    static char note[64];
+    char previous[DSLM_PATH_MAX];
+    strcpy(previous, a->settings.checkpoint);
+    a->settings = *edit;
+    unload_model(a);
+    a->story_len = 0;
+    a->story[0] = '\0';
+    const char *err = load_model(a);
+    if (err) {
+        strcpy(a->settings.checkpoint, previous);
+        const char *again = load_model(a);
+        if (again)
+            ui_fatal("%s", again);
+        /* the reason is longer than the note line: show it on the top screen */
+        snprintf(a->story, STORY_CAP, "Could not switch model:\n\n%s\n\nThe previous model is loaded again.", err);
+        a->story_len = strlen(a->story);
+        return "Not loaded, kept previous model";
+    }
+    char buf[512];
+    size_t n = dslm_ini_format(&a->settings, buf, sizeof buf);
+    snprintf(note, sizeof note, n && sd_write_file(INI_PATH, buf, n) == SD_OK ? "Loaded and saved" : "Loaded (not saved)");
+    return note;
+}
+
 /* Returns when the user leaves the settings screen. */
 static void settings_screen(app *a)
 {
     dslm_settings edit = a->settings;
+    model_entry models[MAX_MODELS];
+    int n_models = scan_models(models, MAX_MODELS);
+    int current = -1;
+    for (int i = 0; i < n_models; i++)
+        if (strcmp(models[i].path, edit.checkpoint) == 0)
+            current = i;
     int cursor = 0;
-    const char *note = NULL;
+    const char *note = n_models > 1 ? NULL : "Only one model in /dslm/models";
     ui_title(a->model_name, "settings");
     ui_hint("START:save  B:back");
     ui_panel_settings(&edit, cursor, note);
@@ -337,17 +465,37 @@ static void settings_screen(app *a)
         case UI_EV_LEFT:
         case UI_EV_RIGHT:
             cursor = row;
-            adjust(&edit, row, e.type == UI_EV_RIGHT ? 1 : -1, a->model.config.seq_len);
             note = NULL;
+            if (row == UI_SETTINGS_MODEL_ROW) {
+                if (n_models > 0) {
+                    int dir = e.type == UI_EV_RIGHT ? 1 : -1;
+                    current = current < 0 ? 0 : (current + dir + n_models) % n_models;
+                    strcpy(edit.checkpoint, models[current].path);
+                    note = model_note(&models[current]);
+                }
+            } else {
+                adjust(&edit, row, e.type == UI_EV_RIGHT ? 1 : -1, a->model.config.seq_len);
+            }
             break;
-        case UI_EV_SAVE: {
-            char buf[512];
-            size_t n = dslm_ini_format(&edit, buf, sizeof buf);
-            a->settings = edit;
-            note = n && sd_write_file(INI_PATH, buf, n) == SD_OK ? "Saved to /dslm/dslm.ini"
-                                                                  : "Applied (could not save)";
+        case UI_EV_SAVE:
+            if (strcmp(edit.checkpoint, a->settings.checkpoint) != 0) {
+                note = switch_model(a, &edit);
+                edit = a->settings;
+                /* clear the loading bar; after a failure, show why */
+                if (a->story_len)
+                    ui_text(a->story, a->story_len, 0);
+                else
+                    ui_text(welcome, sizeof welcome - 1, 0);
+                ui_title(a->model_name, "settings");
+                ui_hint("START:save  B:back");
+            } else {
+                char buf[512];
+                size_t n = dslm_ini_format(&edit, buf, sizeof buf);
+                a->settings = edit;
+                note = n && sd_write_file(INI_PATH, buf, n) == SD_OK ? "Saved to /dslm/dslm.ini"
+                                                                      : "Applied (could not save)";
+            }
             break;
-        }
         case UI_EV_BACK:
             return;
         default:
@@ -362,7 +510,7 @@ int main(void)
     static app a;
 
     ui_init();
-    load(&a);
+    boot(&a);
     strcpy(a.prompt, examples[0]);
     a.example = 0;
     a.scroll = 0;

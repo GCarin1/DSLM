@@ -10,6 +10,7 @@ First release: a tiny Llama 2 language model that runs 100% offline on a Nintend
 
 - **Fixed-point int8 engine** (default): integer-only forward pass, int8 weights, matmul in ITCM; 6.55 tokens/s on a real DS with an R4, 4.1x the fp32 build (change 0010, ADR 0008).
 - **fp32 reference engine**: line-for-line port of `llama2.c`'s `run.c`, token-for-token identical to the PC (change 0004, ADR 0001).
+- **Model picker**: the Settings screen lists the checkpoints in `/dslm/models/`, switches models without restarting and restores the previous one if the new one does not load (change 0015).
 - **Interface**: touch keyboard, five screens (Loading, Prompt, Generating, Story, Settings), word-wrapped streaming, stop with B or STOP, example prompts on L/R, settings saved to `/dslm/dslm.ini`, tokens per second on the story screen; every action on buttons and on touch (changes 0005 and 0010, ADR 0006).
 - **Model loading** from the microSD card through DLDI: format detection (fp32 or int8), size check, RAM budget before allocating, progress bar, clear errors for missing files and models that do not fit (changes 0002, 0004, 0007).
 - **int8 model format**: `llama2.c` v2 (`ak42`), quantized from the pinned fp32 model with group size 4 (change 0007, ADR 0007).

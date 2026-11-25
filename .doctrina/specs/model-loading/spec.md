@@ -6,7 +6,7 @@
 **Realizes:** SC1, SC5
 **Depends on:** pc-toolchain
 **Last updated:** 2026-11-25
-**Version:** 0.5.0
+**Version:** 0.6.0
 
 ## Purpose
 
@@ -20,6 +20,8 @@ Read the checkpoint (`model.bin`) and the tokenizer (`tok.bin`) from the R4 flas
 - The loader shall keep the whole model in main RAM; it shall compute the total memory needed (weights, KV cache, run-state buffers) from the checkpoint header before allocating.
 - The loader shall read model files with fread calls of at least 32 KB each.
 - The loader shall tell the fp32 and int8 checkpoint formats apart by the first four bytes and check the file size against the size its header implies.
+- The loader shall list as models only the files in /dslm/models whose header and size pass the checkpoint checks.
+- The loader shall count memory released by a previous model as available when checking the budget for the next one.
 
 ### Event-driven
 
@@ -52,6 +54,7 @@ Read the checkpoint (`model.bin`) and the tokenizer (`tok.bin`) from the R4 flas
 5. [verified] The `/dslm/dslm.ini` parser applies the contract defaults for missing files, missing keys and unknown keys — verified by `tests/host/test_ini.c`
 6. [verified] The hello-world `.nds` mounts the card and prints the settings read from `/dslm/dslm.ini` on melonDS — verified by `tests/hw/hello-card.md`
 7. [verified] The same loader runs the fp32 and the int8 checkpoint and records the checkpoint in tokens.txt — verified by `tests/parity/int8-stories260k.md`
+8. [verified] Only valid checkpoints are offered, and after unloading a model the budget sees the freed memory — verified by `tests/hw/model-picker.md`
 
 ## Maturity
 

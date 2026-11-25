@@ -22,7 +22,7 @@ Developers build this tree with `python tools/dslm.py stage <card root>` (`docs/
 2. **Prompt.** The top screen shows a welcome text (later, your last story). The bottom screen shows your prompt, four buttons and the touch keyboard.
 3. **Generating.** The story appears word by word on the top screen. The bottom screen shows progress, the time per token and a big STOP button.
 4. **Story.** The finished story on the top screen; New prompt, Same prompt again and Settings below.
-5. **Settings.** Temperature, top-p and the number of steps, saved to `/dslm/dslm.ini`.
+5. **Settings.** Temperature, top-p, the number of steps and the model, saved to `/dslm/dslm.ini`.
 
 ## Controls
 
@@ -43,6 +43,7 @@ Every action works with the buttons or with the stylus.
 | Story | Settings | SELECT | Settings |
 | Settings | Choose a setting | Up / Down | touch its row |
 | Settings | Change it | Left / Right | `[-]` / `[+]` |
+| Settings | Pick another model (row `Model`) | Left / Right, then START | `[<]` / `[>]`, then Save |
 | Settings | Save to the card | START | Save |
 | Settings | Back without saving | B | Back |
 
@@ -52,4 +53,5 @@ Typing is touch-only for now; without the stylus, L/R pick an example prompt and
 
 - **Temperature** 0 always picks the most likely next word, so the same prompt gives the same story. Higher values (up to 2.0) give more varied stories.
 - **Top-p** limits sampling to the most likely words when temperature is above 0.
-- **Steps** is the story length in tokens (16 to 512). Each token takes about half a second or more, and later tokens take longer.
+- **Steps** is the story length in tokens (16 to 512). The int8 model writes about 6 to 7 tokens per second on a DS; later tokens take a little longer.
+- **Model** lists every checkpoint in `/dslm/models/` (fp32 or int8, `llama2.c` format). START unloads the current one and loads the new one; if it does not fit in memory or cannot be read, the top screen says why and the previous model comes back. All models must use the tokenizer named in `dslm.ini` (`tok512.bin` for the included ones).

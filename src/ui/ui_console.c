@@ -287,7 +287,8 @@ void ui_panel_story(int tokens, unsigned total_ms, int stopped)
 }
 
 #define SET_FIRST_ROW 3
-#define SET_BUTTON_ROW 11
+#define SET_NOTE_ROW 11
+#define SET_BUTTON_ROW 13
 
 static void milli(char *out, size_t cap, float v)
 {
@@ -301,22 +302,34 @@ void ui_panel_settings(const dslm_settings *s, int cursor, const char *note)
     milli(t, sizeof t, s->temperature);
     milli(p, sizeof p, s->topp);
     snprintf(st, sizeof st, "%d", s->steps);
-    const char *labels[UI_SETTINGS_ROWS] = {"Temperature", "Top-p", "Steps"};
-    const char *values[UI_SETTINGS_ROWS] = {t, p, st};
+    /* model row: file name without the directory and ".bin" */
+    char model[DSLM_PATH_MAX];
+    const char *slash = strrchr(s->checkpoint, '/');
+    snprintf(model, sizeof model, "%s", slash ? slash + 1 : s->checkpoint);
+    char *dot = strrchr(model, '.');
+    if (dot && dot != model)
+        *dot = '\0';
+    const char *labels[UI_SETTINGS_ROWS] = {"Temperature", "Top-p", "Steps", "Model"};
+    const char *values[UI_SETTINGS_ROWS] = {t, p, st, model};
 
     show_keyboard(0);
     clear_bottom();
     linef(&bottom, 0, C_ACCENT, " Settings");
     rule(&bottom, 1);
-    for (int i = 0; i < UI_SETTINGS_ROWS; i++)
-        linef(&bottom, SET_FIRST_ROW + 2 * i, i == cursor ? C_TITLE : C_RESET, "%c%-12s [-] %6s [+]",
-              i == cursor ? '>' : ' ', labels[i], values[i]);
+    for (int i = 0; i < UI_SETTINGS_ROWS; i++) {
+        if (i == UI_SETTINGS_MODEL_ROW)
+            linef(&bottom, SET_FIRST_ROW + 2 * i, i == cursor ? C_TITLE : C_RESET, "%c%-12s [<] %-10.10s [>]",
+                  i == cursor ? '>' : ' ', labels[i], values[i]);
+        else
+            linef(&bottom, SET_FIRST_ROW + 2 * i, i == cursor ? C_TITLE : C_RESET, "%c%-12s [-] %6s [+]",
+                  i == cursor ? '>' : ' ', labels[i], values[i]);
+    }
     if (note)
-        linef(&bottom, 9, C_OK, " %s", note);
+        linef(&bottom, SET_NOTE_ROW, C_OK, " %s", note);
     box(SET_BUTTON_ROW, 0, 15, "Save (START)", C_OK);
     box(SET_BUTTON_ROW, 17, 31, "Back (B)", C_ACCENT);
-    linef(&bottom, 15, C_DIM, " Up/Down: select");
-    linef(&bottom, 16, C_DIM, " Left/Right or -/+: change");
+    linef(&bottom, 17, C_DIM, " Up/Down: select");
+    linef(&bottom, 18, C_DIM, " Left/Right, -/+ or </>: change");
     consoleSelect(&top);
 }
 

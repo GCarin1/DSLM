@@ -43,7 +43,8 @@ typedef struct {
     int value;
 } ui_event;
 
-#define UI_SETTINGS_ROWS 3 /* temperature, top-p, steps */
+#define UI_SETTINGS_ROWS 4      /* temperature, top-p, steps, model */
+#define UI_SETTINGS_MODEL_ROW 3 /* Left/Right picks a checkpoint from /dslm/models */
 #define UI_PROMPT_MAX 90   /* fits the three prompt lines on the bottom screen */
 
 void ui_init(void);

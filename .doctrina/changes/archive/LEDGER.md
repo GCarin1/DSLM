@@ -16,3 +16,4 @@ One line per archived change, newest last. Appended by
 - 2026-11-25 — 0011-mit-license — MIT license (specs: pc-toolchain MODIFIED)
 - 2026-11-25 — 0012-m5-hardware-results — M5 hardware results (specs: fixed-point-inference MODIFIED)
 - 2026-11-25 — 0013-test-harness — Test harness (specs: test-harness MODIFIED)
+- 2026-11-25 — 0015-model-picker — Model picker (specs: ds-interface MODIFIED, model-loading MODIFIED)

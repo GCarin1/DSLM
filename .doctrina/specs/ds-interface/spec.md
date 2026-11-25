@@ -6,7 +6,7 @@
 **Realizes:** SC4
 **Depends on:** inference-engine
 **Last updated:** 2026-11-25
-**Version:** 0.3.0
+**Version:** 0.4.0
 
 ## Purpose
 
@@ -28,6 +28,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - When the user presses B during generation, the interface shall stop generation and keep the text produced so far.
 - When the user presses L or R on the prompt screen, the interface shall replace the prompt with the previous or next example prompt.
 - When the user saves the settings screen, the interface shall write the settings to /dslm/dslm.ini and apply them to the next generation.
+- When the user picks another model on the Settings screen and saves, the interface shall unload the current model, load the chosen one with the loading progress, and save it to /dslm/dslm.ini.
 
 ### State-driven
 
@@ -36,6 +37,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 ### Unwanted-behavior (must-not)
 
 - The interface shall not accept a new prompt while a generation is running.
+- The interface shall not leave the DS without a model: when the chosen model fails to load, it shall show the reason and load the previous model again.
 
 ### Optional
 
@@ -49,6 +51,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 4. [verified] Every documented action works by button and by touch on melonDS — verified by `tests/hw/ui-navigation.md`
 5. [verified] Wrapped lines never exceed the width and keep words whole — verified by `tests/host/test_textview.c`
 6. [verified] Stopping generation keeps the tokens produced so far — verified by `tools/tests/test_engine_host.py`
+7. [verified] Picking another model on the Settings screen switches models without a restart, and a model that does not fit is refused with the previous one restored — verified by `tests/hw/model-picker.md`
 
 ## Maturity
 

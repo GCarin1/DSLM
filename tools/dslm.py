@@ -456,6 +456,7 @@ Every action works with buttons or with the stylus.
   Generating:  hold B or touch STOP to stop and keep the text.
   Story:       Up/Down scroll, A new prompt, Y same prompt again.
   Settings:    Up/Down choose, Left/Right change, START saves, B back.
+               The Model row picks any checkpoint in dslm/models.
 Each token takes about half a second; a 256-token story takes minutes.
 
 Troubleshooting

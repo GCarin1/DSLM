@@ -15,7 +15,7 @@
         "id": "ds-interface",
         "path": ".doctrina/specs/ds-interface/spec.md",
         "status": "active",
-        "version": "0.3.0",
+        "version": "0.4.0",
         "last_updated": "2026-11-25",
         "implementation": "implemented — screens, keyboard, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, real R4 run is M4",
         "realizes": [
@@ -59,7 +59,7 @@
         "id": "model-loading",
         "path": ".doctrina/specs/model-loading/spec.md",
         "status": "active",
-        "version": "0.5.0",
+        "version": "0.6.0",
         "last_updated": "2026-11-25",
         "implementation": "implemented — header check, RAM budget, chunked reads and error paths (`src/main.c`, `src/storage/`); loads on melonDS and on the reference R4 in 249 ms",
         "realizes": [
@@ -405,6 +405,24 @@
         "specs_affected": [
           {
             "capability": "test-harness",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "product (uncertain)"
+      },
+      {
+        "id": "0015-model-picker",
+        "title": "Model picker",
+        "path": ".doctrina/changes/archive/2026-11-25-0015-model-picker",
+        "status": "applied",
+        "applied": "2026-11-25",
+        "specs_affected": [
+          {
+            "capability": "ds-interface",
+            "operation": "MODIFIED"
+          },
+          {
+            "capability": "model-loading",
             "operation": "MODIFIED"
           }
         ],
