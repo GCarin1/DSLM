@@ -1,12 +1,12 @@
 # ADR 0002 — Load the whole model into the 4 MB main RAM
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2026-11-24
 - **Deciders:** Carini
 - **Supersedes:** —
 - **Superseded by:** —
 - **Evidence:** n/a — no implementation yet
-- **Landed:** —
+- **Landed:** 2026-11-25 — `src/main.c`, `tests/hw/oversized-model.md`, `tests/hw/load-stories260k.md`
 
 ## Context
 

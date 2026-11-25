@@ -1,12 +1,12 @@
 # ADR 0001 — Base the inference engine on llama2.c
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2026-11-24
 - **Deciders:** Carini
 - **Supersedes:** —
 - **Superseded by:** —
 - **Evidence:** n/a — no implementation yet
-- **Landed:** —
+- **Landed:** 2026-11-25 — `src/engine/llama2.c`, `tests/parity/fp32-stories260k.md`, `benchmarks/2026-11-25-r4-ysmenu.txt`
 
 ## Context
 

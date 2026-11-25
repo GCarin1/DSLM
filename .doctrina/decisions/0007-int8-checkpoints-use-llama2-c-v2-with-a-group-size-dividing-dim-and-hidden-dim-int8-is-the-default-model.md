@@ -1,12 +1,12 @@
 # ADR 0007 — int8 checkpoints use llama2.c v2 with a group size dividing dim and hidden_dim; int8 is the default model
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2026-11-25
 - **Deciders:** Carini
 - **Supersedes:** —
 - **Superseded by:** —
 - **Evidence:** `tools/dslm.py`, `src/engine/llama2.c`, `tools/tests/test_quantize.py`, `tests/parity/int8-stories260k.md`
-- **Landed:** —
+- **Landed:** 2026-11-25 — `tools/dslm.py`, `tools/tests/test_quantize.py`
 
 ## Context
 

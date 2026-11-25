@@ -1,12 +1,12 @@
 # ADR 0003 — Fixed-point int8 as the performance path, fp32 as the reference
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2026-11-24
 - **Deciders:** Carini
 - **Supersedes:** —
 - **Superseded by:** —
 - **Evidence:** n/a — no implementation yet
-- **Landed:** —
+- **Landed:** 2026-11-25 — `src/engine/llama2.c`, `src/engine/llama2_fixed.arm.c`, `tests/parity/int8-stories260k.md`
 
 ## Context
 

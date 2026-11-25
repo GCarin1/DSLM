@@ -16,14 +16,14 @@ description: "Put a DSLM build on a real DS through an R4-family flashcart and f
 ## Procedure
 
 1. Identify the cart from its label domain and boot behavior. Look it up in the `flashcarts/flashcard-archive` README and the Sanrax guides (`docs/r4-flashcart.md` §1).
-2. Use the kernel from the table in `docs/r4-flashcart.md` §2. Reference cart: original R4 / M3 Simply + Wood R4 1.62, microSD ≤2 GB FAT.
+2. Use the kernel from the table in `docs/r4-flashcart.md` §2. Reference cart (ADR 0009): the R4 clone with the YSMenu kernel used for M4; YSMenu auto-patches DLDI. The original R4 / M3 Simply + Wood R4 1.62 is best-effort.
 3. Stage the card with `pc-toolchain` and copy the tree as-is. The layout is in `.doctrina/contracts/model-file-format.md`. Kernel files go at the root; DSLM files go in `/dslm.nds` and `/dslm/`.
 4. Boot and launch. If FAT fails: `dlditool <cart>.dldi dslm.nds` (driver from `DS-Homebrew/DLDI`, `r4tf.dldi` for the original R4), copy and retry.
 5. Run the parity prompts, then the benchmark run. Copy `/dslm/bench.txt` to `benchmarks/<YYYY-MM-DD>-<cart>.txt` with cart, kernel and card noted.
 
 ## Anti-patterns
 
-- Committing kernels, firmware or third-party `.dldi` binaries to the repo (ADR 0005).
+- Committing kernels, firmware or third-party `.dldi` binaries to the repo (ADR 0009).
 - Using R4iMenu on DEMON/timebomb clones.
 - Passing settings through argv: clone kernels do not guarantee it. Use `/dslm/dslm.ini`.
 - Forcing an ARM9-only DLDI driver onto the ARM7.
@@ -31,6 +31,6 @@ description: "Put a DSLM build on a real DS through an R4-family flashcart and f
 
 ## Related material
 
-- ADR 0004 (BlocksDS), ADR 0005 (hardware target and kernel policy)
+- ADR 0004 (BlocksDS), ADR 0009 (reference hardware and kernel policy; supersedes 0005)
 - `docs/r4-flashcart.md`, `docs/testing.md`
 - `.doctrina/specs/test-harness/spec.md`

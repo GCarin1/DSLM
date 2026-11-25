@@ -106,65 +106,83 @@
         "id": "0001",
         "path": ".doctrina/decisions/0001-base-the-inference-engine-on-llama2-c.md",
         "title": "Base the inference engine on llama2.c",
-        "status": "proposed",
+        "status": "accepted",
         "date": "2026-11-24",
-        "summary": "The inference engine is a port of `llama2.c`'s `run.c` (fp32) and, for the performance build, `runq.c` (int8)."
+        "summary": "The inference engine is a port of `llama2.c`'s `run.c` (fp32) and, for the performance build, `runq.c` (int8).",
+        "landed": "2026-11-25 — `src/engine/llama2.c`, `tests/parity/fp32-stories260k.md`, `benchmarks/2026-11-25-r4-ysmenu.txt`"
       },
       {
         "id": "0002",
         "path": ".doctrina/decisions/0002-load-the-whole-model-into-the-4-mb-main-ram.md",
         "title": "Load the whole model into the 4 MB main RAM",
-        "status": "proposed",
+        "status": "accepted",
         "date": "2026-11-24",
-        "summary": "The whole model (weights + KV cache + buffers) lives in main RAM, loaded once at startup."
+        "summary": "The whole model (weights + KV cache + buffers) lives in main RAM, loaded once at startup.",
+        "landed": "2026-11-25 — `src/main.c`, `tests/hw/oversized-model.md`, `tests/hw/load-stories260k.md`"
       },
       {
         "id": "0003",
         "path": ".doctrina/decisions/0003-fixed-point-int8-as-the-performance-path-fp32-as-the-reference.md",
         "title": "Fixed-point int8 as the performance path, fp32 as the reference",
-        "status": "proposed",
+        "status": "accepted",
         "date": "2026-11-24",
-        "summary": "The project keeps two builds:"
+        "summary": "The project keeps two builds:",
+        "landed": "2026-11-25 — `src/engine/llama2.c`, `src/engine/llama2_fixed.arm.c`, `tests/parity/int8-stories260k.md`"
       },
       {
         "id": "0004",
         "path": ".doctrina/decisions/0004-use-blocksds-as-the-ds-toolchain.md",
         "title": "Use BlocksDS as the DS toolchain",
-        "status": "proposed",
+        "status": "accepted",
         "date": "2026-11-24",
-        "summary": "DSLM is built with BlocksDS, with DLDI in its default ARM9 mode."
+        "summary": "DSLM is built with BlocksDS, with DLDI in its default ARM9 mode.",
+        "landed": "2026-11-25 — `docker/Dockerfile`, `nds.mk`, `docs/building.md`"
       },
       {
         "id": "0005",
         "path": ".doctrina/decisions/0005-r4-hardware-target-and-kernel-policy.md",
         "title": "R4 hardware target and kernel policy",
-        "status": "proposed",
+        "status": "superseded by 0009",
         "date": "2026-11-24",
-        "summary": "Reference cart."
+        "summary": "Reference cart.",
+        "superseded_by": "0009"
       },
       {
         "id": "0006",
         "path": ".doctrina/decisions/0006-console-ui-with-the-libnds-keyboard-every-action-on-buttons-and-touch.md",
         "title": "Console UI with the libnds keyboard; every action on buttons and touch",
-        "status": "proposed",
+        "status": "accepted",
         "date": "2026-11-25",
-        "summary": "The interface is built on the libnds text console (32x24 cells per screen) with ANSI colours, plus the default libnds touch keyboard on the bottom screen's BG3, shown only on the prompt screen and with its slide anima..."
+        "summary": "The interface is built on the libnds text console (32x24 cells per screen) with ANSI colours, plus the default libnds touch keyboard on the bottom screen's BG3, shown only on the prompt screen and with its slide anima...",
+        "landed": "2026-11-25 — `src/ui/ui_console.c`, `docs/user-guide.md`, `tests/hw/ui-navigation.md`"
       },
       {
         "id": "0007",
         "path": ".doctrina/decisions/0007-int8-checkpoints-use-llama2-c-v2-with-a-group-size-dividing-dim-and-hidden-dim-int8-is-the-default-model.md",
         "title": "int8 checkpoints use llama2.c v2 with a group size dividing dim and hidden_dim; int8 is the default model",
-        "status": "proposed",
+        "status": "accepted",
         "date": "2026-11-25",
-        "summary": "int8 checkpoints are the `llama2.c` v2 format, byte for byte, so the stock `runq.c` is the oracle (contract `model-file-format`)."
+        "summary": "int8 checkpoints are the `llama2.c` v2 format, byte for byte, so the stock `runq.c` is the oracle (contract `model-file-format`).",
+        "landed": "2026-11-25 — `tools/dslm.py`, `tools/tests/test_quantize.py`"
       },
       {
         "id": "0008",
         "path": ".doctrina/decisions/0008-fixed-point-int8-engine-integer-only-and-deterministic-exact-against-its-host-build-drift-against-runq-c-bounded.md",
         "title": "Fixed-point int8 engine: integer-only and deterministic, exact against its host build, drift against runq.c bounded",
-        "status": "proposed",
+        "status": "accepted",
         "date": "2026-11-25",
-        "summary": "The int8 checkpoint runs a fixed-point engine with no float after load: Q16 activations, norms, RoPE and logits; weight scales converted in place to Q30 at load; activation scales Q24; int8 dot products in int32 per g..."
+        "summary": "The int8 checkpoint runs a fixed-point engine with no float after load: Q16 activations, norms, RoPE and logits; weight scales converted in place to Q30 at load; activation scales Q24; int8 dot products in int32 per g...",
+        "landed": "2026-11-25 — `src/engine/llama2_fixed.arm.c`, `tools/check_softfloat.py`, `tests/build/no-softfloat-in-forward.md`"
+      },
+      {
+        "id": "0009",
+        "path": ".doctrina/decisions/0009-reference-hardware-is-the-r4-clone-with-ysmenu-used-for-m4-kernel-dldi-and-argv-policy-unchanged.md",
+        "title": "Reference hardware is the R4 clone with YSMenu used for M4; kernel, DLDI and argv policy unchanged",
+        "status": "accepted",
+        "date": "2026-11-25",
+        "supersedes": "0005",
+        "summary": "Reference cart.",
+        "landed": "2026-11-25 — `benchmarks/2026-11-25-r4-ysmenu.txt`, `tests/hw/offline-run.md`"
       }
     ],
     "changes": [],

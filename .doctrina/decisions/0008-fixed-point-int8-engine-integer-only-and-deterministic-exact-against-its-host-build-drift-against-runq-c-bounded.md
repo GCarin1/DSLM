@@ -1,12 +1,12 @@
 # ADR 0008 — Fixed-point int8 engine: integer-only and deterministic, exact against its host build, drift against runq.c bounded
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2026-11-25
 - **Deciders:** Carini (agreed to accept bounded drift against runq.c, 2026-11-25)
 - **Supersedes:** —
 - **Superseded by:** —
 - **Evidence:** `src/engine/llama2_fixed.arm.c`, `src/engine/fxmath.arm.c`, `tools/check_softfloat.py`, `tools/tests/test_engine_host.py`
-- **Landed:** —
+- **Landed:** 2026-11-25 — `src/engine/llama2_fixed.arm.c`, `tools/check_softfloat.py`, `tests/build/no-softfloat-in-forward.md`
 
 ## Context
 

@@ -1,12 +1,12 @@
 # ADR 0006 — Console UI with the libnds keyboard; every action on buttons and touch
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2026-11-25
 - **Deciders:** Carini (approved the screen flow, control map and keyboard choice on 2026-11-25)
 - **Supersedes:** —
 - **Superseded by:** —
 - **Evidence:** `src/ui/ui.h`, `src/ui/ui_console.c`, `src/main.c`, `docs/user-guide.md`
-- **Landed:** —
+- **Landed:** 2026-11-25 — `src/ui/ui_console.c`, `docs/user-guide.md`, `tests/hw/ui-navigation.md`
 
 ## Context
 

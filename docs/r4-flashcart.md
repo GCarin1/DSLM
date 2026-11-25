@@ -1,6 +1,6 @@
 # Running DSLM on an R4 flashcart
 
-How to get `dslm.nds` running on a real DS / DS Lite with an R4-family flashcart. The policy behind this page is ADR 0005. DSLM never ships kernels or firmware: get them from the guides linked below.
+How to get `dslm.nds` running on a real DS / DS Lite with an R4-family flashcart. The policy behind this page is ADR 0009 (it supersedes ADR 0005). DSLM never ships kernels or firmware: get them from the guides linked below.
 
 ## 1. Identify the cart
 
@@ -20,7 +20,8 @@ Boot symptoms that identify a cart:
 
 | Cart | Kernel | Notes |
 |---|---|---|
-| Original R4 (r4ds.com) / M3 Simply (**reference cart**) | Wood R4 1.62 (`__rpg/` + `_DS_MENU.DAT` at the root) | microSD of **2 GB or less** (no SDHC). DLDI `r4tf.dldi` works on ARM9 and ARM7 |
+| R4 clone booting `R4.dat`/`TTMenu.dat` (DSONEi SDHC / R4i-SDHC YSMenu package) (**reference cart**, ADR 0009) | YSMenu (`TTMenu/` folder; `ttdldi.dat` auto-patches DLDI) | Tested on a 3.8 GB FAT32 partition; DSLM needs about 1.6 MB |
+| Original R4 (r4ds.com) / M3 Simply | Wood R4 1.62 (`__rpg/` + `_DS_MENU.DAT` at the root) | microSD of **2 GB or less** (no SDHC). DLDI `r4tf.dldi` works on ARM9 and ARM7 |
 | Original R4 / DSTT alternative | Pico-Launcher + Pico-Loader | No soft reset to menu |
 | DSTTi "DEMON"/timebomb clones | Pico-Launcher, AKMenu-Next or YSMenu | **Avoid R4iMenu**: it does not launch calico-built homebrew |
 | Ace3DS+/R4iLS family | Ace Wood R4 1.62 / AceOS | Follow the Ace3DS+ guide |

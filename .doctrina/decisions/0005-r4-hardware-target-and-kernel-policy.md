@@ -1,10 +1,10 @@
 # ADR 0005 — R4 hardware target and kernel policy
 
-- **Status:** proposed
+- **Status:** superseded by 0009
 - **Date:** 2026-11-24
 - **Deciders:** Carini
 - **Supersedes:** —
-- **Superseded by:** —
+- **Superseded by:** 0009
 - **Evidence:** n/a — no implementation yet
 - **Landed:** —
 
