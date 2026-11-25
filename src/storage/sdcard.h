@@ -34,6 +34,9 @@ sd_status sd_read_file_progress(const char *path, size_t max_size, void **data,
 /* Create or replace a file. */
 sd_status sd_write_file(const char *path, const void *data, size_t size);
 
+/* Append to a file, creating it if needed. */
+sd_status sd_append_file(const char *path, const void *data, size_t size);
+
 const char *sd_status_text(sd_status st);
 
 #endif

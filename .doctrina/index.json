@@ -86,9 +86,9 @@
         "id": "test-harness",
         "path": ".doctrina/specs/test-harness/spec.md",
         "status": "active",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "last_updated": "2026-11-24",
-        "implementation": "planned — current phase is documentation and planning only; no code yet",
+        "implementation": "implemented — bench.txt with heap peak (`src/main.c`), import into benchmarks/ (`tools/dslm.py bench`), unattended melonDS parity (`tests/parity/run_melonds.py`), golden and parity tools; the v1.0 hardware bench run is pending",
         "realizes": [
           "SC1",
           "SC2",
@@ -386,6 +386,20 @@
           }
         ],
         "lane": "product (confident; signals: build, record)"
+      },
+      {
+        "id": "0013-test-harness",
+        "title": "Test harness",
+        "path": ".doctrina/changes/archive/2026-11-25-0013-test-harness",
+        "status": "applied",
+        "applied": "2026-11-25",
+        "specs_affected": [
+          {
+            "capability": "test-harness",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "product (uncertain)"
       }
     ],
     "skills": [

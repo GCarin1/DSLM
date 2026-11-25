@@ -90,14 +90,24 @@ sd_status sd_read_file_progress(const char *path, size_t max_size, void **data,
     return SD_OK;
 }
 
-sd_status sd_write_file(const char *path, const void *data, size_t size)
+static sd_status put_file(const char *path, const char *mode, const void *data, size_t size)
 {
-    FILE *f = fopen(path, "wb");
+    FILE *f = fopen(path, mode);
     if (!f)
         return SD_IO_ERROR;
     size_t put = fwrite(data, 1, size, f);
     int closed = fclose(f);
     return put == size && closed == 0 ? SD_OK : SD_IO_ERROR;
+}
+
+sd_status sd_append_file(const char *path, const void *data, size_t size)
+{
+    return put_file(path, "ab", data, size);
+}
+
+sd_status sd_write_file(const char *path, const void *data, size_t size)
+{
+    return put_file(path, "wb", data, size);
 }
 
 const char *sd_status_text(sd_status st)

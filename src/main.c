@@ -14,10 +14,12 @@
 #include "storage/sdcard.h"
 #include "ui/textview.h"
 #include "ui/ui.h"
+#include "version.h"
 
 #define INI_PATH "/dslm/dslm.ini"
 #define INI_MAX_SIZE 4096
 #define TOKENS_PATH "/dslm/tokens.txt"
+#define BENCH_PATH "/dslm/bench.txt"
 #define STORY_CAP 8192
 
 static const char *const examples[] = {
@@ -101,7 +103,7 @@ static void load(app *a)
     ui_hint("Reading the microSD card...");
     if (!sd_mount())
         ui_fatal("FAT mount failed. The binary may need a manual DLDI patch (dlditool).");
-    ui_log("FAT mounted");
+    ui_log("DSLM %s - FAT mounted", DSLM_VERSION);
     read_settings(s);
     a->model_name = model_label(s->checkpoint);
     ui_title(a->model_name, "loading");
@@ -183,6 +185,24 @@ static int on_token(int token, const char *piece, void *user)
     return g->stopped;
 }
 
+/* contracts/model-file-format: one block per run appended to /dslm/bench.txt */
+static void append_bench(app *a, int steps)
+{
+    char buf[512];
+    int positions = a->n_tokens > 1 ? a->n_tokens - 1 : 0;
+    unsigned tps100 = a->gen_ms ? (unsigned)((uint64_t)positions * 100000 / a->gen_ms) : 0;
+    unsigned heap_peak = (unsigned)(getHeapEnd() - getHeapStart());
+    int len = snprintf(buf, sizeof buf,
+                       "version=%s\nbuild=%s\nemulated=unknown\ncheckpoint=%s\nprompt=%s\n"
+                       "steps=%d\nstopped=%d\nload_ms=%u\ntokens=%d\ngen_ms=%u\n"
+                       "tok_per_s=%u.%02u\nheap_peak_bytes=%u\n\n",
+                       DSLM_VERSION, a->model.format.quantized ? "int8" : "fp32",
+                       a->settings.checkpoint, a->prompt, steps, a->stopped, a->load_ms, a->n_tokens,
+                       a->gen_ms, tps100 / 100, tps100 % 100, heap_peak);
+    if (len > 0 && (size_t)len < sizeof buf)
+        sd_append_file(BENCH_PATH, buf, (size_t)len);
+}
+
 static void write_tokens(app *a, int steps)
 {
     size_t cap = 256 + DSLM_PATH_MAX + strlen(a->prompt) + (size_t)a->n_tokens * 6;
@@ -221,12 +241,13 @@ static void generate(app *a)
     a->gen_ms = ticks_to_ms(g.ticks);
     a->stopped = g.stopped;
     write_tokens(a, steps);
+    append_bench(a, steps);
 }
 
 /* ---- screens ------------------------------------------------------------ */
 
 static const char welcome[] =
-    "Welcome to DSLM, a tiny Llama 2 running offline on your Nintendo DS.\n\n"
+    "Welcome to DSLM " DSLM_VERSION ", a tiny Llama 2 running offline on your Nintendo DS.\n\n"
     "Type the start of a story on the touch keyboard, or press L/R for examples. "
     "START or GO writes the rest.\n\n"
     "The model only knows simple children's stories in English.";

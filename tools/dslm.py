@@ -8,6 +8,7 @@
     python tools/dslm.py golden [--kind K]      golden outputs: fp32, q80-runq, q80 (needs cc)
     python tools/dslm.py parity <tokens.txt>    compare a DS run with the golden
     python tools/dslm.py package [--force]      zip to unzip at the microSD root
+    python tools/dslm.py bench <bench.txt> ...  import a hardware run into benchmarks/
 
 Standard library only. golden compiles C, so run it in the Docker image.
 """
@@ -535,6 +536,65 @@ def package(out_path, nds_path, checkpoint, tokenizer, force=False, extra=()):
     return out_path, sorted(files)
 
 
+# ---- bench ---------------------------------------------------------------
+
+BENCH_DIR = ROOT / "benchmarks"
+
+
+def read_bench_blocks(path):
+    """Blocks of /dslm/bench.txt (key=value lines, blank line between runs)."""
+    blocks, cur = [], {}
+    for line in pathlib.Path(path).read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            if cur:
+                blocks.append(cur)
+                cur = {}
+            continue
+        key, sep, value = line.partition("=")
+        if sep:
+            cur[key] = value
+    if cur:
+        blocks.append(cur)
+    return blocks
+
+
+def _slug(text):
+    return "-".join("".join(c.lower() if c.isalnum() else " " for c in text).split()) or "cart"
+
+
+def git_commit():
+    try:
+        return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, check=True,
+                              capture_output=True, text=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return "unknown"
+
+
+def import_bench(bench_path, cart, kernel, microsd, emulated, out_path=None, date=None, force=False):
+    """Write the last run of bench.txt as a benchmarks/ file with the header from benchmarks/README.md."""
+    import datetime
+    blocks = read_bench_blocks(bench_path)
+    if not blocks:
+        raise SystemExit(f"error: {bench_path} has no runs")
+    if emulated not in ("yes", "no"):
+        raise SystemExit("error: --emulated must be yes or no")
+    run = dict(blocks[-1])
+    run["emulated"] = emulated
+    if out_path is None:
+        if emulated == "yes":
+            raise SystemExit("error: emulator runs never go to benchmarks/ (spec test-harness); pass --out")
+        date = date or datetime.date.today().isoformat()
+        out_path = BENCH_DIR / f"{date}-{_slug(cart)}-{run.get('build', 'run')}.txt"
+    out_path = pathlib.Path(out_path)
+    if out_path.exists() and not force:
+        raise SystemExit(f"error: {out_path} exists; pass --force to overwrite it")
+    header = {"cart": cart, "kernel": kernel, "microsd": microsd, "commit": git_commit()}
+    text = "".join(f"{k}={v}\n" for k, v in header.items()) + "".join(f"{k}={v}\n" for k, v in run.items())
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(text, encoding="utf-8", newline="\n")
+    return out_path, run
+
+
 # ---- parity --------------------------------------------------------------
 
 def read_ds_tokens(path):
@@ -599,6 +659,14 @@ def main(argv=None):
     p.add_argument("--nds", default=str(ROOT / "dslm.nds"))
     p.add_argument("--out", default=str(ROOT / "build" / "dslm-package.zip"))
     p.add_argument("--force", action="store_true", help="overwrite an existing package")
+    p = sub.add_parser("bench", help="import the last run of /dslm/bench.txt into benchmarks/")
+    p.add_argument("bench", help="path to bench.txt (e.g. E:/dslm/bench.txt)")
+    p.add_argument("--cart", required=True)
+    p.add_argument("--kernel", required=True)
+    p.add_argument("--microsd", required=True)
+    p.add_argument("--emulated", required=True, choices=["yes", "no"])
+    p.add_argument("--out")
+    p.add_argument("--force", action="store_true")
     p = sub.add_parser("parity")
     p.add_argument("tokens", help="path to tokens.txt written by the DS (e.g. .tools/card/dslm/tokens.txt)")
     p.add_argument("--golden")
@@ -631,6 +699,11 @@ def main(argv=None):
         print(f"wrote {out} ({out.stat().st_size} bytes)")
         for n in names:
             print(f"  {n}")
+    elif args.cmd == "bench":
+        out, run = import_bench(args.bench, args.cart, args.kernel, args.microsd, args.emulated,
+                                args.out, force=args.force)
+        print(f"wrote {out}: {run.get('build')} {run.get('tok_per_s')} tokens/s, "
+              f"load {run.get('load_ms')} ms, heap peak {run.get('heap_peak_bytes')} bytes")
     elif args.cmd == "parity":
         return 0 if parity(args.tokens, args.golden) else 1
     return 0

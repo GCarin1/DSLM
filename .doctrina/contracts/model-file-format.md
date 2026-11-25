@@ -82,16 +82,24 @@ gen_ms=<int>
 
 Replaced on every generation. `python tools/dslm.py parity` reads it and picks the golden file named after the checkpoint.
 
-**`/dslm/bench.txt`: one `key=value` per line, one block per run**
+**`/dslm/bench.txt`: one `key=value` per line, one block per run, appended**
 
 ```
+version=<DSLM version, e.g. 1.0.0>
 build=fp32|int8
-emulated=yes|no
+emulated=unknown
+checkpoint=<path from dslm.ini>
+prompt=<prompt text>
+steps=<int>
+stopped=0|1
 load_ms=<int>
-tokens=<int>
-tok_per_s=<float>
+tokens=<int, BOS included>
+gen_ms=<int>
+tok_per_s=<decimal, two places>
 heap_peak_bytes=<int>
 ```
+
+Blocks are separated by a blank line. The DS cannot tell an emulator from hardware, so it writes `emulated=unknown`; `python tools/dslm.py bench` sets `emulated=yes|no` (and the cart, kernel, microSD and commit header of `benchmarks/README.md`) when it imports the last block into `benchmarks/`. `heap_peak_bytes` is the heap claimed from the system at the end of the run (allocations are never returned, so it is the peak).
 
 **fp32 checkpoint: legacy `llama2.c` format (read by `run.c`)**
 
