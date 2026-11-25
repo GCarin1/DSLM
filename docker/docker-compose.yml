@@ -1,0 +1,26 @@
+# Run from the repository root:
+#   docker compose -f docker/docker-compose.yml run --rm <service>
+services:
+  build:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ..:/work
+    command: ["make", "nds"]
+
+  test:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ..:/work
+    command: ["make", "host-test"]
+
+  shell:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ..:/work
+    command: ["bash"]

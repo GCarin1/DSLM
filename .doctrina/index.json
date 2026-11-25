@@ -2,7 +2,7 @@
   "$schema_version": "0.1.0",
   "project": "DSLM",
   "framework_version": "0.22.1",
-  "last_updated": "2026-11-24",
+  "last_updated": "2026-11-25",
   "artifacts": {
     "product": {
       "path": ".doctrina/product.md",
@@ -143,7 +143,16 @@
         "summary": "Reference cart."
       }
     ],
-    "changes": [],
+    "changes": [
+      {
+        "id": "0002-m1-toolchain-card-blocksds",
+        "title": "M1 toolchain and card I/O: BlocksDS project skeleton with a UI-ready layered architecture (ui/engine/storage separation) and a hello-world .nds that reads /dslm/dslm.ini via DLDI",
+        "path": ".doctrina/changes/0002-m1-toolchain-card-blocksds",
+        "status": "proposed",
+        "opened": "2026-11-25",
+        "lane": "product"
+      }
+    ],
     "changes_archive": [
       {
         "id": "0001-r4-research-and-delivery-roadmap",
