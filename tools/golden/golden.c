@@ -1,7 +1,8 @@
 /*
- * Golden-output driver. Reuses the pinned llama2.c run.c unchanged (MIT,
- * Andrej Karpathy): TESTING drops its main(), and this loop mirrors its
- * generate() but prints token ids instead of streaming text.
+ * Golden-output driver. Reuses the pinned llama2.c run.c (fp32) or runq.c
+ * (int8, -DLLAMA2C_SOURCE='"runq.c"') unchanged (MIT, Andrej Karpathy):
+ * TESTING drops its main(), and this loop mirrors its generate() but prints
+ * token ids instead of streaming text. Both files share the API used here.
  *
  * Output, one record per run:
  *   P <prompt token count, BOS included>
@@ -9,7 +10,10 @@
  *   S <generated text as hex, filtered like safe_printf>
  */
 #define TESTING
-#include "run.c"
+#ifndef LLAMA2C_SOURCE
+#define LLAMA2C_SOURCE "run.c"
+#endif
+#include LLAMA2C_SOURCE
 
 static void append_piece(char *buf, size_t *n, const char *piece)
 {

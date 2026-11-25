@@ -30,7 +30,7 @@ class Stage(unittest.TestCase):
     def test_default_ini_points_at_staged_files(self):
         dslm.stage(self.card, self.ckpt, self.tok)
         ini = (self.card / "dslm" / "dslm.ini").read_text()
-        self.assertIn("checkpoint = /dslm/models/stories260K.bin", ini)
+        self.assertIn("checkpoint = /dslm/models/stories260K_q80.bin", ini)
         self.assertIn("tokenizer  = /dslm/models/tok512.bin", ini)
         self.assertIn("temperature = 0.0", ini)
 
@@ -41,6 +41,13 @@ class Stage(unittest.TestCase):
         self.assertEqual(path, "/dslm/models/stories260K.bin")
         self.assertEqual(int(size), 5)
         self.assertEqual(sha, dslm.sha256_file(self.ckpt))
+
+    def test_extra_checkpoints_are_staged(self):
+        fp32 = self.dir / "src" / "other.bin"
+        fp32.write_bytes(b"fp32")
+        lines = dslm.stage(self.card, self.ckpt, self.tok, extra=[fp32])
+        self.assertTrue((self.card / "dslm" / "models" / "other.bin").is_file())
+        self.assertEqual(len(lines), 3)
 
     def test_existing_ini_is_kept_unless_forced(self):
         ini = self.card / "dslm" / "dslm.ini"

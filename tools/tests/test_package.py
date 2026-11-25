@@ -17,8 +17,10 @@ class Package(unittest.TestCase):
         self.dir = pathlib.Path(self.tmp.name)
         self.nds = self.dir / "dslm.nds"
         self.nds.write_bytes(b"NDS")
-        self.ckpt = self.dir / "stories260K.bin"
+        self.ckpt = self.dir / "stories260K_q80.bin"
         self.ckpt.write_bytes(b"model")
+        self.fp32 = self.dir / "stories260K.bin"
+        self.fp32.write_bytes(b"fp32")
         self.tok = self.dir / "tok512.bin"
         self.tok.write_bytes(b"tok")
         self.out = self.dir / "out" / "pkg.zip"
@@ -27,27 +29,29 @@ class Package(unittest.TestCase):
         self.tmp.cleanup()
 
     def build(self, out=None, force=False):
-        return dslm.package(out or self.out, self.nds, self.ckpt, self.tok, force=force)
+        return dslm.package(out or self.out, self.nds, self.ckpt, self.tok, force=force, extra=[self.fp32])
 
     def test_layout_unzips_at_the_card_root(self):
         _, names = self.build()
         self.assertEqual(names, sorted([
             "MANIFEST.txt", "README-DSLM.txt", "THIRD_PARTY.txt", "dslm.nds",
-            "dslm/dslm.ini", "dslm/models/stories260K.bin", "dslm/models/tok512.bin"]))
+            "dslm/dslm.ini", "dslm/models/stories260K.bin", "dslm/models/stories260K_q80.bin",
+            "dslm/models/tok512.bin"]))
 
     def test_model_files_are_copied_unchanged(self):
         self.build()
         with zipfile.ZipFile(self.out) as zf:
-            self.assertEqual(zf.read("dslm/models/stories260K.bin"), b"model")
+            self.assertEqual(zf.read("dslm/models/stories260K_q80.bin"), b"model")
+            self.assertEqual(zf.read("dslm/models/stories260K.bin"), b"fp32")
             self.assertEqual(zf.read("dslm.nds"), b"NDS")
-            self.assertIn("checkpoint = /dslm/models/stories260K.bin", zf.read("dslm/dslm.ini").decode())
+            self.assertIn("checkpoint = /dslm/models/stories260K_q80.bin", zf.read("dslm/dslm.ini").decode())
 
     def test_manifest_lists_sizes_and_hashes(self):
         self.build()
         with zipfile.ZipFile(self.out) as zf:
             lines = zf.read("MANIFEST.txt").decode().splitlines()
         rec = {l.split()[0]: l.split()[1:] for l in lines}
-        self.assertEqual(rec["dslm/models/stories260K.bin"][0], "5")
+        self.assertEqual(rec["dslm/models/stories260K_q80.bin"][0], "5")
         self.assertEqual(rec["dslm.nds"][1], dslm.hashlib.sha256(b"NDS").hexdigest())
 
     def test_licenses_and_readme_are_included(self):

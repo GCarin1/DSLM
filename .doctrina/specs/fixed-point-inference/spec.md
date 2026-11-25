@@ -2,11 +2,11 @@
 
 **Capability:** fixed-point-inference
 **Status:** active
-**Implementation:** planned — current phase is documentation and planning only; no code yet
+**Implementation:** partial — int8 weights with integer matmul and exact parity against runq.c (`src/engine/llama2.c`, ADR 0007); fixed-point activations, exp table and ITCM placement are M5b
 **Realizes:** SC3
 **Depends on:** inference-engine, model-loading
 **Last updated:** 2026-11-24
-**Version:** 0.1.0
+**Version:** 0.2.0
 
 ## Purpose
 
@@ -22,6 +22,7 @@ The performance build. It replaces software-emulated `float` with integer arithm
 ### Event-driven
 
 - When generation finishes, the fixed-point build shall show the measured tokens per second on screen.
+- When the checkpoint starts with the int8 v2 magic number, the engine shall run the int8 forward pass; otherwise it shall run the fp32 forward pass.
 
 ### State-driven
 
@@ -39,8 +40,9 @@ The performance build. It replaces software-emulated `float` with integer arithm
 
 1. [unverified] The time per token measured on a real R4 is recorded and compared with the fp32 baseline — verified by `tests/hw/benchmark-int8.md`.
 2. [unverified] No software-float symbol (`__aeabi_fmul`, `__aeabi_fadd`, ...) appears in the forward pass call map — verified by `tests/build/no-softfloat-in-forward.md`.
-3. [unverified] At temperature 0, the first generated tokens match the PC int8 golden output (`runq.c` running the same quantized checkpoint) — verified by `tests/parity/int8-stories260k.md`.
-4. [unverified] The int8 checkpoint the `pc-toolchain` quantizer generates is read by the reference `runq.c` — verified by `tools/tests/test_quantize.py`.
+3. [verified] At temperature 0, the first generated tokens match the PC int8 golden output (`runq.c` running the same quantized checkpoint) — verified by `tests/parity/int8-stories260k.md`.
+4. [verified] The int8 checkpoint the `pc-toolchain` quantizer generates is read by the reference `runq.c` — verified by `tools/tests/test_quantize.py`.
+5. [verified] The int8 engine built for the host reproduces every runq.c golden prompt token for token — verified by `tools/tests/test_engine_host.py`
 
 ## Maturity
 

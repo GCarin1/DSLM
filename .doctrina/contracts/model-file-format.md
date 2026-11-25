@@ -41,7 +41,8 @@ Not applicable: hardware tests are manual scripts under `tests/hw/`.
 /                     kernel files (e.g. __rpg/, _DS_MENU.DAT); never shipped by DSLM
 /dslm.nds             the homebrew (may also live under /apps/)
 /dslm/dslm.ini        settings (below)
-/dslm/models/stories260K.bin
+/dslm/models/stories260K_q80.bin   int8 (default)
+/dslm/models/stories260K.bin       fp32 reference
 /dslm/models/tok512.bin
 /dslm/bench.txt       written by the harness after each run
 /dslm/manifest.txt    written by pc-toolchain: "<card path> <size> <sha256>" per staged file
@@ -53,7 +54,7 @@ The same tree, minus the kernel files, is the melonDS "Sync SD to folder" direct
 
 ```ini
 [model]
-checkpoint = /dslm/models/stories260K.bin
+checkpoint = /dslm/models/stories260K_q80.bin
 tokenizer  = /dslm/models/tok512.bin
 
 [sampling]
@@ -88,9 +89,17 @@ Little-endian. The DS ARM9 is little-endian too, so no conversion is needed.
 1. `int32 max_token_length`.
 2. For each of the `vocab_size` tokens: `float32 score`, `int32 len`, `len` bytes of text (no terminator).
 
-**int8 checkpoint: to be defined**
+**int8 checkpoint: `llama2.c` v2 format (read by `runq.c`), `<model>_q80.bin`**
 
-The quantized format for `fixed-point-inference` has not been chosen yet. The candidate is `runq.c`'s v2 format (magic `ak42`, version, header, `group_size`, int8 weights with per-group `float32` scales), with the scales converted to fixed point at load or export time. It becomes a change to this contract when the capability is implemented.
+Little-endian, produced by `tools/dslm.py quantize` from the fp32 checkpoint (ADR 0007).
+
+1. Header of 256 bytes, zero-padded: `uint32 magic = 0x616b3432` ("ak42"), `int32 version = 2`, the 7 × `int32` config (positive `vocab_size`), `uint8 shared_classifier`, `int32 group_size` (at byte 37).
+2. `float32` norms: `rms_att_weight` (all layers), `rms_ffn_weight` (all layers), `rms_final_weight`. No RoPE tables.
+3. Quantized tensors, each as `int8 q[n]` followed by `float32 s[n / group_size]` (`q ≈ w / s`, `s = max|w| / 127` per group of `group_size` consecutive values): `token_embedding_table`, then per layer `wq`, then per layer `wk`, `wv`, `wo`, `w1`, `w2`, `w3`, then `wcls` if not shared.
+
+`group_size` must divide both `dim` and `hidden_dim`: `runq.c`'s matmul only walks whole groups and would drop the rest. For stories260K (dim 64, hidden 172) it is 4.
+
+The loader tells the formats apart by the first four bytes.
 
 ## References
 

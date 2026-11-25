@@ -39,6 +39,14 @@ class EngineHost(unittest.TestCase):
             self.assertEqual(got["tokens"], run["tokens"], run["prompt"])
             self.assertEqual(got["text"], run["text"], run["prompt"])
 
+    def test_int8_matches_runq_golden_for_every_prompt(self):
+        q, tok = dslm.ensure_q80()
+        golden = json.loads((dslm.GOLDEN_DIR / "stories260K_q80.json").read_text(encoding="utf-8"))
+        for run in golden["runs"]:
+            got = dslm.run_golden(self.exe, q, tok, run["prompt"], golden["steps"])
+            self.assertEqual(got["tokens"], run["tokens"], run["prompt"])
+            self.assertEqual(got["text"], run["text"], run["prompt"])
+
     def test_stop_keeps_the_tokens_produced_so_far(self):
         ckpt, tok = dslm.model_paths()
         run = self.golden["runs"][1]

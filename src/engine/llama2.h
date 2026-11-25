@@ -9,9 +9,23 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define LLAMA2_HEADER_BYTES 28
+#define LLAMA2_HEADER_BYTES 28    /* fp32 run.c checkpoint header */
+#define LLAMA2_Q80_HEADER_BYTES 256 /* int8 runq.c v2 header ("ak42") */
+#define LLAMA2_PROBE_BYTES 64     /* enough to recognise either format */
 #define LLAMA2_MAX_PROMPT 256 /* bytes; the prompt buffers are sized for this */
 #define LLAMA2_BOS 1
+
+/* Which checkpoint layout a file uses (contracts/model-file-format). */
+typedef struct {
+    int quantized;  /* 0 = fp32 run.c, 1 = int8 runq.c v2 */
+    int shared;     /* classifier shares the token embedding */
+    int group_size; /* int8 only */
+} llama2_format;
+
+typedef struct {
+    int8_t *q; /* int8 values */
+    float *s;  /* one scale per group_size values */
+} llama2_qtensor;
 
 typedef struct {
     int dim;
@@ -33,9 +47,23 @@ typedef struct {
     float *wcls;
 } llama2_weights;
 
+/* int8 weights (runq.c); norms stay fp32 and the embedding is dequantized. */
+typedef struct {
+    llama2_qtensor *q_tokens;
+    float *token_embedding_table;
+    float *rms_att_weight;
+    float *rms_ffn_weight;
+    llama2_qtensor *wq, *wk, *wv, *wo; /* one per layer */
+    llama2_qtensor *w1, *w2, *w3;
+    float *rms_final_weight;
+    llama2_qtensor *wcls;
+} llama2_qweights;
+
 typedef struct {
     float *x, *xb, *xb2, *hb, *hb2, *q, *k, *v, *att, *logits;
     float *key_cache, *value_cache;
+    float *rope;           /* cos/sin pairs for the current position */
+    llama2_qtensor xq, hq; /* int8 only: quantized activations */
 } llama2_state;
 
 typedef struct {
@@ -50,7 +78,9 @@ typedef struct {
 
 typedef struct {
     llama2_config config;
-    llama2_weights weights;
+    llama2_format format;
+    llama2_weights weights;   /* fp32 */
+    llama2_qweights qweights; /* int8 */
     llama2_state state;
 
     /* tokenizer */
@@ -82,19 +112,26 @@ typedef enum {
     LLAMA2_PROMPT_TOO_LONG
 } llama2_status;
 
-/* Parse the 28-byte header; vocab_size is made positive. */
+/* Parse the 28-byte fp32 header; vocab_size is made positive. */
 llama2_status llama2_read_config(const void *header, llama2_config *c, int *shared_weights);
 
-/* Checkpoint size the header implies, in bytes. */
+/* Checkpoint size an fp32 header implies, in bytes. */
 size_t llama2_checkpoint_bytes(const llama2_config *c, int shared_weights);
 
+/* Recognise either format from the first LLAMA2_PROBE_BYTES (or more) bytes. */
+llama2_status llama2_probe(const void *head, size_t n, llama2_config *c, llama2_format *f);
+
+/* File size the header implies for its format, in bytes. */
+size_t llama2_file_bytes(const llama2_config *c, const llama2_format *f);
+
 /* Bytes llama2_init allocates (run state, tokenizer, sampler, scratch). */
-size_t llama2_runtime_bytes(const llama2_config *c, size_t tokenizer_bytes);
+size_t llama2_runtime_bytes(const llama2_config *c, const llama2_format *f, size_t tokenizer_bytes);
 
 /*
- * Wire up a model whose checkpoint and tokenizer files are already in RAM.
- * The checkpoint buffer must stay alive and be 4-byte aligned; weights are
- * used in place. The tokenizer buffer may be freed after this returns.
+ * Wire up a model whose checkpoint and tokenizer files are already in RAM,
+ * in either format. The checkpoint buffer must stay alive and be 4-byte
+ * aligned; weights are used in place. The tokenizer buffer may be freed
+ * after this returns.
  */
 llama2_status llama2_init(llama2 *m, const void *checkpoint, size_t checkpoint_size,
                           const void *tokenizer, size_t tokenizer_size,

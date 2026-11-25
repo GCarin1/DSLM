@@ -2,10 +2,10 @@
 
 **Capability:** pc-toolchain
 **Status:** active
-**Implementation:** partial — fetch, inspect, stage, fp32 golden outputs, parity and install package (`tools/dslm.py`); int8 quantization waits for the format in M5
+**Implementation:** implemented — fetch, inspect, quantize (int8 v2), stage, fp32 and int8 golden outputs, parity and install package (`tools/dslm.py`)
 **Realizes:** SC2, SC5
 **Last updated:** 2026-11-25
-**Version:** 0.4.0
+**Version:** 0.5.0
 
 ## Purpose
 
@@ -18,6 +18,7 @@ Python scripts that run on the PC and prepare everything that goes onto the R4's
 - The toolchain shall produce files only in the layouts defined by `contracts/model-file-format`.
 - The toolchain shall pin the `llama2.c` commit it uses to build golden outputs.
 - The toolchain shall record the size in bytes and the SHA-256 of every staged model and tokenizer file.
+- The toolchain shall choose an int8 group size that divides both dim and hidden_dim.
 
 ### Event-driven
 
@@ -26,6 +27,7 @@ Python scripts that run on the PC and prepare everything that goes onto the R4's
 - When asked to quantize, the toolchain shall convert an fp32 checkpoint into the int8 format and report the size before and after.
 - When asked to stage a card, the toolchain shall write the /dslm/ tree (models, tokenizer and dslm.ini) into a target directory that works both as the melonDS SD sync folder and as the root of the R4 microSD card.
 - When asked to package, the toolchain shall write a zip with dslm.nds, the /dslm tree with the pinned model and tokenizer, a user README, a manifest and the third-party license notices, laid out to unzip at the microSD root.
+- When asked to build golden outputs for the int8 model, the toolchain shall run the pinned runq.c on the quantized checkpoint and save them separately from the fp32 golden outputs.
 
 ### Unwanted-behavior (must-not)
 

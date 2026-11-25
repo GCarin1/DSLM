@@ -103,7 +103,7 @@ size_t dslm_ini_format(const dslm_settings *s, char *buf, size_t cap)
 
 void dslm_settings_defaults(dslm_settings *s)
 {
-    strcpy(s->checkpoint, "/dslm/models/stories260K.bin");
+    strcpy(s->checkpoint, "/dslm/models/stories260K_q80.bin");
     strcpy(s->tokenizer, "/dslm/models/tok512.bin");
     s->temperature = 0.0f;
     s->topp = 0.9f;

@@ -9,7 +9,8 @@ The DS never downloads anything. The model travels on the card with the program:
 ```
 /dslm.nds                     the program (any folder your kernel can launch)
 /dslm/dslm.ini                settings (optional; defaults are used without it)
-/dslm/models/stories260K.bin  the model, about 1 MB
+/dslm/models/stories260K_q80.bin  the model, int8, about 0.5 MB (default)
+/dslm/models/stories260K.bin      the same model in fp32, about 1 MB (reference)
 /dslm/models/tok512.bin       the tokenizer, about 6 KB
 ```
 

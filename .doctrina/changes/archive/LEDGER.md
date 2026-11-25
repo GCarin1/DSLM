@@ -10,3 +10,4 @@ One line per archived change, newest last. Appended by
 - 2026-11-25 — 0005-m6-interface — M6 interface (specs: ds-interface MODIFIED)
 - 2026-11-25 — 0006-install-package — Install package (specs: pc-toolchain MODIFIED)
 - 2026-11-25 — 0008-m4-hardware-results — M4 hardware results (specs: inference-engine MODIFIED, model-loading MODIFIED)
+- 2026-11-25 — 0007-m5a-int8-path — M5a int8 path (specs: fixed-point-inference MODIFIED, pc-toolchain MODIFIED)

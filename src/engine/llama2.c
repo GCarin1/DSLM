@@ -52,20 +52,83 @@ static size_t state_floats(const llama2_config *c)
     size_t kv_dim = (size_t)c->dim * c->n_kv_heads / c->n_heads;
     return 4 * (size_t)c->dim + 2 * (size_t)c->hidden_dim +
            2 * (size_t)c->n_layers * c->seq_len * kv_dim +
-           (size_t)c->n_heads * c->seq_len + c->vocab_size;
+           (size_t)c->n_heads * c->seq_len + c->vocab_size + c->dim /* RoPE table */;
 }
 
 #define ALIGN8(n) (((n) + 7u) & ~(size_t)7u)
+#define Q80_MAGIC 0x616B3432u
 
-size_t llama2_runtime_bytes(const llama2_config *c, size_t tokenizer_bytes)
+llama2_status llama2_probe(const void *head, size_t n, llama2_config *c, llama2_format *f)
+{
+    const unsigned char *h = head;
+    uint32_t magic;
+    memset(f, 0, sizeof *f);
+    if (n < 4)
+        return LLAMA2_BAD_HEADER;
+    memcpy(&magic, h, 4);
+    if (magic != Q80_MAGIC) {
+        if (n < LLAMA2_HEADER_BYTES)
+            return LLAMA2_BAD_HEADER;
+        return llama2_read_config(head, c, &f->shared);
+    }
+
+    /* runq.c v2: magic, version, 7 x int32 config, uint8 shared, int32 group size */
+    int32_t version, cfg[7], gs;
+    if (n < 41)
+        return LLAMA2_BAD_HEADER;
+    memcpy(&version, h + 4, 4);
+    memcpy(cfg, h + 8, sizeof cfg);
+    memcpy(&gs, h + 37, 4);
+    if (version != 2)
+        return LLAMA2_BAD_HEADER;
+    f->quantized = 1;
+    f->shared = h[36] != 0;
+    f->group_size = gs;
+    llama2_status st = llama2_read_config(cfg, c, &(int){0});
+    if (st != LLAMA2_OK)
+        return st;
+    if (gs <= 0 || c->dim % gs != 0 || c->hidden_dim % gs != 0)
+        return LLAMA2_BAD_HEADER;
+    return LLAMA2_OK;
+}
+
+size_t llama2_file_bytes(const llama2_config *c, const llama2_format *f)
+{
+    if (!f->quantized)
+        return llama2_checkpoint_bytes(c, f->shared);
+    size_t d = c->dim, hd = c->hidden_dim, L = c->n_layers, V = c->vocab_size;
+    size_t kv = d * c->n_kv_heads / c->n_heads, gs = f->group_size;
+#define QT(nn) ((nn) + 4 * ((nn) / gs))
+    size_t n = LLAMA2_Q80_HEADER_BYTES + 4 * (2 * L * d + d) + QT(V * d);
+    n += L * (QT(d * d) + 2 * QT(d * kv) + QT(d * d) + 3 * QT(d * hd));
+    if (!f->shared)
+        n += QT(V * d);
+#undef QT
+    return n;
+}
+
+/* int8 extras: dequantized embedding, k/v rows, activation scales */
+static size_t qstate_floats(const llama2_config *c, const llama2_format *f)
+{
+    size_t kv_dim = (size_t)c->dim * c->n_kv_heads / c->n_heads;
+    return (size_t)c->vocab_size * c->dim + 2 * kv_dim +
+           c->dim / f->group_size + c->hidden_dim / f->group_size;
+}
+
+size_t llama2_runtime_bytes(const llama2_config *c, const llama2_format *f, size_t tokenizer_bytes)
 {
     size_t V = c->vocab_size;
-    return ALIGN8(state_floats(c) * sizeof(float)) +
-           ALIGN8(V * sizeof(char *)) + ALIGN8(V * sizeof(float)) +
-           ALIGN8(tokenizer_bytes) + ALIGN8(V * sizeof(llama2_token_index)) +
-           ALIGN8(V * sizeof(llama2_prob_index)) +
-           ALIGN8(2 * tokenizer_bytes + 3) +
-           ALIGN8((LLAMA2_MAX_PROMPT + 3) * sizeof(int));
+    size_t n = ALIGN8(state_floats(c) * sizeof(float)) +
+               ALIGN8(V * sizeof(char *)) + ALIGN8(V * sizeof(float)) +
+               ALIGN8(tokenizer_bytes) + ALIGN8(V * sizeof(llama2_token_index)) +
+               ALIGN8(V * sizeof(llama2_prob_index)) +
+               ALIGN8(2 * tokenizer_bytes + 3) +
+               ALIGN8((LLAMA2_MAX_PROMPT + 3) * sizeof(int));
+    if (f->quantized)
+        n += ALIGN8(qstate_floats(c, f) * sizeof(float)) + 8 /* carved in two blocks */ +
+             ALIGN8((size_t)c->dim + c->hidden_dim) +
+             ALIGN8((7 * (size_t)c->n_layers + 2) * sizeof(llama2_qtensor));
+    return n;
 }
 
 static void *carve(unsigned char **p, size_t bytes)
@@ -80,33 +143,95 @@ static int compare_tokens(const void *a, const void *b)
     return strcmp(((const llama2_token_index *)a)->str, ((const llama2_token_index *)b)->str);
 }
 
+/* runq.c init_quantized_tensors: n tensors of size_each int8 values, each followed by its scales */
+static llama2_qtensor *map_qtensors(const unsigned char **ptr, int n, size_t size_each, size_t gs,
+                                    llama2_qtensor *out)
+{
+    const unsigned char *p = *ptr;
+    for (int i = 0; i < n; i++) {
+        out[i].q = (int8_t *)p;
+        p += size_each;
+        out[i].s = (float *)p;
+        p += 4 * (size_each / gs);
+    }
+    *ptr = p;
+    return out;
+}
+
+/* runq.c memory_map_weights; the embedding is dequantized once into the arena */
+static void init_qweights(llama2 *m, const void *checkpoint, unsigned char **arena)
+{
+    llama2_config *p = &m->config;
+    llama2_qweights *w = &m->qweights;
+    size_t gs = m->format.group_size;
+    size_t L = p->n_layers, d = p->dim, hd = p->hidden_dim, V = p->vocab_size;
+    size_t head_size = d / p->n_heads;
+    size_t kv = p->n_kv_heads * head_size;
+
+    float *fptr = (float *)((const unsigned char *)checkpoint + LLAMA2_Q80_HEADER_BYTES);
+    w->rms_att_weight = fptr;
+    fptr += L * d;
+    w->rms_ffn_weight = fptr;
+    fptr += L * d;
+    w->rms_final_weight = fptr;
+    fptr += d;
+
+    llama2_qtensor *t = carve(arena, (7 * L + 2) * sizeof(llama2_qtensor));
+    const unsigned char *ptr = (const unsigned char *)fptr;
+    w->q_tokens = map_qtensors(&ptr, 1, V * d, gs, t);
+    t += 1;
+    w->wq = map_qtensors(&ptr, (int)L, d * (p->n_heads * head_size), gs, t);
+    t += L;
+    w->wk = map_qtensors(&ptr, (int)L, d * kv, gs, t);
+    t += L;
+    w->wv = map_qtensors(&ptr, (int)L, d * kv, gs, t);
+    t += L;
+    w->wo = map_qtensors(&ptr, (int)L, (p->n_heads * head_size) * d, gs, t);
+    t += L;
+    w->w1 = map_qtensors(&ptr, (int)L, d * hd, gs, t);
+    t += L;
+    w->w2 = map_qtensors(&ptr, (int)L, hd * d, gs, t);
+    t += L;
+    w->w3 = map_qtensors(&ptr, (int)L, d * hd, gs, t);
+    t += L;
+    w->wcls = m->format.shared ? w->q_tokens : map_qtensors(&ptr, 1, d * V, gs, t);
+
+    /* dequantize(): x[i] = q[i] * s[i / GS] */
+    w->token_embedding_table = carve(arena, V * d * sizeof(float));
+    for (size_t i = 0; i < V * d; i++)
+        w->token_embedding_table[i] = w->q_tokens->q[i] * w->q_tokens->s[i / gs];
+}
+
 llama2_status llama2_init(llama2 *m, const void *checkpoint, size_t checkpoint_size,
                           const void *tokenizer, size_t tokenizer_size,
                           float temperature, float topp, unsigned long long seed)
 {
-    int shared;
     memset(m, 0, sizeof *m);
-    if (checkpoint_size < LLAMA2_HEADER_BYTES)
-        return LLAMA2_BAD_HEADER;
-    llama2_status st = llama2_read_config(checkpoint, &m->config, &shared);
+    llama2_status st = llama2_probe(checkpoint, checkpoint_size, &m->config, &m->format);
     if (st != LLAMA2_OK)
         return st;
-    if (llama2_checkpoint_bytes(&m->config, shared) != checkpoint_size)
+    if (llama2_file_bytes(&m->config, &m->format) != checkpoint_size)
         return LLAMA2_BAD_SIZE;
     if (tokenizer_size < 4)
         return LLAMA2_BAD_TOKENIZER;
 
     llama2_config *p = &m->config;
+    int shared = m->format.shared;
     int V = p->vocab_size;
-    unsigned char *arena = malloc(llama2_runtime_bytes(p, tokenizer_size));
+    unsigned char *arena = malloc(llama2_runtime_bytes(p, &m->format, tokenizer_size));
     if (!arena)
         return LLAMA2_NO_MEMORY;
     m->arena = arena;
 
-    /* weights, used in place (memory_map_weights) */
-    llama2_weights *w = &m->weights;
     int head_size = p->dim / p->n_heads;
     size_t L = p->n_layers;
+    if (m->format.quantized) {
+        init_qweights(m, checkpoint, &arena);
+        goto state;
+    }
+
+    /* weights, used in place (memory_map_weights) */
+    llama2_weights *w = &m->weights;
     float *ptr = (float *)((const unsigned char *)checkpoint + LLAMA2_HEADER_BYTES);
     w->token_embedding_table = ptr;
     ptr += (size_t)p->vocab_size * p->dim;
@@ -134,9 +259,22 @@ llama2_status llama2_init(llama2 *m, const void *checkpoint, size_t checkpoint_s
     ptr += p->seq_len * head_size / 2; /* legacy freq_cis_imag */
     w->wcls = shared ? w->token_embedding_table : ptr;
 
+state:;
     /* run state (malloc_run_state), zeroed like calloc */
     llama2_state *s = &m->state;
     int kv_dim = (p->dim * p->n_kv_heads) / p->n_heads;
+    if (m->format.quantized) {
+        size_t gs = m->format.group_size;
+        float *qf = carve(&arena, (2 * (size_t)kv_dim + p->dim / gs + p->hidden_dim / gs) * sizeof(float));
+        int8_t *qi = carve(&arena, (size_t)p->dim + p->hidden_dim);
+        memset(qi, 0, (size_t)p->dim + p->hidden_dim);
+        s->k = qf;          qf += kv_dim;
+        s->v = qf;          qf += kv_dim;
+        s->xq.s = qf;       qf += p->dim / gs;
+        s->hq.s = qf;
+        s->xq.q = qi;
+        s->hq.q = qi + p->dim;
+    }
     float *f = carve(&arena, state_floats(p) * sizeof(float));
     memset(f, 0, state_floats(p) * sizeof(float));
     s->x = f;            f += p->dim;
@@ -148,7 +286,8 @@ llama2_status llama2_init(llama2 *m, const void *checkpoint, size_t checkpoint_s
     s->key_cache = f;    f += L * p->seq_len * kv_dim;
     s->value_cache = f;  f += L * p->seq_len * kv_dim;
     s->att = f;          f += (size_t)p->n_heads * p->seq_len;
-    s->logits = f;
+    s->logits = f;       f += p->vocab_size;
+    s->rope = f;
 
     /* tokenizer (build_tokenizer), strings packed into one block */
     m->vocab = carve(&arena, V * sizeof(char *));
@@ -256,8 +395,181 @@ static void matmul(float *xout, float *x, float *w, int n, int d)
     }
 }
 
+/*
+ * run.c's RoPE factors (cos, sin) for one position. run.c recomputes them in
+ * every layer; they only depend on pos, so computing them once per token
+ * gives bit-identical values for a fifth of the powf/cosf/sinf calls.
+ */
+static void rope_table(float *rope, int dim, int head_size, int pos)
+{
+    for (int i = 0; i < dim; i += 2) {
+        int head_dim = i % head_size;
+        float freq = 1.0f / powf(10000.0f, head_dim / (float)head_size);
+        float val = pos * freq;
+        rope[i] = cosf(val);
+        rope[i + 1] = sinf(val);
+    }
+}
+
+/* ---- int8 blocks (runq.c) ----------------------------------------------- */
+
+/*
+ * runq.c quantize(). fabsf/roundf give the same results as its fabs/round on
+ * float inputs without going through double.
+ */
+static void quantize(llama2_qtensor *qx, const float *x, int n, int gs)
+{
+    int num_groups = n / gs;
+    float Q_MAX = 127.0f;
+    for (int group = 0; group < num_groups; group++) {
+        float wmax = 0.0f;
+        for (int i = 0; i < gs; i++) {
+            float val = fabsf(x[group * gs + i]);
+            if (val > wmax) {
+                wmax = val;
+            }
+        }
+        float scale = wmax / Q_MAX;
+        qx->s[group] = scale;
+        for (int i = 0; i < gs; i++) {
+            float quant_value = x[group * gs + i] / scale;
+            int8_t quantized = (int8_t)roundf(quant_value);
+            qx->q[group * gs + i] = quantized;
+        }
+    }
+}
+
+/* runq.c matmul(): integer dot products per group, scaled in float. */
+static void matmul_q(float *xout, const llama2_qtensor *x, const llama2_qtensor *w, int n, int d, int gs)
+{
+    for (int i = 0; i < d; i++) {
+        float val = 0.0f;
+        int32_t ival = 0;
+        int in = i * n;
+        for (int j = 0; j <= n - gs; j += gs) {
+            for (int k = 0; k < gs; k++) {
+                ival += ((int32_t)x->q[j + k]) * ((int32_t)w->q[in + j + k]);
+            }
+            val += ((float)ival) * w->s[(in + j) / gs] * x->s[j / gs];
+            ival = 0;
+        }
+        xout[i] = val;
+    }
+}
+
+static void rmsnorm(float *o, float *x, float *weight, int size);
+static void softmax(float *x, int size);
+
+static float *forward_q(llama2 *m, int token, int pos)
+{
+    llama2_config *p = &m->config;
+    llama2_qweights *w = &m->qweights;
+    llama2_state *s = &m->state;
+    float *x = s->x;
+    int gs = m->format.group_size;
+    int dim = p->dim;
+    int kv_dim = (p->dim * p->n_kv_heads) / p->n_heads;
+    int kv_mul = p->n_heads / p->n_kv_heads;
+    int hidden_dim = p->hidden_dim;
+    int head_size = dim / p->n_heads;
+    float sqrt_head_size = sqrtf(head_size);
+    rope_table(s->rope, dim, head_size, pos);
+
+    memcpy(x, w->token_embedding_table + token * dim, dim * sizeof(float));
+
+    for (int l = 0; l < p->n_layers; l++) {
+        rmsnorm(s->xb, x, w->rms_att_weight + l * dim, dim);
+
+        quantize(&s->xq, s->xb, dim, gs);
+        matmul_q(s->q, &s->xq, w->wq + l, dim, dim, gs);
+        matmul_q(s->k, &s->xq, w->wk + l, dim, kv_dim, gs);
+        matmul_q(s->v, &s->xq, w->wv + l, dim, kv_dim, gs);
+
+        for (int i = 0; i < dim; i += 2) {
+            float fcr = s->rope[i];
+            float fci = s->rope[i + 1];
+            int rotn = i < kv_dim ? 2 : 1;
+            for (int v = 0; v < rotn; v++) {
+                float *vec = v == 0 ? s->q : s->k;
+                float v0 = vec[i];
+                float v1 = vec[i + 1];
+                vec[i] = v0 * fcr - v1 * fci;
+                vec[i + 1] = v0 * fci + v1 * fcr;
+            }
+        }
+
+        int loff = l * p->seq_len * kv_dim;
+        float *key_cache_row = s->key_cache + loff + pos * kv_dim;
+        float *value_cache_row = s->value_cache + loff + pos * kv_dim;
+        memcpy(key_cache_row, s->k, kv_dim * sizeof(*key_cache_row));
+        memcpy(value_cache_row, s->v, kv_dim * sizeof(*value_cache_row));
+
+        for (int h = 0; h < p->n_heads; h++) {
+            float *q = s->q + h * head_size;
+            float *att = s->att + h * p->seq_len;
+            for (int t = 0; t <= pos; t++) {
+                float *k = s->key_cache + loff + t * kv_dim + (h / kv_mul) * head_size;
+                float score = 0.0f;
+                for (int i = 0; i < head_size; i++) {
+                    score += q[i] * k[i];
+                }
+                score /= sqrt_head_size;
+                att[t] = score;
+            }
+
+            softmax(att, pos + 1);
+
+            float *xb = s->xb + h * head_size;
+            memset(xb, 0, head_size * sizeof(float));
+            for (int t = 0; t <= pos; t++) {
+                float *v = s->value_cache + loff + t * kv_dim + (h / kv_mul) * head_size;
+                float a = att[t];
+                for (int i = 0; i < head_size; i++) {
+                    xb[i] += a * v[i];
+                }
+            }
+        }
+
+        quantize(&s->xq, s->xb, dim, gs);
+        matmul_q(s->xb2, &s->xq, w->wo + l, dim, dim, gs);
+
+        for (int i = 0; i < dim; i++) {
+            x[i] += s->xb2[i];
+        }
+
+        rmsnorm(s->xb, x, w->rms_ffn_weight + l * dim, dim);
+
+        quantize(&s->xq, s->xb, dim, gs);
+        matmul_q(s->hb, &s->xq, w->w1 + l, dim, hidden_dim, gs);
+        matmul_q(s->hb2, &s->xq, w->w3 + l, dim, hidden_dim, gs);
+
+        for (int i = 0; i < hidden_dim; i++) {
+            float val = s->hb[i];
+            val *= (1.0f / (1.0f + expf(-val)));
+            val *= s->hb2[i];
+            s->hb[i] = val;
+        }
+
+        quantize(&s->hq, s->hb, hidden_dim, gs);
+        matmul_q(s->xb, &s->hq, w->w2 + l, hidden_dim, dim, gs);
+
+        for (int i = 0; i < dim; i++) {
+            x[i] += s->xb[i];
+        }
+    }
+
+    rmsnorm(x, x, w->rms_final_weight, dim);
+
+    quantize(&s->xq, x, dim, gs);
+    matmul_q(s->logits, &s->xq, w->wcls, dim, p->vocab_size, gs);
+    return s->logits;
+}
+
 float *llama2_forward(llama2 *m, int token, int pos)
 {
+    if (m->format.quantized)
+        return forward_q(m, token, pos);
+
     llama2_config *p = &m->config;
     llama2_weights *w = &m->weights;
     llama2_state *s = &m->state;
@@ -267,6 +579,8 @@ float *llama2_forward(llama2 *m, int token, int pos)
     int kv_mul = p->n_heads / p->n_kv_heads;
     int hidden_dim = p->hidden_dim;
     int head_size = dim / p->n_heads;
+    float sqrt_head_size = sqrtf(head_size);
+    rope_table(s->rope, dim, head_size, pos);
 
     float *content_row = w->token_embedding_table + token * dim;
     memcpy(x, content_row, dim * sizeof(*x));
@@ -283,11 +597,8 @@ float *llama2_forward(llama2 *m, int token, int pos)
         matmul(s->v, s->xb, w->wv + l * dim * kv_dim, dim, kv_dim);
 
         for (int i = 0; i < dim; i += 2) {
-            int head_dim = i % head_size;
-            float freq = 1.0f / powf(10000.0f, head_dim / (float)head_size);
-            float val = pos * freq;
-            float fcr = cosf(val);
-            float fci = sinf(val);
+            float fcr = s->rope[i];
+            float fci = s->rope[i + 1];
             int rotn = i < kv_dim ? 2 : 1;
             for (int v = 0; v < rotn; v++) {
                 float *vec = v == 0 ? s->q : s->k;
@@ -307,7 +618,7 @@ float *llama2_forward(llama2 *m, int token, int pos)
                 for (int i = 0; i < head_size; i++) {
                     score += q[i] * k[i];
                 }
-                score /= sqrtf(head_size);
+                score /= sqrt_head_size;
                 att[t] = score;
             }
 

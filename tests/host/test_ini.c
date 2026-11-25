@@ -23,7 +23,7 @@ static void test_defaults_on_empty(void)
 {
     dslm_settings s;
     parse("", &s);
-    CHECK(strcmp(s.checkpoint, "/dslm/models/stories260K.bin") == 0);
+    CHECK(strcmp(s.checkpoint, "/dslm/models/stories260K_q80.bin") == 0);
     CHECK(strcmp(s.tokenizer, "/dslm/models/tok512.bin") == 0);
     CHECK(s.temperature == 0.0f);
     CHECK(s.topp == 0.9f);
@@ -50,7 +50,7 @@ static void test_unknown_keys_and_sections_ignored(void)
     dslm_settings s;
     parse("[extra]\nsteps = 1\n[sampling]\nbogus = 7\nsteps = 10\n", &s);
     CHECK(s.steps == 10);
-    CHECK(strcmp(s.checkpoint, "/dslm/models/stories260K.bin") == 0);
+    CHECK(strcmp(s.checkpoint, "/dslm/models/stories260K_q80.bin") == 0);
 }
 
 static void test_crlf_comments_and_spaces(void)
@@ -85,7 +85,7 @@ static void test_path_too_long_keeps_default(void)
     memset(text + strlen(text), 'x', 200);
     strcat(text, "\n");
     parse(text, &s);
-    CHECK(strcmp(s.checkpoint, "/dslm/models/stories260K.bin") == 0);
+    CHECK(strcmp(s.checkpoint, "/dslm/models/stories260K_q80.bin") == 0);
 }
 
 static void test_not_nul_terminated(void)

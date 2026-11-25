@@ -29,9 +29,9 @@
         "id": "fixed-point-inference",
         "path": ".doctrina/specs/fixed-point-inference/spec.md",
         "status": "active",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "last_updated": "2026-11-24",
-        "implementation": "planned — current phase is documentation and planning only; no code yet",
+        "implementation": "partial — int8 weights with integer matmul and exact parity against runq.c (`src/engine/llama2.c`, ADR 0007); fixed-point activations, exp table and ITCM placement are M5b",
         "realizes": [
           "SC3"
         ],
@@ -74,9 +74,9 @@
         "id": "pc-toolchain",
         "path": ".doctrina/specs/pc-toolchain/spec.md",
         "status": "active",
-        "version": "0.4.0",
+        "version": "0.5.0",
         "last_updated": "2026-11-25",
-        "implementation": "partial — fetch, inspect, stage, fp32 golden outputs, parity and install package (`tools/dslm.py`); int8 quantization waits for the format in M5",
+        "implementation": "implemented — fetch, inspect, quantize (int8 v2), stage, fp32 and int8 golden outputs, parity and install package (`tools/dslm.py`)",
         "realizes": [
           "SC2",
           "SC5"
@@ -149,6 +149,14 @@
         "status": "proposed",
         "date": "2026-11-25",
         "summary": "The interface is built on the libnds text console (32x24 cells per screen) with ANSI colours, plus the default libnds touch keyboard on the bottom screen's BG3, shown only on the prompt screen and with its slide anima..."
+      },
+      {
+        "id": "0007",
+        "path": ".doctrina/decisions/0007-int8-checkpoints-use-llama2-c-v2-with-a-group-size-dividing-dim-and-hidden-dim-int8-is-the-default-model.md",
+        "title": "int8 checkpoints use llama2.c v2 with a group size dividing dim and hidden_dim; int8 is the default model",
+        "status": "proposed",
+        "date": "2026-11-25",
+        "summary": "int8 checkpoints are the `llama2.c` v2 format, byte for byte, so the stock `runq.c` is the oracle (contract `model-file-format`)."
       }
     ],
     "changes": [],
@@ -252,6 +260,24 @@
           }
         ],
         "lane": "chore (confident; signals: readme)"
+      },
+      {
+        "id": "0007-m5a-int8-path",
+        "title": "M5a int8 path",
+        "path": ".doctrina/changes/archive/2026-11-25-0007-m5a-int8-path",
+        "status": "applied",
+        "applied": "2026-11-25",
+        "specs_affected": [
+          {
+            "capability": "fixed-point-inference",
+            "operation": "MODIFIED"
+          },
+          {
+            "capability": "pc-toolchain",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "product (confident; signals: build, define)"
       },
       {
         "id": "0008-m4-hardware-results",

@@ -91,10 +91,10 @@ static const char *model_label(const char *path)
 
 static void load(app *a)
 {
-    unsigned char header[LLAMA2_HEADER_BYTES], tok_head[4];
+    unsigned char header[LLAMA2_PROBE_BYTES], tok_head[4];
     size_t ckpt_size, tok_size;
     llama2_config cfg;
-    int shared;
+    llama2_format fmt;
     dslm_settings *s = &a->settings;
 
     ui_title("", "loading");
@@ -117,13 +117,17 @@ static void load(app *a)
     ui_log("found %s", s->checkpoint);
     ui_log("found %s", s->tokenizer);
 
-    if (llama2_read_config(header, &cfg, &shared) != LLAMA2_OK)
-        ui_fatal("%s is not a llama2.c checkpoint.", s->checkpoint);
-    if (llama2_checkpoint_bytes(&cfg, shared) != ckpt_size)
+    if (llama2_probe(header, sizeof header, &cfg, &fmt) != LLAMA2_OK)
+        ui_fatal("%s is not a llama2.c checkpoint (fp32 or int8 v2).", s->checkpoint);
+    if (llama2_file_bytes(&cfg, &fmt) != ckpt_size)
         ui_fatal("%s: %u bytes, but its header implies %u.", s->checkpoint, (unsigned)ckpt_size,
-                 (unsigned)llama2_checkpoint_bytes(&cfg, shared));
+                 (unsigned)llama2_file_bytes(&cfg, &fmt));
+    if (fmt.quantized)
+        ui_log("int8 checkpoint, group size %d", fmt.group_size);
+    else
+        ui_log("fp32 checkpoint");
 
-    size_t need = ckpt_size + 1 + tok_size + 1 + llama2_runtime_bytes(&cfg, tok_size) +
+    size_t need = ckpt_size + 1 + tok_size + 1 + llama2_runtime_bytes(&cfg, &fmt, tok_size) +
                   (size_t)(cfg.seq_len + 1) * sizeof(int);
     size_t avail = (size_t)(getHeapLimit() - getHeapEnd());
     ui_log("dim %d layers %d heads %d vocab %d seq %d", cfg.dim, cfg.n_layers, cfg.n_heads,
@@ -181,12 +185,12 @@ static int on_token(int token, const char *piece, void *user)
 
 static void write_tokens(app *a, int steps)
 {
-    size_t cap = 256 + strlen(a->prompt) + (size_t)a->n_tokens * 6;
+    size_t cap = 256 + DSLM_PATH_MAX + strlen(a->prompt) + (size_t)a->n_tokens * 6;
     char *buf = malloc(cap);
     if (!buf)
         return;
-    int len = snprintf(buf, cap, "prompt=%s\nsteps=%d\nprompt_tokens=%d\ntokens=", a->prompt, steps,
-                       a->n_prompt_tokens);
+    int len = snprintf(buf, cap, "checkpoint=%s\nprompt=%s\nsteps=%d\nprompt_tokens=%d\ntokens=",
+                       a->settings.checkpoint, a->prompt, steps, a->n_prompt_tokens);
     for (int i = 0; i < a->n_tokens; i++)
         len += snprintf(buf + len, cap - len, i ? " %d" : "%d", a->tokens[i]);
     len += snprintf(buf + len, cap - len, "\nstopped=%d\nload_ms=%u\ngen_ms=%u\n", a->stopped,
