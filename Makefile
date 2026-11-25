@@ -4,12 +4,13 @@
 #   make tools-test       fetch the pinned model and run the PC toolchain tests
 #   make golden           build tests/golden/stories260K.json (FORCE=1 to overwrite)
 #   make stage CARD=dir   write the /dslm card tree into dir (default build/card)
+#   make package          build/dslm-package.zip to unzip at the microSD root
 #   make all              host-test, tools-test and nds
 
 PY   ?= python3
 CARD ?= build/card
 
-.PHONY: all nds host-test tools-test fetch inspect golden stage clean
+.PHONY: all nds host-test tools-test fetch inspect golden stage package clean
 
 all: host-test tools-test nds
 
@@ -33,6 +34,9 @@ golden: fetch
 
 stage: fetch
 	$(PY) tools/dslm.py stage $(CARD)
+
+package: nds fetch
+	$(PY) tools/dslm.py package --force
 
 clean:
 	$(MAKE) -C tests/host clean

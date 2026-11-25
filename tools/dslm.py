@@ -6,6 +6,7 @@
     python tools/dslm.py stage <dir> [--force]  write the /dslm card tree
     python tools/dslm.py golden [--force]       fp32 golden outputs (needs cc)
     python tools/dslm.py parity <tokens.txt>    compare a DS run with the golden
+    python tools/dslm.py package [--force]      zip to unzip at the microSD root
 
 Standard library only. golden compiles C, so run it in the Docker image.
 """
@@ -259,6 +260,120 @@ def golden(out_path=None, force=False, steps=GOLDEN_STEPS, model=DEFAULT_MODEL):
     return out_path
 
 
+# ---- package -------------------------------------------------------------
+
+PACKAGE_README = """DSLM - a tiny Llama 2 language model for the Nintendo DS
+==========================================================
+
+DSLM writes short children's stories in English, entirely offline. The
+model (stories260K, about 1 MB) is in this package; the DS never needs
+the internet.
+
+What you need
+-------------
+- A Nintendo DS or DS Lite.
+- An R4 (or any DLDI-compatible) flashcart whose kernel is already
+  installed on its microSD card. Kernels and DLDI drivers are NOT part
+  of this package.
+
+Install
+-------
+1. Unzip this package to the ROOT of the flashcart's microSD card.
+   You should see dslm.nds and a folder named dslm next to the kernel
+   files. Keep the dslm folder exactly as it is:
+       dslm/dslm.ini
+       dslm/models/stories260K.bin
+       dslm/models/tok512.bin
+   (dslm.nds may also go in another folder your kernel lists, but the
+   dslm folder must stay at the root.)
+2. Put the card back in the flashcart, boot the DS and launch dslm.nds
+   from the kernel menu.
+
+Controls
+--------
+Every action works with buttons or with the stylus.
+  Prompt:      type on the touch keyboard, B deletes, L/R example
+               prompts, START or GO generates, SELECT opens settings.
+  Generating:  hold B or touch STOP to stop and keep the text.
+  Story:       Up/Down scroll, A new prompt, Y same prompt again.
+  Settings:    Up/Down choose, Left/Right change, START saves, B back.
+Each token takes about half a second; a 256-token story takes minutes.
+
+Troubleshooting
+---------------
+- "FAT mount failed": your kernel did not patch the DLDI driver. Patch
+  dslm.nds with dlditool and the driver for your cart, then retry.
+- "... file not found": the dslm folder is not at the card root, or a
+  file is missing. Unzip the package again.
+- "Model does not fit": dslm.ini points at a model that is too big for
+  the DS's 4 MB of RAM.
+
+Files in this package
+---------------------
+MANIFEST.txt lists every file with its size and SHA-256.
+THIRD_PARTY.txt has the licenses of the model and of llama2.c.
+"""
+
+
+def _zip_entry(zf, name, data):
+    import zipfile
+    info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.external_attr = 0o644 << 16
+    zf.writestr(info, data)
+
+
+def third_party_notice(model=DEFAULT_MODEL):
+    pins = load_pins()
+    entry = pins["models"][model]
+    license_text = (ROOT / "third_party" / "llama2.c" / "LICENSE").read_text(encoding="utf-8")
+    return (
+        "Third-party components\n"
+        "======================\n\n"
+        f"Model {model} ({entry['checkpoint']['file']}, {entry['tokenizer']['file']})\n"
+        f"  Source: {entry['checkpoint']['url']}\n"
+        f"          {entry['tokenizer']['url']}\n"
+        "  Author: Andrej Karpathy (karpathy/tinyllamas). License: MIT.\n\n"
+        "llama2.c (the inference code dslm.nds is ported from)\n"
+        f"  Source: https://github.com/karpathy/llama2.c (commit {pins['llama2c']['commit']})\n"
+        "  License: MIT, text below. The same MIT terms cover the model files.\n\n"
+        + license_text
+    )
+
+
+def package(out_path, nds_path, checkpoint, tokenizer, force=False):
+    """Write a zip to unzip at the microSD root: dslm.nds + /dslm + docs."""
+    import tempfile
+    import zipfile
+
+    out_path = pathlib.Path(out_path)
+    nds_path = pathlib.Path(nds_path)
+    if out_path.exists() and not force:
+        raise SystemExit(f"error: {out_path} exists; pass --force to overwrite it")
+    if not nds_path.is_file():
+        raise SystemExit(f"error: {nds_path} not found; build it first (make nds)")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        card = pathlib.Path(tmp) / "card"
+        stage(card, checkpoint, tokenizer, force=True)
+        files = {"dslm.nds": nds_path.read_bytes()}
+        for p in sorted((card / "dslm").rglob("*")):
+            if p.is_file() and p.name != "manifest.txt":
+                files[p.relative_to(card).as_posix()] = p.read_bytes()
+
+    manifest = "".join(
+        f"{name} {len(data)} {hashlib.sha256(data).hexdigest()}\n" for name, data in sorted(files.items()))
+    files["MANIFEST.txt"] = manifest.encode()
+    files["README-DSLM.txt"] = PACKAGE_README.encode()
+    files["THIRD_PARTY.txt"] = third_party_notice().encode()
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(out_path, "w") as zf:
+        for name in sorted(files):
+            _zip_entry(zf, name, files[name])
+    return out_path, sorted(files)
+
+
 # ---- parity --------------------------------------------------------------
 
 def read_ds_tokens(path):
@@ -312,6 +427,10 @@ def main(argv=None):
     p = sub.add_parser("golden")
     p.add_argument("--force", action="store_true", help="overwrite an existing golden file")
     p.add_argument("--out")
+    p = sub.add_parser("package")
+    p.add_argument("--nds", default=str(ROOT / "dslm.nds"))
+    p.add_argument("--out", default=str(ROOT / "build" / "dslm-package.zip"))
+    p.add_argument("--force", action="store_true", help="overwrite an existing package")
     p = sub.add_parser("parity")
     p.add_argument("tokens", help="path to tokens.txt written by the DS (e.g. .tools/card/dslm/tokens.txt)")
     p.add_argument("--golden")
@@ -330,6 +449,12 @@ def main(argv=None):
             print(f"staged {line}")
     elif args.cmd == "golden":
         print(f"wrote {golden(args.out, args.force)}")
+    elif args.cmd == "package":
+        ckpt, tok = fetch()
+        out, names = package(args.out, args.nds, ckpt, tok, args.force)
+        print(f"wrote {out} ({out.stat().st_size} bytes)")
+        for n in names:
+            print(f"  {n}")
     elif args.cmd == "parity":
         return 0 if parity(args.tokens, args.golden) else 1
     return 0

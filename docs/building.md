@@ -47,6 +47,14 @@ python tools/dslm.py parity .tools/card/dslm/tokens.txt   # after a DS run (test
 
 `stage` keeps an existing `dslm.ini` unless `--force` is given. `golden` refuses to overwrite `tests/golden/stories260K.json` unless `--force` (`make golden FORCE=1`). Pins (URLs, sizes, SHA-256, `llama2.c` commit) live in `tools/models.json`.
 
+## Install package (for players)
+
+```bash
+docker compose -f docker/docker-compose.yml run --rm shell make package
+```
+
+`build/dslm-package.zip` holds `dslm.nds`, the `/dslm` tree with the pinned model, `README-DSLM.txt` (install, controls, troubleshooting), `MANIFEST.txt` (sizes and SHA-256) and `THIRD_PARTY.txt` (MIT notices for the model and `llama2.c`). Players unzip it at the root of the flashcart's microSD card; nothing is downloaded on the DS. It never contains kernels or DLDI drivers (ADR 0005). The build is byte-reproducible for the same `dslm.nds`.
+
 ## Local emulator (melonDS, optional)
 
 Used for the manual runbooks in `tests/hw/`. It is installed portably under `.tools/` (git-ignored), so nothing touches the system:

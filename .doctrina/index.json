@@ -74,9 +74,9 @@
         "id": "pc-toolchain",
         "path": ".doctrina/specs/pc-toolchain/spec.md",
         "status": "active",
-        "version": "0.3.0",
-        "last_updated": "2026-11-24",
-        "implementation": "partial — fetch, inspect, stage and fp32 golden outputs (`tools/dslm.py`); int8 quantization waits for the format in M5",
+        "version": "0.4.0",
+        "last_updated": "2026-11-25",
+        "implementation": "partial — fetch, inspect, stage, fp32 golden outputs, parity and install package (`tools/dslm.py`); int8 quantization waits for the format in M5",
         "realizes": [
           "SC2",
           "SC5"
@@ -238,6 +238,20 @@
           }
         ],
         "lane": "product (uncertain)"
+      },
+      {
+        "id": "0006-install-package",
+        "title": "Install package",
+        "path": ".doctrina/changes/archive/2026-11-25-0006-install-package",
+        "status": "applied",
+        "applied": "2026-11-25",
+        "specs_affected": [
+          {
+            "capability": "pc-toolchain",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "chore (confident; signals: readme)"
       }
     ],
     "skills": [
