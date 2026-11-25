@@ -102,14 +102,19 @@ llama2_status llama2_init(llama2 *m, const void *checkpoint, size_t checkpoint_s
 
 void llama2_free(llama2 *m);
 
-/* Called once per generated token with its decoded, printable text. */
-typedef void (*llama2_token_fn)(int token, const char *piece, void *user);
+/*
+ * Called once per token after BOS with its decoded text ("" when run.c's
+ * safe_printf would print nothing). Return nonzero to stop generating; the
+ * tokens produced so far are kept.
+ */
+typedef int (*llama2_token_fn)(int token, const char *piece, void *user);
 
 /*
  * Generate like run.c's generate(): BOS + prompt, then sample until `steps`
- * positions or BOS. Writes the full sequence (BOS first) to `out` when it is
- * not NULL. Returns the number of tokens written, or -1 for a prompt that
- * does not fit LLAMA2_MAX_PROMPT. Never allocates.
+ * positions, BOS, or the callback asks to stop. Writes the full sequence
+ * (BOS first) to `out` when it is not NULL. Returns the number of tokens
+ * written, or -1 for a prompt that does not fit LLAMA2_MAX_PROMPT. Never
+ * allocates.
  */
 int llama2_generate(llama2 *m, const char *prompt, int steps,
                     int *out, int out_cap, int *n_prompt_tokens,

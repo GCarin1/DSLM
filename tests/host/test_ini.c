@@ -98,8 +98,40 @@ static void test_not_nul_terminated(void)
     CHECK(s.steps == 99);
 }
 
+static void test_format_round_trips(void)
+{
+    dslm_settings a, b;
+    char buf[512];
+    dslm_settings_defaults(&a);
+    strcpy(a.checkpoint, "/dslm/models/x.bin");
+    a.temperature = 0.7f;
+    a.topp = 0.95f;
+    a.steps = 96;
+    a.seed = 1234;
+    size_t n = dslm_ini_format(&a, buf, sizeof buf);
+    CHECK(n > 0);
+    CHECK(strstr(buf, "temperature = 0.700") != NULL);
+    dslm_settings_defaults(&b);
+    dslm_ini_parse(buf, n, &b);
+    CHECK(strcmp(b.checkpoint, "/dslm/models/x.bin") == 0);
+    CHECK(b.temperature > 0.699f && b.temperature < 0.701f);
+    CHECK(b.topp > 0.949f && b.topp < 0.951f);
+    CHECK(b.steps == 96);
+    CHECK(b.seed == 1234);
+}
+
+static void test_format_refuses_small_buffer(void)
+{
+    dslm_settings s;
+    char buf[16];
+    dslm_settings_defaults(&s);
+    CHECK(dslm_ini_format(&s, buf, sizeof buf) == 0);
+}
+
 int main(void)
 {
+    test_format_round_trips();
+    test_format_refuses_small_buffer();
     test_defaults_on_empty();
     test_full_file();
     test_unknown_keys_and_sections_ignored();

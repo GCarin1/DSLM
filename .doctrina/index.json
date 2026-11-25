@@ -15,9 +15,9 @@
         "id": "ds-interface",
         "path": ".doctrina/specs/ds-interface/spec.md",
         "status": "active",
-        "version": "0.2.0",
+        "version": "0.3.0",
         "last_updated": "2026-11-25",
-        "implementation": "partial — `ui.h` boundary and libnds console backend (`src/ui/`); keyboard, streaming and cancel still planned",
+        "implementation": "implemented — screens, keyboard, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, real R4 run is M4",
         "realizes": [
           "SC4"
         ],
@@ -141,6 +141,14 @@
         "status": "proposed",
         "date": "2026-11-24",
         "summary": "Reference cart."
+      },
+      {
+        "id": "0006",
+        "path": ".doctrina/decisions/0006-console-ui-with-the-libnds-keyboard-every-action-on-buttons-and-touch.md",
+        "title": "Console UI with the libnds keyboard; every action on buttons and touch",
+        "status": "proposed",
+        "date": "2026-11-25",
+        "summary": "The interface is built on the libnds text console (32x24 cells per screen) with ANSI colours, plus the default libnds touch keyboard on the bottom screen's BG3, shown only on the prompt screen and with its slide anima..."
       }
     ],
     "changes": [],
@@ -212,6 +220,20 @@
           },
           {
             "capability": "model-loading",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "product (uncertain)"
+      },
+      {
+        "id": "0005-m6-interface",
+        "title": "M6 interface",
+        "path": ".doctrina/changes/archive/2026-11-25-0005-m6-interface",
+        "status": "applied",
+        "applied": "2026-11-25",
+        "specs_affected": [
+          {
+            "capability": "ds-interface",
             "operation": "MODIFIED"
           }
         ],

@@ -1,6 +1,6 @@
 # Manual test: ui-streaming
 
-**Status:** not runnable yet — needs the interface (M6). Proves `ds-interface` criterion 1.
+**Status:** runnable on melonDS since M6. Proves `ds-interface` criterion 1.
 
 ## Steps and expected result
 
@@ -12,3 +12,4 @@
 
 | Date | Target | Build | Result | emulated |
 |------|--------|-------|--------|----------|
+| 2026-11-25 | melonDS 1.1 | M6 | prompt `Once upon a time` (default example; typing checked in `ui-navigation.md`): mid-run capture shows `11/32` and the partial text; the keyboard is hidden while generating | yes |

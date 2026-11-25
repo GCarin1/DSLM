@@ -7,3 +7,4 @@ One line per archived change, newest last. Appended by
 - 2026-11-25 — 0002-m1-toolchain-card-blocksds — M1 toolchain and card I/O: BlocksDS project skeleton with a UI-ready layered architecture (ui/engine/storage separation) and a hello-world .nds that reads /dslm/dslm.ini via DLDI (specs: ds-interface MODIFIED, model-loading MODIFIED)
 - 2026-11-25 — 0003-m2-pc-toolchain — M2 PC toolchain (specs: pc-toolchain MODIFIED)
 - 2026-11-25 — 0004-m3-fp32-skeleton — M3 fp32 skeleton (specs: inference-engine MODIFIED, model-loading MODIFIED)
+- 2026-11-25 — 0005-m6-interface — M6 interface (specs: ds-interface MODIFIED)

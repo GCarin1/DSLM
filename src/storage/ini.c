@@ -1,5 +1,6 @@
 #include "ini.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -78,6 +79,26 @@ static void apply(enum section sec, const char *kb, const char *ke,
         if (*end == '\0' && buf[0] != '-')
             s->seed = (uint32_t)v;
     }
+}
+
+/* "d.ddd" from a non-negative float, rounded to three decimals. */
+static void milli(char *out, size_t cap, float v)
+{
+    unsigned m = (unsigned)(v * 1000.0f + 0.5f);
+    snprintf(out, cap, "%u.%03u", m / 1000, m % 1000);
+}
+
+size_t dslm_ini_format(const dslm_settings *s, char *buf, size_t cap)
+{
+    char t[16], p[16];
+    milli(t, sizeof t, s->temperature);
+    milli(p, sizeof p, s->topp);
+    int n = snprintf(buf, cap,
+                     "[model]\ncheckpoint = %s\ntokenizer  = %s\n\n"
+                     "[sampling]\ntemperature = %s\ntopp        = %s\n"
+                     "steps       = %d\nseed        = %lu\n",
+                     s->checkpoint, s->tokenizer, t, p, s->steps, (unsigned long)s->seed);
+    return n > 0 && (size_t)n < cap ? (size_t)n : 0;
 }
 
 void dslm_settings_defaults(dslm_settings *s)

@@ -26,4 +26,11 @@ void dslm_settings_defaults(dslm_settings *s);
  */
 void dslm_ini_parse(const char *text, size_t len, dslm_settings *s);
 
+/*
+ * Write `s` as a dslm.ini that dslm_ini_parse reads back (floats with three
+ * decimals, no printf float support needed). Returns the length, or 0 if
+ * `cap` is too small.
+ */
+size_t dslm_ini_format(const dslm_settings *s, char *buf, size_t cap);
+
 #endif

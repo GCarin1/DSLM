@@ -39,6 +39,15 @@ class EngineHost(unittest.TestCase):
             self.assertEqual(got["tokens"], run["tokens"], run["prompt"])
             self.assertEqual(got["text"], run["text"], run["prompt"])
 
+    def test_stop_keeps_the_tokens_produced_so_far(self):
+        ckpt, tok = dslm.model_paths()
+        run = self.golden["runs"][1]
+        out = subprocess.run([str(self.exe), str(ckpt), str(tok), "64", run["prompt"], "10"],
+                             check=True, capture_output=True, text=True).stdout
+        tokens = [int(t) for t in out.splitlines()[1].split()[1:]]
+        self.assertEqual(len(tokens), 11)  # BOS + the 10 tokens seen before stopping
+        self.assertEqual(tokens, run["tokens"][:11])
+
     def test_rejects_a_prompt_longer_than_the_buffer(self):
         ckpt, tok = dslm.model_paths()
         r = subprocess.run([str(self.exe), str(ckpt), str(tok), "4", "a" * 300], capture_output=True)

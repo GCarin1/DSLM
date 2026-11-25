@@ -1,0 +1,25 @@
+# Manual test: ui-navigation
+
+**Status:** runnable on melonDS since M6. Proves `ds-interface`: every action is reachable by a button and by touch (control map in `docs/user-guide.md`).
+
+## Setup
+
+Stage the card (`python tools/dslm.py stage .tools/card`), build `dslm.nds`. In melonDS, map keys for the DS buttons (Config > Input and hotkeys); the automated run used X=A, Z=B, A=Y, S=X, Q=L, W=R, Enter=START, Backspace=SELECT and the arrow keys.
+
+## Steps and expected result
+
+1. Boot. Prompt screen: welcome text on top; `Once upon a time_`, the `<` `>` `SET` `GO` buttons and the keyboard below.
+2. R, then L: the prompt cycles through the example prompts. Touch `<` / `>`: same.
+3. Touch Bksp twice, then a letter: two characters are deleted and the letter is typed.
+4. SELECT: Settings. Down twice, Left six times: Steps goes from 128 to 32. START: "Saved to /dslm/dslm.ini", and the file on the card holds `steps = 32`. B: back to the prompt.
+5. START: Generating screen with the progress bar and STOP box; then the Story screen with "Done".
+6. Y: generates again; hold B: the Story screen says "Stopped" and keeps the text so far.
+7. A: back to the prompt with the same prompt and the last story on top. Touch GO: generates. Touch STOP: stops.
+8. With a story longer than 20 lines (steps 512), Up/Down scroll the top screen.
+
+## Results
+
+| Date | Target | Build | Steps passed | emulated |
+|------|--------|-------|--------------|----------|
+| 2026-11-25 | melonDS 1.1 | M6 | 1-7 (input posted to the melonDS window; captures checked) | yes |
+| 2026-11-25 | melonDS 1.1 (fast-forward) | M6 | 8: steps 512 stopped at 289 tokens (23 lines); the view follows the end while streaming, Up reaches the first line, Down goes back | yes |

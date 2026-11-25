@@ -9,3 +9,5 @@ tests/host/test_ini.exe
 .tools/
 .cache/
 __pycache__/
+tests/host/test_textview
+tests/host/test_textview.exe

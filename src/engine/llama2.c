@@ -625,9 +625,9 @@ int llama2_generate(llama2 *m, const char *prompt, int steps,
             out[n_out] = next;
         n_out++;
         const char *piece = decode(m, token, next);
-        if (on_token && printable(piece))
-            on_token(next, piece, user);
         token = next;
+        if (on_token && on_token(next, printable(piece) ? piece : "", user))
+            break;
     }
     return n_out;
 }

@@ -27,17 +27,26 @@ static void *slurp(const char *path, size_t *size)
     return buf;
 }
 
-static void on_token(int token, const char *piece, void *user)
+typedef struct {
+    FILE *text;
+    int seen;
+    int stop_after; /* 0 = never stop early */
+} run_ctx;
+
+static int on_token(int token, const char *piece, void *user)
 {
+    run_ctx *ctx = user;
     (void)token;
     for (const unsigned char *p = (const unsigned char *)piece; *p; p++)
-        fprintf((FILE *)user, "%02x", *p);
+        fprintf(ctx->text, "%02x", *p);
+    ctx->seen++;
+    return ctx->stop_after > 0 && ctx->seen >= ctx->stop_after;
 }
 
 int main(int argc, char **argv)
 {
-    if (argc != 5) {
-        fprintf(stderr, "usage: engine_main <checkpoint> <tokenizer> <steps> <prompt>\n");
+    if (argc != 5 && argc != 6) {
+        fprintf(stderr, "usage: engine_main <checkpoint> <tokenizer> <steps> <prompt> [stop_after]\n");
         return 2;
     }
     size_t ckpt_size, tok_size;
@@ -58,7 +67,8 @@ int main(int argc, char **argv)
 
     /* Text first into a temp file, so the token line can come before it. */
     FILE *text = tmpfile();
-    int n = llama2_generate(&m, argv[4], steps, out, m.config.seq_len + 1, &n_prompt, on_token, text);
+    run_ctx ctx = {text, 0, argc == 6 ? atoi(argv[5]) : 0};
+    int n = llama2_generate(&m, argv[4], steps, out, m.config.seq_len + 1, &n_prompt, on_token, &ctx);
     if (n < 0) {
         fprintf(stderr, "prompt too long\n");
         return 1;
