@@ -19,3 +19,4 @@ One line per archived change, newest last. Appended by
 - 2026-11-25 — 0015-model-picker — Model picker (specs: ds-interface MODIFIED, model-loading MODIFIED)
 - 2026-11-25 — 0014-v1-0-0-release — v1.0.0 release (specs: ds-interface MODIFIED, inference-engine MODIFIED, model-loading MODIFIED, pc-toolchain MODIFIED, test-harness MODIFIED)
 - 2026-11-25 — 0016-tiny1m-in-the-package — tiny1m in the package (specs: fixed-point-inference MODIFIED, pc-toolchain MODIFIED)
+- 2026-11-25 — 0017-m8-littlekedi-reference-engine — M8 LittleKedi reference engine (specs: inference-engine MODIFIED)

@@ -38,6 +38,30 @@
       }
     }
   },
+  "experimental": {
+    "littlekedi": {
+      "$comment": "DeepSeek-V3-style MLA + MoE chat model (M8); not in the package yet. Pinned at a repo revision.",
+      "author": "edededdy (edededdy/LittleKedi-tiny-instruct)",
+      "license": "Apache-2.0",
+      "files": {
+        "model.safetensors": {
+          "url": "https://huggingface.co/edededdy/LittleKedi-tiny-instruct/resolve/e17d4134ec9d755d55c34be044a5afb42fecd633/model.safetensors",
+          "size": 7971200,
+          "sha256": "49496e1e999c2dcedcb31e2b7ceef0b5d43c60e601b3b2c92496f84f1d14936e"
+        },
+        "tokenizer.json": {
+          "url": "https://huggingface.co/edededdy/LittleKedi-tiny-instruct/resolve/e17d4134ec9d755d55c34be044a5afb42fecd633/tokenizer.json",
+          "size": 230452,
+          "sha256": "d0c60e9db629099972cfb7de4d325bd49b02b72802a6ea264409b3294633fee5"
+        },
+        "config.json": {
+          "url": "https://huggingface.co/edededdy/LittleKedi-tiny-instruct/resolve/e17d4134ec9d755d55c34be044a5afb42fecd633/config.json",
+          "size": 668,
+          "sha256": "67f4396a15835420c1af7872a837c2ee80fc0a9619e19f7039ae503ce493eec3"
+        }
+      }
+    }
+  },
   "llama2c": {
     "commit": "350e04fe35433e6d2941dce5a1f53308f87058eb",
     "run_c_url": "https://raw.githubusercontent.com/karpathy/llama2.c/350e04fe35433e6d2941dce5a1f53308f87058eb/run.c",

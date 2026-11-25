@@ -44,7 +44,7 @@
         "id": "inference-engine",
         "path": ".doctrina/specs/inference-engine/spec.md",
         "status": "active",
-        "version": "0.3.1",
+        "version": "0.4.0",
         "last_updated": "2026-11-24",
         "implementation": "verified — fp32 engine (`src/engine/llama2.c`), parity with run.c on melonDS and the reference R4",
         "realizes": [
@@ -466,6 +466,20 @@
           }
         ],
         "lane": "chore (confident; signals: readme)"
+      },
+      {
+        "id": "0017-m8-littlekedi-reference-engine",
+        "title": "M8 LittleKedi reference engine",
+        "path": ".doctrina/changes/archive/2026-11-25-0017-m8-littlekedi-reference-engine",
+        "status": "applied",
+        "applied": "2026-11-25",
+        "specs_affected": [
+          {
+            "capability": "inference-engine",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "product (uncertain)"
       }
     ],
     "skills": [

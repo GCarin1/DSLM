@@ -6,7 +6,7 @@
 **Realizes:** SC1, SC2
 **Depends on:** model-loading
 **Last updated:** 2026-11-24
-**Version:** 0.3.1
+**Version:** 0.4.0
 
 ## Purpose
 
@@ -18,6 +18,7 @@ A port of the core of `llama2.c`'s `run.c` to the Nintendo DS ARM9. It covers th
 
 - The engine shall implement the same forward pass, tokenizer and sampler as `run.c` from `llama2.c`, using 32-bit floats.
 - The engine shall be plain C with no dependency beyond the toolchain's C library and libnds.
+- The engine shall also run LittleKedi-style checkpoints (DeepSeek-V3 multi-head latent attention, sigmoid-gated top-k experts plus a shared expert, GPT-2 byte-level BPE) from the MLA1 and BPE1 files written by tools/m8/convert_littlekedi.py.
 
 ### Event-driven
 
@@ -45,6 +46,7 @@ A port of the core of `llama2.c`'s `run.c` to the Nintendo DS ARM9. It covers th
 3. [verified] The fp32 build's time per token is measured and recorded (baseline for the fixed-point build) — verified by `tests/hw/benchmark-fp32.md`.
 4. [verified] The engine built for the host reproduces every golden prompt token for token — verified by `tools/tests/test_engine_host.py`
 5. [verified] Stopping after N tokens returns BOS plus those N tokens, identical to the golden prefix — verified by `tools/tests/test_engine_host.py`
+6. [verified] The LittleKedi C engine and tokenizer reproduce the numpy oracle token for token on every golden prompt; the oracle equals llama.cpp greedy output with the repeat penalty off — verified by `tools/tests/test_mla_host.py`
 
 ## Maturity
 

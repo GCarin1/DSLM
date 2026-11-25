@@ -308,6 +308,25 @@ def ensure_q80(model=DEFAULT_MODEL):
     return q, tok
 
 
+# ---- LittleKedi (MLA + MoE, M8) -------------------------------------------
+
+def ensure_littlekedi():
+    """Fetch the pinned LittleKedi files and convert them; returns (model, tokenizer)."""
+    entry = load_pins()["experimental"]["littlekedi"]
+    hf = CACHE / "models" / "littlekedi-hf"
+    for name, f in entry["files"].items():
+        fetch_pinned(f["url"], hf / name, f["sha256"], f["size"])
+    out = CACHE / "models"
+    model, tok = out / "littlekedi.bin", out / "littlekedi.tok"
+    newest = max((hf / n).stat().st_mtime for n in entry["files"])
+    if not model.exists() or not tok.exists() or model.stat().st_mtime < newest:
+        sys.path.insert(0, str(TOOLS / "m8"))
+        import convert_littlekedi
+        convert_littlekedi.convert_model(hf, out)
+        convert_littlekedi.convert_tokenizer(hf, out)
+    return model, tok
+
+
 # ---- stage ---------------------------------------------------------------
 
 def stage(target, checkpoint, tokenizer, force=False, extra=()):
