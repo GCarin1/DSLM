@@ -1,8 +1,9 @@
 /*
  * The only boundary to screens and input. Storage and engine code never
- * include <nds.h>. Top screen: title bar, text body, hint bar. Bottom
- * (touch) screen: one panel per app screen. Every action has a button and a
- * touch target; ui_poll() maps both to the same events.
+ * include <nds.h>. Top screen: title bar, text body, hint bar; during boot
+ * and model loads, the DSLM splash. Bottom (touch) screen: one panel per app
+ * screen. Every action has a button and a touch target; ui_poll() maps both
+ * to the same events.
  */
 #ifndef DSLM_UI_H
 #define DSLM_UI_H
@@ -51,6 +52,8 @@ void ui_init(void);
 
 /* Boot and errors */
 void ui_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+/* Splash on the top screen, loading panel (progress and log) on the bottom. */
+void ui_splash(const char *model);
 void ui_loading(const char *what, size_t done, size_t total);
 void ui_halt(void) __attribute__((noreturn));
 void ui_fatal(const char *fmt, ...) __attribute__((format(printf, 1, 2), noreturn));
@@ -60,7 +63,9 @@ void ui_title(const char *model, const char *state);
 void ui_hint(const char *hint);
 /* Word-wrapped body; first_line < 0 follows the end. Returns the line count. */
 int ui_text(const char *text, size_t len, int first_line);
-#define UI_TEXT_ROWS 20
+/* Lines the body would wrap `text` into. */
+int ui_text_lines(const char *text, size_t len);
+#define UI_TEXT_ROWS 14
 
 /* Bottom screen panels */
 void ui_panel_prompt(const char *prompt);

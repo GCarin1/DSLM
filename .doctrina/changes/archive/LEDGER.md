@@ -23,3 +23,4 @@ One line per archived change, newest last. Appended by
 - 2026-11-25 — 0018-m8-fixed-point-mla-engine — M8 fixed-point MLA engine (specs: fixed-point-inference MODIFIED)
 - 2026-11-25 — 0019-m8-littlekedi-chat-on-the-ds — M8 LittleKedi chat on the DS (specs: ds-interface MODIFIED, model-loading MODIFIED)
 - 2026-11-25 — 0020-release-v1-2-0 — Release v1.2.0
+- 2026-11-26 — 0021-graphical-ui-base-visual — Graphical UI base and visual identity: replace the libnds text console with a tiled-graphics renderer (custom pixel font, palette from the DSLM logo, LZ77 assets embedded in the .nds and decompressed to VRAM via grit), a splash screen with the logo, a 32x32 banner icon, and the existing five screens redrawn 1:1 in the new look; supersedes ADR 0006's console decision; must keep tok/s within 2%, binary growth within 64 KB and LittleKedi loadable (specs: ds-interface MODIFIED)

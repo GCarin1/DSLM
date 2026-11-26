@@ -241,7 +241,7 @@ static const char *load_model(app *a)
     dslm_settings *s = &a->settings;
 
     a->model_name = model_label(s->checkpoint);
-    ui_title(a->model_name, "loading");
+    ui_splash(a->model_name);
 
     sd_status st = sd_read_head(s->checkpoint, header, sizeof header, &ckpt_size);
     if (st != SD_OK) {
@@ -318,7 +318,7 @@ static const char *load_model(app *a)
 
 static void boot(app *a)
 {
-    ui_title("", "loading");
+    ui_splash("");
     ui_hint("Reading the microSD card...");
     if (!sd_mount())
         ui_fatal("FAT mount failed. The binary may need a manual DLDI patch (dlditool).");
@@ -537,7 +537,7 @@ static void enter_story(app *a)
 
 static void scroll_story(app *a, int delta)
 {
-    int total = tv_wrap(a->story, a->story_len, 32, NULL, 0);
+    int total = ui_text_lines(a->story, a->story_len);
     int max = total > UI_TEXT_ROWS ? total - UI_TEXT_ROWS : 0;
     a->scroll += delta;
     if (a->scroll < 0)

@@ -2,7 +2,7 @@
   "$schema_version": "0.1.0",
   "project": "DSLM",
   "framework_version": "0.22.1",
-  "last_updated": "2026-11-25",
+  "last_updated": "2026-11-26",
   "artifacts": {
     "product": {
       "path": ".doctrina/product.md",
@@ -15,9 +15,9 @@
         "id": "ds-interface",
         "path": ".doctrina/specs/ds-interface/spec.md",
         "status": "active",
-        "version": "0.5.0",
-        "last_updated": "2026-11-25",
-        "implementation": "verified — screens, keyboard, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS and the reference R4",
+        "version": "0.6.0",
+        "last_updated": "2026-11-26",
+        "implementation": "verified — bitmap screens in the DSLM palette and pixel font, logo splash, libnds keyboard, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, the reference R4 run of the graphical build lands with the v1.3.0 release change",
         "realizes": [
           "SC4"
         ],
@@ -151,8 +151,9 @@
         "id": "0006",
         "path": ".doctrina/decisions/0006-console-ui-with-the-libnds-keyboard-every-action-on-buttons-and-touch.md",
         "title": "Console UI with the libnds keyboard; every action on buttons and touch",
-        "status": "accepted",
+        "status": "superseded by 0011",
         "date": "2026-11-25",
+        "superseded_by": "0011",
         "landed": "2026-11-25 — `src/ui/ui_console.c`, `docs/user-guide.md`, `tests/hw/ui-navigation.md`",
         "summary": "The interface is built on the libnds text console (32x24 cells per screen) with ANSI colours, plus the default libnds touch keyboard on the bottom screen's BG3, shown only on the prompt screen and with its slide anima..."
       },
@@ -192,6 +193,16 @@
         "date": "2026-11-25",
         "landed": "2026-11-25 — `src/engine/mlq_fixed.arm.c`, `tools/tests/test_mlq_host.py`",
         "summary": "The MLQ1 file keeps the expert router (`gate_w`, 8×128) in fp32."
+      },
+      {
+        "id": "0011",
+        "path": ".doctrina/decisions/0011-graphical-bitmap-ui-with-the-dslm-palette-pixel-font-and-logo-splash-every-action-on-buttons-and-touch.md",
+        "title": "Graphical bitmap UI with the DSLM palette, pixel font and logo splash; every action on buttons and touch",
+        "status": "accepted",
+        "date": "2026-11-26",
+        "supersedes": "0006",
+        "landed": "2026-11-26 — `src/ui/gfx.c`, `src/ui/ui_gfx.c`, `tests/hw/ui-graphics.md`",
+        "summary": "Each screen is one 8bpp bitmap background (mode 5, BG2): the main screen on VRAM bank A and the sub screen on bank C, at 48 KB so it clears the keyboard."
       }
     ],
     "changes": [],
@@ -530,6 +541,20 @@
         "applied": "2026-11-25",
         "specs_affected": [],
         "lane": "chore (confident; signals: bump, changelog) — opened as chore"
+      },
+      {
+        "id": "0021-graphical-ui-base-visual",
+        "title": "Graphical UI base and visual identity: replace the libnds text console with a tiled-graphics renderer (custom pixel font, palette from the DSLM logo, LZ77 assets embedded in the .nds and decompressed to VRAM via grit), a splash screen with the logo, a 32x32 banner icon, and the existing five screens redrawn 1:1 in the new look; supersedes ADR 0006's console decision; must keep tok/s within 2%, binary growth within 64 KB and LittleKedi loadable",
+        "path": ".doctrina/changes/archive/2026-11-26-0021-graphical-ui-base-visual",
+        "status": "applied",
+        "applied": "2026-11-26",
+        "specs_affected": [
+          {
+            "capability": "ds-interface",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "product (confident; signals: must)"
       }
     ],
     "skills": [

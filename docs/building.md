@@ -55,6 +55,17 @@ docker compose -f docker/docker-compose.yml run --rm shell make package
 
 `build/dslm-package.zip` holds `dslm.nds`, the `/dslm` tree with the pinned model, `README-DSLM.txt` (install, controls, troubleshooting), `MANIFEST.txt` (sizes and SHA-256) and `THIRD_PARTY.txt` (MIT notices for the model and `llama2.c`). Players unzip it at the root of the flashcart's microSD card; nothing is downloaded on the DS. It never contains kernels or DLDI drivers (ADR 0009). The build is byte-reproducible for the same `dslm.nds`.
 
+## Interface art
+
+The screens are drawn from art embedded in the .nds (ADR 0011). The sources are `assets/dslm-logo.png` (the splash is a crop of it), `assets/ui/font.txt` (the pixel font) and `assets/ui/icons.txt`. After editing one, regenerate the committed outputs (needs Pillow):
+
+```bash
+python tools/ui_assets.py           # src/ui/art_data.c/.h, assets/ui/gfx/splash.png, assets/ui/icon.png
+python tools/ui_assets.py --check   # exit 1 if an output is stale
+```
+
+At build time grit compresses `assets/ui/gfx/splash.png` (LZ77, flags in `splash.grit`) and ndstool takes `assets/ui/icon.png` as the banner icon.
+
 ## Local emulator (melonDS, optional)
 
 Used for the manual runbooks in `tests/hw/`. It is installed portably under `.tools/` (git-ignored), so nothing touches the system:
@@ -68,5 +79,6 @@ To uninstall everything: delete the `.tools/` folder. Docker images are removed 
 ## Layout
 
 - `src/storage/`: FAT mount, whole-file reads and the `dslm.ini` parser. No libnds in `ini.c`, so it builds on the host.
-- `src/ui/`: the only code that touches screens and input, behind `ui.h`.
+- `src/ui/`: the only code that touches screens and input, behind `ui.h`. `gfx.c` draws on the two bitmap screens, `ui_gfx.c` lays out the screens, and `textview.c` wraps text (host-tested).
+- `assets/ui/`: interface art sources and the generated splash and icon (see Interface art).
 - `tests/host/`: unit tests that run on the host. `tests/hw/`: manual emulator and hardware runbooks.

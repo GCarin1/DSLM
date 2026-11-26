@@ -4,36 +4,46 @@
 
 int tv_wrap(const char *text, size_t len, int width, tv_line *lines, int max)
 {
+    return tv_wrap_px(text, len, width, NULL, lines, max);
+}
+
+int tv_wrap_px(const char *text, size_t len, int width, const unsigned char *adv, tv_line *lines, int max)
+{
     size_t pos = 0;
-    size_t w = width > 0 ? (size_t)width : 1;
+    int limit = width > 0 ? width : 1;
     int n = 0;
 
     while (pos < len) {
-        size_t start = pos, end, next;
-        size_t limit = len - start < w ? len - start : w;
-        const char *nl = memchr(text + start, '\n', limit);
+        size_t start = pos, end = len, next = len, space = 0;
+        int w = 0, have_space = 0;
 
-        if (nl) {
-            end = (size_t)(nl - text);
-            next = end + 1;
-        } else if (len - start <= w) {
-            end = len;
-            next = len;
-        } else if (text[start + w] == ' ' || text[start + w] == '\n') {
-            /* The line fills the width exactly and a break follows. */
-            end = start + w;
-            next = end + 1;
-        } else {
-            size_t bp = start + w;
-            while (bp > start && text[bp - 1] != ' ')
-                bp--;
-            if (bp > start) {
-                end = bp - 1; /* drop the space */
-                next = bp;
-            } else {
-                end = start + w; /* one word longer than the line */
-                next = end;
+        for (size_t i = start; i < len; i++) {
+            unsigned char c = (unsigned char)text[i];
+            if (c == '\n') {
+                end = i;
+                next = i + 1;
+                break;
             }
+            int cw = adv ? adv[c] : 1;
+            if (w + cw > limit) {
+                if (c == ' ') { /* the line is full and a break follows */
+                    end = i;
+                    next = i + 1;
+                } else if (have_space) {
+                    end = space; /* drop the space */
+                    next = space + 1;
+                } else {
+                    /* one word longer than the line; always take one byte */
+                    end = i > start ? i : i + 1;
+                    next = end;
+                }
+                break;
+            }
+            if (c == ' ') {
+                space = i;
+                have_space = 1;
+            }
+            w += cw;
         }
 
         if (lines && n < max) {

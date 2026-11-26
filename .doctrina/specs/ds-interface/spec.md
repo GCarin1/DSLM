@@ -2,15 +2,15 @@
 
 **Capability:** ds-interface
 **Status:** active
-**Implementation:** verified — screens, keyboard, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS and the reference R4
+**Implementation:** verified — bitmap screens in the DSLM palette and pixel font, logo splash, libnds keyboard, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, the reference R4 run of the graphical build lands with the v1.3.0 release change
 **Realizes:** SC4
 **Depends on:** inference-engine
-**Last updated:** 2026-11-25
-**Version:** 0.5.0
+**Last updated:** 2026-11-26
+**Version:** 0.6.0
 
 ## Purpose
 
-The homebrew's interface on the DS's two 256x192 screens. The top screen streams the generated text. The bottom (touch) screen shows the on-screen keyboard for typing the prompt and the generation status. It starts with the libnds text console, with no custom graphics.
+The homebrew's interface on the DS's two 256x192 screens. The top screen streams the generated text. The bottom (touch) screen shows the on-screen keyboard for typing the prompt and the generation status. Both screens are bitmap graphics in the colours of the DSLM logo, with the project's pixel font and the logo splash while a model loads (ADR 0011).
 
 ## Requirements (EARS)
 
@@ -20,6 +20,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - The firmware shall confine all screen and input handling to the ui layer behind `src/ui/ui.h`, so the storage and engine layers build and test without libnds.
 - The interface shall make every action reachable both by a DS button and by a touch target on the bottom screen.
 - The interface shall wrap text on both screens at word boundaries, breaking a word only when it is longer than a line.
+- The interface shall draw both screens as bitmap graphics in the DSLM palette with the project pixel font, and shall show the DSLM logo splash while a model loads.
 
 ### Event-driven
 
@@ -39,6 +40,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 
 - The interface shall not accept a new prompt while a generation is running.
 - The interface shall not leave the DS without a model: when the chosen model fails to load, it shall show the reason and load the previous model again.
+- The interface shall not slow generation by more than 2% nor grow the binary by more than 64 KB against the console interface it replaced.
 
 ### Optional
 
@@ -54,18 +56,20 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 6. [verified] Stopping generation keeps the tokens produced so far — verified by `tools/tests/test_engine_host.py`
 7. [verified] Picking another model on the Settings screen switches models without a restart, and a model that does not fit is refused with the previous one restored — verified by `tests/hw/model-picker.md`
 8. [verified] With LittleKedi loaded, START on the first example question shows the question and the answer and the run matches the host golden token for token in melonDS — verified by `tests/parity/littlekedi-chat.md`
+9. [verified] Every screen draws in the DSLM palette and font, the splash shows the logo, and a touch that opens the prompt screen types nothing — verified by `tests/hw/ui-graphics.md`
+10. [verified] int8 generation is no slower than the console build (256 steps on melonDS), the binary grows under 64 KB, and LittleKedi still loads and matches its golden — verified by `tests/hw/ui-graphics.md`
 
 ## Maturity
 
 **MVP (committed):**
 
-- libnds console, default libnds keyboard, streaming and cancellation.
-- Five screens (Loading, Prompt, Generating, Story, Settings), example prompts on L/R, every action on buttons and touch (ADR 0006).
+- Bitmap screens in the DSLM palette and pixel font, logo splash and banner icon, default libnds keyboard, streaming and cancellation (ADR 0011).
+- Five screens (Loading, Prompt, Generating, Story, Settings), example prompts on L/R, every action on buttons and touch (ADR 0011, after ADR 0006).
 - Settings screen for temperature, top-p and steps, saved to /dslm/dslm.ini.
 
 **Future (aspirational, not committed):**
 
-- Custom keyboard with D-pad typing, custom font and graphics, and generation history saved to microSD.
+- Custom QWERTY keyboard with D-pad typing, Home menu with Stories, Chat, Settings and About, motion (transitions, smooth scrolling), and generation history saved to microSD.
 
 ## Out of scope for this spec
 

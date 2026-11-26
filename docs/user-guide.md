@@ -21,8 +21,8 @@ Developers build this tree with `python tools/dslm.py stage <card root>` (`docs/
 
 ## Screens
 
-1. **Loading.** A progress bar while the model is read into memory.
-2. **Prompt.** The top screen shows a welcome text (later, your last story). The bottom screen shows your prompt, four buttons and the touch keyboard.
+1. **Loading.** The DSLM logo on the top screen; a progress bar and the loading steps below while the model is read into memory.
+2. **Prompt.** The top screen shows a welcome text (later, your last story). Its title bar shows the model and its state, and the bar at the bottom shows the buttons to press. The bottom screen shows your prompt, four buttons and the touch keyboard.
 3. **Generating.** The story appears word by word on the top screen. The bottom screen shows progress, the time per token and a big STOP button.
 4. **Story.** The finished story on the top screen; New prompt, Same prompt again and Settings below.
 5. **Settings.** Temperature, top-p, the number of steps and the model, saved to `/dslm/dslm.ini`.

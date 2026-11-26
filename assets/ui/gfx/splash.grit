@@ -1,0 +1,2 @@
+# 8bpp bitmap, LZ77, no palette (art_palette holds it)
+-gb -gB8 -gzl -p!

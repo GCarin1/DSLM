@@ -2,8 +2,9 @@
 BLOCKSDS	?= /opt/wonderful/thirdparty/blocksds/core
 
 NAME		:= dslm
-GAME_TITLE	:= DSLM 1.1.0
-GAME_SUBTITLE1	:= Llama 2 on the Nintendo DS
+GAME_TITLE	:= DSLM
+GAME_SUBTITLE1	:= Run LLMs on Nintendo DS
+GAME_ICON	:= assets/ui/icon.png
 
 # Sources are listed explicitly and sorted, so the link order (and so the
 # binary) does not depend on the filesystem's directory order: a Windows bind
@@ -12,6 +13,8 @@ GAME_SUBTITLE1	:= Llama 2 on the Nintendo DS
 SOURCES_C	:= $(sort $(shell find src -name "*.c"))
 SOURCEDIRS	:= docker
 INCLUDEDIRS	:= src
+# Interface art (tools/ui_assets.py writes it; grit converts it at build time)
+GFXDIRS		:= assets/ui/gfx
 LIBS		:= -lnds9
 LIBDIRS		:= $(BLOCKSDS)/libs/libnds
 

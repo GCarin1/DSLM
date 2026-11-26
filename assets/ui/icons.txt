@@ -1,0 +1,16 @@
+# DSLM UI icons (original, after the brain in assets/dslm-logo.png).
+# "== <name>" then rows; letters are UI palette colours (tools/ui_assets.py),
+# '.' is transparent.
+== brain
+..cccc....cccc..
+.c....c..c....c.
+c..cc.c..c.cc..c
+c.c...c..c...c.c
+c...c.c..c.c...c
+.cc.c.c..c.c.cc.
+c...c.c..c.c...c
+c.cc..c..c..cc.c
+c...c.c..c.c...c
+.c..c.c..c.c..c.
+..c...c..c...c..
+..cccc....cccc..

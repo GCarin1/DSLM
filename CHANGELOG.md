@@ -2,6 +2,17 @@
 
 All notable changes to DSLM are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/). Each entry links to the Doctrina change that delivered it (`.doctrina/changes/archive/`).
 
+## [Unreleased]
+
+### Changed
+
+- **New look** (change 0021, ADR 0011): both screens are drawn as graphics in the colours of the DSLM logo, with an original pixel font (about 40 characters per line instead of 32), rounded buttons labelled with the DS button that presses them, a title bar with the model and its state, and a splash with the logo while a model loads. The flashcart menu shows a brain icon and "Run LLMs on Nintendo DS". Controls are unchanged.
+- The top screen shows 14 lines of text instead of 20 (more fit on each line).
+
+### Fixed
+
+- Touching Back on the Settings screen could type a character on the keyboard of the prompt screen.
+
 ## [1.2.0] - 2026-11-25
 
 ### Added
