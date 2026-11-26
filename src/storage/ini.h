@@ -15,6 +15,7 @@ typedef struct {
     char chat_checkpoint[DSLM_PATH_MAX]; /* the chat model (names its own tokenizer) */
     dslm_mode mode;                      /* the Home card used last */
     int sound;                           /* interface sounds on (1) or off (0) */
+    int accent;                          /* 0: DSLM cyan, 1: favourite colour from the DS settings */
     float temperature;
     float topp;
     int steps;

@@ -19,6 +19,7 @@
 #include "gfx.h"
 #include "keyboard.h"
 #include "sfx.h"
+#include "theme.h"
 #include "splash.h"
 #include "textview.h"
 #include "version.h"
@@ -110,6 +111,7 @@ static struct {
     char home_sub[2][40];              /* subtitles of the Stories and Chat cards */
     int list_first, list_n;            /* History list scroll */
     volatile int pulse;                /* animate COL_PULSE in the VBlank interrupt */
+    uint16_t acc, acc_d, acc_l;        /* the accent and its shades now in the palette */
     unsigned pulse_frame;
 } st;
 
@@ -181,7 +183,7 @@ static void on_vblank(void)
     sound_tick();
     if (st.pulse) { /* brain icons breathe between dark and light cyan, 64 frames a cycle */
         unsigned ph = st.pulse_frame++ & 63, t = ph < 32 ? ph : 63 - ph;
-        uint16_t a = art_palette[COL_CYAN_D], b = art_palette[COL_CYAN_L], c = 0;
+        uint16_t a = st.acc_d, b = st.acc_l, c = 0;
         for (int sh = 0; sh < 15; sh += 5) {
             int ca = (a >> sh) & 31, cb = (b >> sh) & 31;
             c |= (uint16_t)((ca + (cb - ca) * (int)t / 31) << sh);
@@ -195,9 +197,34 @@ void ui_pulse(int on)
 {
     st.pulse = on;
     if (!on) {
-        BG_PALETTE[COL_PULSE] = art_palette[COL_PULSE];
-        BG_PALETTE_SUB[COL_PULSE] = art_palette[COL_PULSE];
+        BG_PALETTE[COL_PULSE] = st.acc;
+        BG_PALETTE_SUB[COL_PULSE] = st.acc;
     }
+}
+
+void ui_accent(int from_ds)
+{
+    if (from_ds) {
+        st.acc = theme_colour(PersonalData->theme & 15);
+        theme_shades(st.acc, &st.acc_d, &st.acc_l);
+    } else {
+        st.acc = art_palette[COL_CYAN];
+        st.acc_d = art_palette[COL_CYAN_D];
+        st.acc_l = art_palette[COL_CYAN_L];
+    }
+    static const uint8_t idx[] = {COL_CYAN, COL_CYAN_D, COL_CYAN_L, COL_PULSE};
+    uint16_t val[] = {st.acc, st.acc_d, st.acc_l, st.acc};
+    for (int i = 0; i < 4; i++) {
+        BG_PALETTE[idx[i]] = val[i];
+        BG_PALETTE_SUB[idx[i]] = val[i];
+    }
+}
+
+const char *ui_user_name(void)
+{
+    static char name[12];
+    theme_name_ascii((const uint16_t *)PersonalData->name, PersonalData->nameLen, name, sizeof name);
+    return name;
 }
 
 /* Master brightness steps of 4 per frame: about 70 ms each way. */
@@ -235,6 +262,7 @@ void ui_init(void)
     kb_init(&st.kb);
     st.chat_q = -1;
     soundEnable();
+    ui_accent(0);
     keysSetRepeat(15, 4);
     irqSet(IRQ_VBLANK, on_vblank);
     irqEnable(IRQ_VBLANK);
@@ -623,8 +651,8 @@ void ui_panel_story(int tokens, unsigned total_ms, int stopped)
 #define SET_VALUE_W 96
 #define SET_PLUS_X 222
 #define SET_STEP_W 22
-static const rect SET_SAVE = {8, 142, 118, 26};
-static const rect SET_BACK = {130, 142, 118, 26};
+static const rect SET_SAVE = {8, 156, 118, 22};
+static const rect SET_BACK = {130, 156, 118, 22};
 
 static void milli(char *out, size_t cap, float v)
 {
@@ -658,8 +686,9 @@ void ui_panel_settings(const dslm_settings *s, int cursor, const char *note)
     char *dot = strrchr(model, '.');
     if (dot && dot != model)
         *dot = '\0';
-    const char *labels[UI_SETTINGS_ROWS] = {"Temperature", "Top-p", "Steps", "Model", "Sound"};
-    const char *values[UI_SETTINGS_ROWS] = {t, p, stp, model, s->sound ? "on" : "off"};
+    const char *labels[UI_SETTINGS_ROWS] = {"Temperature", "Top-p", "Steps", "Model", "Sound", "Colour"};
+    const char *values[UI_SETTINGS_ROWS] = {t, p, stp, model, s->sound ? "on" : "off",
+                                            s->accent ? "My DS" : "DSLM cyan"};
 
     clear_bottom();
     header("Settings", COL_CYAN, NULL);
@@ -683,10 +712,10 @@ void ui_panel_settings(const dslm_settings *s, int cursor, const char *note)
                  1);
     }
     if (note)
-        gfx_str(&gfx_bot, 10, 125, note, COL_GREEN, 1);
+        gfx_str(&gfx_bot, 10, 144, note, COL_GREEN, 1);
     button(SET_SAVE, "Save", "START", BTN_PRIMARY, 1);
     button(SET_BACK, "Back", "B", BTN_NORMAL, 1);
-    gfx_str_centered(&gfx_bot, 0, 176, GFX_W, "Up/Down select   Left/Right change", COL_DIM, 1);
+    gfx_str_centered(&gfx_bot, 0, 182, GFX_W, "Up/Down select   Left/Right change", COL_DIM, 1);
 }
 
 /* ---- Home and About ----------------------------------------------------- */
@@ -745,7 +774,10 @@ void ui_home(int focus, const char *stories, const char *chat, const char *note)
     snprintf(st.home_sub[0], sizeof st.home_sub[0], "%s", stories);
     snprintf(st.home_sub[1], sizeof st.home_sub[1], "%s", chat);
     clear_bottom();
-    header("DSLM", COL_CYAN, "D-pad + A or touch");
+    char hello[24];
+    const char *name = ui_user_name();
+    snprintf(hello, sizeof hello, "Hi, %s!", name);
+    header("DSLM", COL_CYAN, name[0] ? hello : "D-pad + A or touch");
     for (int i = 0; i < UI_CARDS; i++)
         draw_card(i);
     if (note)

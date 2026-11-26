@@ -15,6 +15,7 @@ All notable changes to DSLM are listed here. The format follows [Keep a Changelo
 
 ### Added
 
+- **Personal touches** (change 0026): DSLM greets you by the name set in the DS System Settings (Home and welcome text) and uses it in one story example; the new `Colour` row in Settings switches the accent to your DS favourite colour (`[ui] accent` in `dslm.ini`).
 - **History** (change 0025): every finished story and chat answer is saved to `/dslm/history` on the microSD card with its date and time. The new History card on the Home screen lists them newest first, shows the chosen one again (chats in bubbles), scrolls it with L/R and deletes it with Y pressed twice.
 - **Sounds** (change 0024, ADR 0014): clicks, blips and chimes for typing, moving, opening, going back, starting and stopping a generation, a finished story, errors and the boot. They are original and made by the DS sound chip itself (no recordings, no extra memory). Settings has a `Sound` row to switch them off (`[ui] sound` in `dslm.ini`).
 

@@ -6,7 +6,7 @@
 **Realizes:** SC4
 **Depends on:** inference-engine
 **Last updated:** 2026-11-26
-**Version:** 0.10.0
+**Version:** 0.11.0
 
 ## Purpose
 
@@ -26,6 +26,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - The interface shall fade between screens and animate the brain icon while generating, using only hardware brightness and palette changes.
 - The interface shall play original sounds synthesized on the PSG channels for its actions and moments (key, move, delete, page, open, back, start, stop, done, error, boot), with no audio samples.
 - The interface shall list the saved history newest first from the History card, show the chosen entry on the top screen, and delete an entry only after the delete button is pressed twice.
+- Where the DS settings hold a user name, the interface shall greet the user by that name on the Home screen and in the welcome text.
 
 ### Event-driven
 
@@ -39,6 +40,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - When the user opens the Stories or Chat card while the other kind of model is loaded, the interface shall load that mode's model with the loading progress and save the mode to /dslm/dslm.ini, so the next boot loads it and focuses its card.
 - When the user switches Sound off on the Settings screen and saves, the interface shall stop playing sounds and save the choice to /dslm/dslm.ini.
 - When a generation finishes or is stopped, the interface shall save its text, prompt, model and date to a new file in /dslm/history.
+- When the user picks My DS on the Colour row of the Settings screen and saves, the interface shall draw its accent in the favourite colour from the DS settings and save the choice to /dslm/dslm.ini.
 
 ### State-driven
 
@@ -74,6 +76,8 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 16. [verified] The boot chime and the open sound play on melonDS at their pitches, and Sound off is saved and silences them — verified by `tests/hw/ui-sound.md`
 17. [verified] History files round-trip their header and text, tolerate CRLF and cut headers, and are named H0001.TXT upwards — verified by `tests/host/test_history.c`
 18. [verified] Finished runs are saved with the clock date, listed newest first, shown again with chat bubbles and deleted by a double press — verified by `tests/hw/ui-history.md`
+19. [verified] The 16 favourite colours are distinct and readable, their shades bracket them, and firmware names convert to trimmed ASCII — verified by `tests/host/test_theme.c`
+20. [verified] The greeting, the personal example and the saved favourite-colour accent show on melonDS with a firmware name and colour — verified by `tests/hw/ui-personal.md`
 
 ## Maturity
 
@@ -84,6 +88,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - Motion by hardware only: brightness fades between screens and a pulsing brain while generating; chat in speech bubbles (ADR 0013).
 - Original interface sounds synthesized on the PSG channels, with a Sound switch in Settings (ADR 0014).
 - History of finished stories and answers in /dslm/history, browsed from the Home screen.
+- Personal touches from the DS settings: a greeting with the user's name, a story example with it, and an optional accent in their favourite colour.
 - Settings screen for temperature, top-p and steps, saved to /dslm/dslm.ini.
 
 **Future (aspirational, not committed):**

@@ -70,6 +70,10 @@ static void apply(enum section sec, const char *kb, const char *ke,
             s->sound = 1;
         else if (span_eq(kb, ke, "sound") && span_eq(vb, ve, "off"))
             s->sound = 0;
+        else if (span_eq(kb, ke, "accent") && span_eq(vb, ve, "dslm"))
+            s->accent = 0;
+        else if (span_eq(kb, ke, "accent") && span_eq(vb, ve, "ds"))
+            s->accent = 1;
         return;
     }
     if (sec != SEC_SAMPLING || !value_copy(buf, sizeof buf, vb, ve))
@@ -110,9 +114,9 @@ size_t dslm_ini_format(const dslm_settings *s, char *buf, size_t cap)
                      "[model]\ncheckpoint = %s\ntokenizer  = %s\nchat_checkpoint = %s\n\n"
                      "[sampling]\ntemperature = %s\ntopp        = %s\n"
                      "steps       = %d\nseed        = %lu\n\n"
-                     "[ui]\nmode = %s\nsound = %s\n",
+                     "[ui]\nmode = %s\nsound = %s\naccent = %s\n",
                      s->checkpoint, s->tokenizer, s->chat_checkpoint, t, p, s->steps, (unsigned long)s->seed,
-                     s->mode == DSLM_MODE_CHAT ? "chat" : "stories", s->sound ? "on" : "off");
+                     s->mode == DSLM_MODE_CHAT ? "chat" : "stories", s->sound ? "on" : "off", s->accent ? "ds" : "dslm");
     return n > 0 && (size_t)n < cap ? (size_t)n : 0;
 }
 
@@ -123,6 +127,7 @@ void dslm_settings_defaults(dslm_settings *s)
     strcpy(s->chat_checkpoint, "/dslm/models/littlekedi_q80.bin");
     s->mode = DSLM_MODE_STORIES;
     s->sound = 1;
+    s->accent = 0;
     s->temperature = 0.0f;
     s->topp = 0.9f;
     s->steps = 256;

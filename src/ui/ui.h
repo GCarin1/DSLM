@@ -62,9 +62,10 @@ typedef struct {
     int value;
 } ui_event;
 
-#define UI_SETTINGS_ROWS 5      /* temperature, top-p, steps, model, sound */
+#define UI_SETTINGS_ROWS 6      /* temperature, top-p, steps, model, sound, colour */
 #define UI_SETTINGS_MODEL_ROW 3 /* Left/Right picks a checkpoint from /dslm/models */
 #define UI_SETTINGS_SOUND_ROW 4 /* Left/Right switches the sounds on or off */
+#define UI_SETTINGS_ACCENT_ROW 5 /* Left/Right: DSLM cyan or the DS favourite colour */
 #define UI_PROMPT_MAX 90   /* fits the three prompt lines on the bottom screen */
 
 void ui_init(void);
@@ -104,6 +105,11 @@ void ui_pulse(int on);
  * events itself); off silences everything. */
 void ui_sound(int sfx);
 void ui_sound_enable(int on);
+
+/* Accent colour: 0 the DSLM cyan, 1 the favourite colour in the DS settings. */
+void ui_accent(int from_ds);
+/* The user's name from the DS settings in ASCII, or "" when it is not set. */
+const char *ui_user_name(void);
 
 /* Fade both screens out before drawing a new screen, and in after. */
 void ui_fade_out(void);

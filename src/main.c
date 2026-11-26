@@ -38,7 +38,7 @@
 typedef enum { KIND_STORY, KIND_CHAT } model_kind;
 
 #define N_EXAMPLES 4
-static const char *const examples[2][N_EXAMPLES] = {
+static const char *examples[2][N_EXAMPLES] = { /* [0][2] gets the user's name at boot */
     {"Once upon a time", "The little dog", "Lily wanted to", "Tom and his mom went to the park"},
     /* the first one is a golden prompt: the melonDS parity run presses START on it */
     {"What causes the seasons?", "Hello! Who are you?", "Give me three tips to sleep better.",
@@ -525,11 +525,23 @@ static const char welcome_chat[] =
 
 static void show_welcome(const app *a)
 {
+    static char text[sizeof welcome_chat + 32];
+    const char *name = ui_user_name();
+    const char *body = a->kind == KIND_CHAT ? welcome_chat : welcome;
+    int n = name[0] ? snprintf(text, sizeof text, "Hi, %s! %s", name, body) : snprintf(text, sizeof text, "%s", body);
     ui_set_chat(-1);
-    if (a->kind == KIND_CHAT)
-        ui_text(welcome_chat, sizeof welcome_chat - 1, 0);
-    else
-        ui_text(welcome, sizeof welcome - 1, 0);
+    ui_text(text, (size_t)n < sizeof text ? (size_t)n : sizeof text - 1, 0);
+}
+
+/* "Lily wanted to" becomes "<name> wanted to" when the DS knows the user's name. */
+static void personal_example(void)
+{
+    static char line[32];
+    const char *name = ui_user_name();
+    if (name[0]) {
+        snprintf(line, sizeof line, "%s wanted to", name);
+        examples[KIND_STORY][2] = line;
+    }
 }
 
 /* The last run's text, in bubbles when it was a chat. */
@@ -600,6 +612,10 @@ static void adjust(dslm_settings *s, int row, int dir, int seq_len)
     case UI_SETTINGS_SOUND_ROW:
         s->sound = !s->sound;
         ui_sound_enable(s->sound); /* hear the choice before saving it */
+        break;
+    case UI_SETTINGS_ACCENT_ROW:
+        s->accent = !s->accent;
+        ui_accent(s->accent); /* see the choice before saving it */
         break;
     }
 }
@@ -757,7 +773,8 @@ static const char *settings_screen(app *a)
             }
             break;
         case UI_EV_BACK:
-            ui_sound_enable(a->settings.sound); /* an unsaved switch does not stick */
+            ui_sound_enable(a->settings.sound); /* unsaved switches do not stick */
+            ui_accent(a->settings.accent);
             snprintf(done, sizeof done, "%s", note && strncmp(note, "Not loaded", 10) == 0 ? note : "");
             return done[0] ? done : NULL;
         default:
@@ -1084,6 +1101,8 @@ int main(void)
     ui_init();
     boot(&a);
     ui_sound_enable(a.settings.sound);
+    ui_accent(a.settings.accent);
+    personal_example();
     settle_mode(&a);
     a.chat_q = -1;
     strcpy(a.prompt, examples[a.kind][0]);

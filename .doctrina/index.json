@@ -15,7 +15,7 @@
         "id": "ds-interface",
         "path": ".doctrina/specs/ds-interface/spec.md",
         "status": "active",
-        "version": "0.10.0",
+        "version": "0.11.0",
         "last_updated": "2026-11-26",
         "implementation": "verified — bitmap screens in the DSLM palette and pixel font, logo splash, Home menu with Stories, Chat, History, Settings and About, own QWERTY keyboard typed by D-pad or touch, VBlank-latched input, fades, chat bubbles, synthesized interface sounds, history on the card, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, the reference R4 run of the graphical build lands with the v1.3.0 release change",
         "realizes": [
@@ -638,6 +638,20 @@
           }
         ],
         "lane": "chore (confident; signals: format)"
+      },
+      {
+        "id": "0026-personalization-ds-firmware-greet",
+        "title": "Personalization from the DS firmware: greet the user by the name stored in the DS settings on the Home screen and in the welcome text, put the name into one story example, and a Color row on the Settings screen that switches the interface accent between the DSLM cyan and the user's favourite colour from the DS settings, saved in dslm.ini; the colour table, shade derivation and name conversion are pure C tested on the host",
+        "path": ".doctrina/changes/archive/2026-11-26-0026-personalization-ds-firmware-greet",
+        "status": "applied",
+        "applied": "2026-11-26",
+        "specs_affected": [
+          {
+            "capability": "ds-interface",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "product (uncertain)"
       }
     ],
     "skills": [

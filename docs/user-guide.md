@@ -23,7 +23,7 @@ Developers build this tree with `python tools/dslm.py stage <card root>` (`docs/
 ## Screens
 
 1. **Loading.** The DSLM logo on the top screen; a progress bar and the loading steps below while the model is read into memory.
-2. **Home.** The logo on top and five cards below: **Stories**, **Chat**, **History**, **Settings** and **About**. Stories and Chat load their model if the other one is loaded, then open the prompt. The DS remembers the last one and starts with its card highlighted.
+2. **Home.** The logo on top and five cards below (with a greeting when your name is set in the DS System Settings): **Stories**, **Chat**, **History**, **Settings** and **About**. Stories and Chat load their model if the other one is loaded, then open the prompt. The DS remembers the last one and starts with its card highlighted.
 3. **Prompt.** The top screen shows a welcome text (later, your last story). Its title bar shows the model and its state, and the bar at the bottom shows the buttons to press. The bottom screen shows your prompt, four buttons and the touch keyboard.
 4. **Generating.** The story appears word by word on the top screen (in chat, the question and the answer appear as speech bubbles). The bottom screen shows progress, the time per token, a pulsing brain and a big STOP button.
 5. **Story.** The finished story on the top screen; New prompt, Same prompt again and Menu below.
@@ -61,6 +61,7 @@ Every action works with the buttons or with the stylus.
 | Settings | Choose a setting | Up / Down | touch its row |
 | Settings | Change it | Left / Right | `[-]` / `[+]` |
 | Settings | Sounds on or off (row `Sound`) | Left / Right, then START | `[<]` / `[>]`, then Save |
+| Settings | Accent colour (row `Colour`) | Left / Right, then START | `[<]` / `[>]`, then Save |
 | Settings | Pick another model (row `Model`) | Left / Right, then START | `[<]` / `[>]`, then Save |
 | Settings | Save to the card | START | Save |
 | Settings | Back to Home without saving | B | Back |
@@ -69,6 +70,7 @@ Without the stylus, the D-pad moves the highlight over the keyboard and A types 
 
 ## Settings
 
+- **Colour** picks the accent: the DSLM cyan, or "My DS", the favourite colour chosen in the DS System Settings.
 - **Sound** switches the interface sounds (clicks, chimes) on or off. They are original sounds made by the DS sound chip itself.
 - **Temperature** 0 always picks the most likely next word, so the same prompt gives the same story. Higher values (up to 2.0) give more varied stories.
 - **Top-p** limits sampling to the most likely words when temperature is above 0.
