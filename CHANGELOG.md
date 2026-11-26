@@ -8,6 +8,8 @@ All notable changes to DSLM are listed here. The format follows [Keep a Changelo
 
 - **New look** (change 0021, ADR 0011): both screens are drawn as graphics in the colours of the DSLM logo, with an original pixel font (about 40 characters per line instead of 32), rounded buttons labelled with the DS button that presses them, a title bar with the model and its state, and a splash with the logo while a model loads. The flashcart menu shows a brain icon and "Run LLMs on Nintendo DS". Controls are unchanged.
 - The top screen shows 14 lines of text instead of 20 (more fit on each line).
+- **New keyboard** (change 0022, ADR 0012): a QWERTY keyboard in the same style with keys twice as large, typed by touch or without the stylus: the D-pad moves the highlight and A types the key; B deletes, Y adds a space, X makes the next letter a capital, `?123` opens numbers and symbols. On the prompt screen START (or GO) generates; A now types.
+- A short press of B stops a generation; it no longer has to be held.
 
 ### Fixed
 

@@ -1,7 +1,9 @@
 /*
  * Graphical backend for ui.h (ADR 0011): both screens are 8bpp bitmaps drawn
- * with the DSLM palette and pixel font (gfx.h). The libnds keyboard sits on
- * the bottom screen's BG1 above the bitmap, on the prompt screen only.
+ * with the DSLM palette and pixel font (gfx.h). The prompt screen carries the
+ * QWERTY keyboard (keyboard.h), typed by touch or by D-pad focus and A.
+ * Input is sampled in the VBlank interrupt and latched, so a press shorter
+ * than a token is still seen by the next ui_poll().
  *
  * Top: title bar (y 0-17), 14 text lines (y 21-174), hint bar (y 178-191).
  * Bottom: a header strip (y 0-17) and the panel of the current screen. Every
@@ -15,6 +17,7 @@
 #include <string.h>
 
 #include "gfx.h"
+#include "keyboard.h"
 #include "splash.h"
 #include "textview.h"
 
@@ -88,14 +91,6 @@ static void bar(gfx_surface *s, int x, int y, int w, int h, int done, int total)
         gfx_fill(s, x + 1, y + 1, fill, h - 2, COL_CYAN);
 }
 
-static void show_keyboard(int on)
-{
-    if (on && !keyboardIsVisible())
-        keyboardShow();
-    else if (!on && keyboardIsVisible())
-        keyboardHide();
-}
-
 /* ---- top screen state --------------------------------------------------- */
 
 #define ROW_CHARS 128
@@ -106,8 +101,27 @@ static struct {
     char rows[UI_TEXT_ROWS][ROW_CHARS]; /* what each body line shows now */
     unsigned char row_len[UI_TEXT_ROWS];
     int body_valid;                    /* rows[] matches the screen */
-    int kb_armed;                      /* the stylus was lifted since the prompt panel appeared */
+    kb_state kb;                       /* page and D-pad focus of the keyboard */
 } st;
+
+/* ---- input latched in the VBlank interrupt ------------------------------ */
+
+static volatile uint32_t latch_down, latch_rep;
+static volatile int latch_tx = -1, latch_ty = -1; /* where the last touch began */
+
+static void on_vblank(void)
+{
+    scanKeys();
+    uint32_t down = keysDown();
+    latch_down |= down;
+    latch_rep |= keysDownRepeat();
+    if (down & KEY_TOUCH) {
+        touchPosition tp;
+        touchRead(&tp);
+        latch_tx = tp.px;
+        latch_ty = tp.py;
+    }
+}
 
 static void body_invalidate(void)
 {
@@ -117,15 +131,10 @@ static void body_invalidate(void)
 void ui_init(void)
 {
     gfx_init();
-    /* Same layer layout the keyboard had on the console build, moved to BG1
-     * because mode 5 makes BG3 a bitmap layer. No slide animation:
-     * keyboardShow/Hide would block for several frames and swallow a short
-     * button press made right after a screen change. */
-    Keyboard *kb = keyboardInit(NULL, 1, BgType_Text4bpp, BgSize_T_256x512, 20, 0, false, true);
-    kb->scrollSpeed = 0;
-    keyboardHide();
-    gfx_load_palette();
+    kb_init(&st.kb);
     keysSetRepeat(15, 4);
+    irqSet(IRQ_VBLANK, on_vblank);
+    irqEnable(IRQ_VBLANK);
 }
 
 /* ---- boot, loading and errors ------------------------------------------- */
@@ -166,7 +175,6 @@ static void tagline(void)
 
 void ui_splash(const char *model)
 {
-    show_keyboard(0);
     decompress(splashBitmap, (void *)gfx_top.px, LZ77Vram);
     tagline();
     st.splash = 1;
@@ -319,7 +327,6 @@ void ui_fatal(const char *fmt, ...)
     vsnprintf(msg, sizeof msg, fmt, ap);
     va_end(ap);
 
-    show_keyboard(0);
     ui_title("", "error");
     gfx_fill(&gfx_top, 0, TITLE_H, GFX_W, HINT_Y - TITLE_H, COL_BG);
     body_invalidate();
@@ -334,12 +341,46 @@ void ui_fatal(const char *fmt, ...)
 
 /* ---- bottom panels ------------------------------------------------------ */
 
-/* Prompt: header, three-line field, four buttons; the keyboard below y 72. */
+/* Prompt: header, three-line field, four buttons; the keyboard below y 76. */
 static const rect PR_FIELD = {4, 20, 248, 35};
 static const rect PR_PREV = {4, 57, 34, 15};
 static const rect PR_NEXT = {41, 57, 34, 15};
 static const rect PR_SET = {78, 57, 56, 15};
 static const rect PR_GO = {137, 57, 115, 15};
+
+static void draw_key(int i)
+{
+    kb_rect r = kb_key_rect(i);
+    int code = kb_key_code(st.kb.mode, i);
+    int special = code < 0;
+    int focus = i == st.kb.focus;
+    uint8_t fill = code == KC_GO ? COL_CYAN_D : special ? COL_PANEL : COL_PANEL2;
+    uint8_t edge = code == KC_GO ? COL_CYAN : COL_LINE;
+    uint8_t ink = special && code != KC_GO ? COL_GREY : COL_WHITE;
+    if (code == KC_SHIFT && st.kb.mode == KB_UPPER) {
+        fill = COL_CYAN_D;
+        ink = COL_WHITE;
+    }
+    gfx_fill(&gfx_bot, r.x - 1, r.y - 1, r.w + 2, r.h + 2, COL_BG); /* old focus ring */
+    if (focus) {
+        gfx_round(&gfx_bot, r.x - 1, r.y - 1, r.w + 2, r.h + 2, COL_CYAN);
+        gfx_round(&gfx_bot, r.x + 1, r.y + 1, r.w - 2, r.h - 2, COL_CYAN_L);
+        ink = COL_BG;
+    } else {
+        gfx_round(&gfx_bot, r.x, r.y, r.w, r.h, edge);
+        gfx_round(&gfx_bot, r.x, r.y + 1, r.w, r.h - 1, fill);
+    }
+    gfx_str_centered(&gfx_bot, r.x, r.y + (r.h - 7) / 2, r.w, kb_key_label(st.kb.mode, i), ink, 1);
+}
+
+static void focus_key(int key)
+{
+    int old = st.kb.focus;
+    st.kb.focus = key;
+    if (old != key)
+        draw_key(old);
+    draw_key(key);
+}
 
 void ui_panel_prompt(const char *prompt)
 {
@@ -368,9 +409,8 @@ void ui_panel_prompt(const char *prompt)
     button(PR_NEXT, ">", NULL, BTN_NORMAL, 1);
     button(PR_SET, "SET", NULL, BTN_NORMAL, 1);
     button(PR_GO, "GO", "START", BTN_PRIMARY, 1);
-    if (!keyboardIsVisible()) /* a touch that opened this screen must not type */
-        st.kb_armed = 0;
-    show_keyboard(1);
+    for (int i = 0; i < KB_KEYS; i++)
+        draw_key(i);
 }
 
 static const rect GEN_STOP = {16, 96, 224, 52};
@@ -378,12 +418,11 @@ static const rect GEN_STOP = {16, 96, 224, 52};
 void ui_panel_generating(int tokens, int steps, unsigned ms_per_token)
 {
     char buf[48];
-    show_keyboard(0);
     if (tokens == 0) {
         clear_bottom();
         header("Writing...", COL_AMBER, NULL);
         button(GEN_STOP, "STOP", "B", BTN_DANGER, 2);
-        gfx_str_centered(&gfx_bot, 0, 166, GFX_W, "Hold B or touch STOP to stop.", COL_DIM, 1);
+        gfx_str_centered(&gfx_bot, 0, 166, GFX_W, "Press B or touch STOP to stop.", COL_DIM, 1);
     }
     gfx_fill(&gfx_bot, 0, 24, GFX_W, 46, COL_BG);
     snprintf(buf, sizeof buf, "%d / %d tokens", tokens, steps);
@@ -402,7 +441,6 @@ static const rect STORY_SET = {12, 130, 232, 32};
 void ui_panel_story(int tokens, unsigned total_ms, int stopped)
 {
     char right[24], stats[48];
-    show_keyboard(0);
     clear_bottom();
     snprintf(right, sizeof right, "%d tokens", tokens);
     header(stopped ? "Stopped" : "Done", stopped ? COL_AMBER : COL_GREEN, right);
@@ -462,7 +500,6 @@ void ui_panel_settings(const dslm_settings *s, int cursor, const char *note)
     const char *labels[UI_SETTINGS_ROWS] = {"Temperature", "Top-p", "Steps", "Model"};
     const char *values[UI_SETTINGS_ROWS] = {t, p, stp, model};
 
-    show_keyboard(0);
     clear_bottom();
     header("Settings", COL_CYAN, NULL);
     for (int i = 0; i < UI_SETTINGS_ROWS; i++) {
@@ -499,37 +536,63 @@ static ui_event ev(ui_event_type t, int v)
     return e;
 }
 
+/* What a keyboard key press means to the app; a page change redraws the keys. */
+static ui_event key_event(int key)
+{
+    int code = kb_press(&st.kb, key);
+    if (code == KC_DEL)
+        return ev(UI_EV_BACKSPACE, 0);
+    if (code == KC_GO)
+        return ev(UI_EV_GO, 0);
+    for (int i = 0; i < KB_KEYS; i++) /* the page or shift may have changed */
+        draw_key(i);
+    return code > 0 ? ev(UI_EV_CHAR, code) : ev(UI_EV_NONE, 0);
+}
+
 ui_event ui_poll(ui_screen screen)
 {
-    scanKeys();
-    uint32_t down = keysDown();
+    int ime = REG_IME;
+    REG_IME = 0;
+    uint32_t down = latch_down;
+    uint32_t rep = latch_rep;
+    int tx = latch_tx, ty = latch_ty;
+    latch_down = latch_rep = 0;
+    latch_tx = latch_ty = -1;
+    REG_IME = ime;
     uint32_t held = keysHeld();
-    uint32_t rep = keysDownRepeat();
+    if (!(down & KEY_TOUCH))
+        tx = ty = -1;
     touchPosition tp;
-    int tx = -1, ty = -1;
-    if (down & KEY_TOUCH) {
-        touchRead(&tp);
-        tx = tp.px;
-        ty = tp.py;
-    }
 
     switch (screen) {
     case UI_PROMPT:
-        if (down & (KEY_START | KEY_A))
+        if (down & KEY_START)
             return ev(UI_EV_GO, 0);
+        if (down & KEY_A)
+            return key_event(st.kb.focus);
         if (rep & KEY_B)
             return ev(UI_EV_BACKSPACE, 0);
+        if (down & KEY_Y)
+            return ev(UI_EV_CHAR, ' ');
+        if (down & KEY_X) {
+            st.kb.mode = st.kb.mode == KB_LOWER ? KB_UPPER : KB_LOWER;
+            for (int i = 0; i < KB_KEYS; i++)
+                draw_key(i);
+            return ev(UI_EV_NONE, 0);
+        }
         if (down & KEY_L)
             return ev(UI_EV_EXAMPLE_PREV, 0);
         if (down & KEY_R)
             return ev(UI_EV_EXAMPLE_NEXT, 0);
         if (down & KEY_SELECT)
             return ev(UI_EV_SETTINGS, 0);
-        if (rep & KEY_UP)
-            return ev(UI_EV_UP, 0);
-        if (rep & KEY_DOWN)
-            return ev(UI_EV_DOWN, 0);
-        if (ty >= 0 && ty < PR_PREV.y + PR_PREV.h) {
+        if (rep & (KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT)) {
+            int dx = rep & KEY_LEFT ? -1 : rep & KEY_RIGHT ? 1 : 0;
+            int dy = dx ? 0 : rep & KEY_UP ? -1 : 1;
+            focus_key(kb_move(st.kb.focus, dx, dy));
+            return ev(UI_EV_NONE, 0);
+        }
+        if (ty >= 0) {
             if (hit(PR_PREV, tx, ty))
                 return ev(UI_EV_EXAMPLE_PREV, 0);
             if (hit(PR_NEXT, tx, ty))
@@ -538,25 +601,19 @@ ui_event ui_poll(ui_screen screen)
                 return ev(UI_EV_SETTINGS, 0);
             if (hit(PR_GO, tx, ty))
                 return ev(UI_EV_GO, 0);
-            return ev(UI_EV_NONE, 0);
-        }
-        if (!st.kb_armed) {
-            st.kb_armed = !(held & KEY_TOUCH);
-            break;
-        }
-        {
-            int k = keyboardUpdate();
-            if (k == DVK_ENTER)
-                return ev(UI_EV_GO, 0);
-            if (k == DVK_BACKSPACE)
-                return ev(UI_EV_BACKSPACE, 0);
-            if (k >= 32 && k < 127)
-                return ev(UI_EV_CHAR, k);
+            int key = kb_hit(tx, ty);
+            if (key >= 0) {
+                focus_key(key);
+                return key_event(key);
+            }
         }
         break;
 
     case UI_GENERATING:
-        if (held & KEY_B)
+        /* a tap latched since the last token counts, not only a held button */
+        if ((down | held) & KEY_B)
+            return ev(UI_EV_STOP, 0);
+        if (ty >= 0 && hit(GEN_STOP, tx, ty))
             return ev(UI_EV_STOP, 0);
         if (held & KEY_TOUCH) {
             touchRead(&tp);

@@ -455,7 +455,7 @@ static void generate(app *a)
     a->story_len = 0;
     a->story[0] = '\0';
     ui_title(a->model_name, "generating");
-    ui_hint("B or STOP: stop");
+    ui_hint("B:stop");
     ui_text("", 0, 0);
     ui_panel_generating(0, steps, 0);
 
@@ -496,14 +496,14 @@ static void generate(app *a)
 
 static const char welcome[] =
     "Welcome to DSLM " DSLM_VERSION ", a tiny Llama 2 running offline on your Nintendo DS.\n\n"
-    "Type the start of a story on the touch keyboard, or press L/R for examples. "
-    "START or GO writes the rest.\n\n"
+    "Type the start of a story with the stylus, or move on the keyboard with the D-pad and press A. "
+    "L/R pick an example. START or GO writes the rest.\n\n"
     "The model only knows simple children's stories in English.";
 
 static const char welcome_chat[] =
     "Welcome to DSLM " DSLM_VERSION ". This is LittleKedi, a 2M-parameter chat model running offline on your "
     "Nintendo DS.\n\n"
-    "Type a question on the touch keyboard, or press L/R for examples. START or GO asks it.\n\n"
+    "Type a question with the stylus, or with the D-pad and A. L/R pick an example. START or GO asks it.\n\n"
     "It is tiny: its answers are often wrong or off-topic. Each question starts a new chat.";
 
 static void show_welcome(const app *a)
@@ -517,7 +517,7 @@ static void show_welcome(const app *a)
 static void enter_prompt(app *a, int show_story)
 {
     ui_title(a->model_name, "ready");
-    ui_hint("START:go  L/R:examples  SEL:set");
+    ui_hint("START:go  A:key  B:del  Y:space  X:Aa");
     if (show_story && a->story_len)
         ui_text(a->story, a->story_len, a->scroll);
     else

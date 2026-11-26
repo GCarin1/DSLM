@@ -25,7 +25,7 @@ extern gfx_surface gfx_bot;
 
 /* Sets the modes, VRAM banks A and C, both bitmaps and the palette. */
 void gfx_init(void);
-/* Rewrites sub-screen palette entries 0 and 32-255 (after the keyboard loads its own 1-31). */
+/* Loads sub-screen palette entries 0 and 32-255. */
 void gfx_load_palette(void);
 
 void gfx_fill(gfx_surface *s, int x, int y, int w, int h, uint8_t c);

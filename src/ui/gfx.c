@@ -18,7 +18,7 @@ static int glyph_of(unsigned char b)
 
 void gfx_load_palette(void)
 {
-    /* entries 1-31 belong to the libnds keyboard (palette banks 0 and 1) */
+    /* entries 1-31 are unused (they held the libnds keyboard's palette) */
     dmaCopy(art_palette + 32, BG_PALETTE_SUB + 32, 224 * 2);
     BG_PALETTE_SUB[0] = art_palette[COL_BG];
 }
@@ -29,8 +29,7 @@ void gfx_init(void)
     videoSetModeSub(MODE_5_2D);
     vramSetBankA(VRAM_A_MAIN_BG);
     vramSetBankC(VRAM_C_SUB_BG);
-    /* Sub screen: the libnds keyboard keeps tile base 0 and map base 20
-     * (bytes 0-44K); the bitmap starts at 48K (base 3, 16K units). */
+    /* Sub screen bitmap at 48K (base 3, 16K units); bytes 0-48K are free. */
     int top = bgInit(2, BgType_Bmp8, BgSize_B8_256x256, 0, 0);
     int bot = bgInitSub(2, BgType_Bmp8, BgSize_B8_256x256, 3, 0);
     bgSetPriority(top, 3);

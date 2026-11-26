@@ -15,9 +15,9 @@
         "id": "ds-interface",
         "path": ".doctrina/specs/ds-interface/spec.md",
         "status": "active",
-        "version": "0.6.0",
+        "version": "0.7.0",
         "last_updated": "2026-11-26",
-        "implementation": "verified — bitmap screens in the DSLM palette and pixel font, logo splash, libnds keyboard, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, the reference R4 run of the graphical build lands with the v1.3.0 release change",
+        "implementation": "verified — bitmap screens in the DSLM palette and pixel font, logo splash, own QWERTY keyboard typed by D-pad or touch, VBlank-latched input, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, the reference R4 run of the graphical build lands with the v1.3.0 release change",
         "realizes": [
           "SC4"
         ],
@@ -203,6 +203,15 @@
         "supersedes": "0006",
         "landed": "2026-11-26 — `src/ui/gfx.c`, `src/ui/ui_gfx.c`, `tests/hw/ui-graphics.md`",
         "summary": "Each screen is one 8bpp bitmap background (mode 5, BG2): the main screen on VRAM bank A and the sub screen on bank C, at 48 KB so it clears the keyboard."
+      },
+      {
+        "id": "0012",
+        "path": ".doctrina/decisions/0012-custom-qwerty-keyboard-typed-by-d-pad-or-touch-input-latched-in-the-vblank-interrupt.md",
+        "title": "Custom QWERTY keyboard typed by D-pad or touch; input latched in the VBlank interrupt",
+        "status": "accepted",
+        "date": "2026-11-26",
+        "landed": "2026-11-26 — `src/ui/keyboard.c`, `src/ui/ui_gfx.c`, `tests/hw/ui-keyboard.md`",
+        "summary": "An own QWERTY keyboard, drawn in the ADR 0011 style, replaces the libnds one."
       }
     ],
     "changes": [],
@@ -555,6 +564,20 @@
           }
         ],
         "lane": "product (confident; signals: must)"
+      },
+      {
+        "id": "0022-custom-qwerty-keyboard-d-pad",
+        "title": "Custom QWERTY keyboard with D-pad and touch typing: replace the libnds keyboard on the prompt screen with a keyboard drawn in the DSLM style, navigable with the D-pad (A types the focused key, B deletes, Y types a space, X toggles shift/symbols, L/R example prompts, START generates, SELECT settings) and by touch; input sampled in the VBlank interrupt and latched so a short B tap stops generation; keyboard layout and focus movement are pure C tested on the host",
+        "path": ".doctrina/changes/archive/2026-11-26-0022-custom-qwerty-keyboard-d-pad",
+        "status": "applied",
+        "applied": "2026-11-26",
+        "specs_affected": [
+          {
+            "capability": "ds-interface",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "product (uncertain)"
       }
     ],
     "skills": [

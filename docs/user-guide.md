@@ -33,13 +33,16 @@ Every action works with the buttons or with the stylus.
 
 | Screen | Action | Buttons | Touch |
 |--------|--------|---------|-------|
-| Prompt | Type | — | touch keyboard |
-| Prompt | Delete a character | B | Bksp |
+| Prompt | Move on the keyboard | D-pad | — |
+| Prompt | Type the highlighted key | A | touch the key |
+| Prompt | Delete a character | B | DEL |
+| Prompt | Space | Y | space |
+| Prompt | Capital letter (next one only) | X | Aa |
+| Prompt | Numbers and symbols | — | ?123 (abc goes back) |
 | Prompt | Previous / next example prompt | L / R | `<` / `>` |
-| Prompt | Generate | START or A | GO (or Rtrn) |
+| Prompt | Generate | START | GO |
 | Prompt | Settings | SELECT | SET |
-| Prompt | Scroll the last story | Up / Down | — |
-| Generating | Stop and keep the text | hold B | STOP |
+| Generating | Stop and keep the text | B | STOP |
 | Story | New prompt (keeps the old one for editing) | A | New prompt |
 | Story | Same prompt again | Y | Same prompt again |
 | Story | Scroll | Up / Down | — |
@@ -50,7 +53,7 @@ Every action works with the buttons or with the stylus.
 | Settings | Save to the card | START | Save |
 | Settings | Back without saving | B | Back |
 
-Typing is touch-only for now; without the stylus, L/R pick an example prompt and START generates.
+Without the stylus, the D-pad moves the highlight over the keyboard and A types the key; `?123`, `GO` and `DEL` can be reached the same way. A short press of B is enough to stop: it is noticed after the current word.
 
 ## Settings
 

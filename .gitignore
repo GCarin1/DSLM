@@ -14,3 +14,5 @@ tests/host/test_textview.exe
 tests/host/test_fxmath
 tests/host/test_fxmath.exe
 dist/
+tests/host/test_keyboard
+tests/host/test_keyboard.exe

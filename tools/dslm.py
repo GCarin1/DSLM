@@ -501,9 +501,11 @@ Install
 Controls
 --------
 Every action works with buttons or with the stylus.
-  Prompt:      type on the touch keyboard, B deletes, L/R example
-               prompts, START or GO generates, SELECT opens settings.
-  Generating:  hold B or touch STOP to stop and keep the text.
+  Prompt:      type with the stylus, or move on the keyboard with the
+               D-pad and press A; B deletes, Y adds a space, X shifts,
+               L/R example prompts, START or GO generates, SELECT opens
+               settings.
+  Generating:  B or touch STOP to stop and keep the text.
   Story:       Up/Down scroll, A new prompt, Y same prompt again.
   Settings:    Up/Down choose, Left/Right change, START saves, B back.
                The Model row picks any checkpoint in dslm/models:

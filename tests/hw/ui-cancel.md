@@ -5,7 +5,7 @@
 ## Steps and expected result
 
 1. Start a generation with a high `steps` value in `/dslm/dslm.ini`.
-2. Hold B (or touch STOP) mid-generation. Generation stops within one token; the text produced so far stays on the top screen, the Story screen says "Stopped", and A returns to the prompt for a new one.
+2. Press B (a short tap is enough since change 0022) or touch STOP mid-generation. Generation stops within one token; the text produced so far stays on the top screen, the Story screen says "Stopped", and A returns to the prompt for a new one.
 
 ## Results
 
