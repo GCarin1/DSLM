@@ -2,11 +2,11 @@
 
 **Capability:** ds-interface
 **Status:** active
-**Implementation:** verified — bitmap screens in the DSLM palette and pixel font, logo splash, Home menu with Stories, Chat, Settings and About, own QWERTY keyboard typed by D-pad or touch, VBlank-latched input, fades, chat bubbles, synthesized interface sounds, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, the reference R4 run of the graphical build lands with the v1.3.0 release change
+**Implementation:** verified — bitmap screens in the DSLM palette and pixel font, logo splash, Home menu with Stories, Chat, History, Settings and About, own QWERTY keyboard typed by D-pad or touch, VBlank-latched input, fades, chat bubbles, synthesized interface sounds, history on the card, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, the reference R4 run of the graphical build lands with the v1.3.0 release change
 **Realizes:** SC4
 **Depends on:** inference-engine
 **Last updated:** 2026-11-26
-**Version:** 0.9.0
+**Version:** 0.10.0
 
 ## Purpose
 
@@ -25,6 +25,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - The interface shall open on a Home screen with Stories, Chat, Settings and About cards, and SELECT shall return to it from the prompt and story screens.
 - The interface shall fade between screens and animate the brain icon while generating, using only hardware brightness and palette changes.
 - The interface shall play original sounds synthesized on the PSG channels for its actions and moments (key, move, delete, page, open, back, start, stop, done, error, boot), with no audio samples.
+- The interface shall list the saved history newest first from the History card, show the chosen entry on the top screen, and delete an entry only after the delete button is pressed twice.
 
 ### Event-driven
 
@@ -37,6 +38,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - When the loaded model is a chat model, the interface shall send the typed text as a question in the model's chat format, show the question and the answer as speech bubbles, stop at the end-of-answer marker and offer example questions on L/R.
 - When the user opens the Stories or Chat card while the other kind of model is loaded, the interface shall load that mode's model with the loading progress and save the mode to /dslm/dslm.ini, so the next boot loads it and focuses its card.
 - When the user switches Sound off on the Settings screen and saves, the interface shall stop playing sounds and save the choice to /dslm/dslm.ini.
+- When a generation finishes or is stopped, the interface shall save its text, prompt, model and date to a new file in /dslm/history.
 
 ### State-driven
 
@@ -70,6 +72,8 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 14. [verified] chat_checkpoint and the [ui] mode round-trip through dslm.ini and an unknown mode keeps the previous one — verified by `tests/host/test_ini.c`
 15. [verified] Every sound is a playable PSG sequence within its length budget and the sequencer starts each note once, decays and ends — verified by `tests/host/test_sfx.c`
 16. [verified] The boot chime and the open sound play on melonDS at their pitches, and Sound off is saved and silences them — verified by `tests/hw/ui-sound.md`
+17. [verified] History files round-trip their header and text, tolerate CRLF and cut headers, and are named H0001.TXT upwards — verified by `tests/host/test_history.c`
+18. [verified] Finished runs are saved with the clock date, listed newest first, shown again with chat bubbles and deleted by a double press — verified by `tests/hw/ui-history.md`
 
 ## Maturity
 
@@ -79,11 +83,12 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - Seven screens (Loading, Home, Prompt, Generating, Story, Settings, About), Stories and Chat modes remembered in /dslm/dslm.ini, example prompts on L/R, every action on buttons and touch (ADR 0013, after ADRs 0011 and 0006).
 - Motion by hardware only: brightness fades between screens and a pulsing brain while generating; chat in speech bubbles (ADR 0013).
 - Original interface sounds synthesized on the PSG channels, with a Sound switch in Settings (ADR 0014).
+- History of finished stories and answers in /dslm/history, browsed from the Home screen.
 - Settings screen for temperature, top-p and steps, saved to /dslm/dslm.ini.
 
 **Future (aspirational, not committed):**
 
-- Pixel-smooth scrolling, and generation history saved to microSD.
+- Pixel-smooth scrolling.
 
 ## Out of scope for this spec
 

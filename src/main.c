@@ -13,10 +13,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/stat.h>
+#include <time.h>
 
 #include "engine/bpe.h"
 #include "engine/llama2.h"
 #include "engine/mlq_chat.h"
+#include "storage/history.h"
 #include "storage/ini.h"
 #include "storage/sdcard.h"
 #include "ui/sfx.h"
@@ -389,6 +392,7 @@ typedef struct {
 } gen_ctx;
 
 static int on_token(int token, const char *piece, void *user);
+static void save_history(app *a);
 
 /* chat tokens arrive as raw bytes; the story view wants a C string */
 static int on_chat_token(int token, const uint8_t *piece, int len, void *user)
@@ -499,6 +503,7 @@ static void generate(app *a)
     ui_pulse(0);
     write_tokens(a, steps);
     append_bench(a, steps);
+    save_history(a);
 }
 
 /* ---- screens ------------------------------------------------------------ */
@@ -791,6 +796,206 @@ static void about_screen(app *a)
     }
 }
 
+/* ---- history ------------------------------------------------------------ */
+
+#define HISTORY_MAX 64        /* entries listed, newest first */
+#define HISTORY_FILE_MAX 16384
+
+/* Up to `max` history numbers, newest first. */
+static int scan_history(int *nums, int max)
+{
+    DIR *dir = opendir(HISTORY_DIR);
+    int n = 0;
+    if (!dir)
+        return 0;
+    for (struct dirent *e; (e = readdir(dir)) != NULL;) {
+        int num = history_number(e->d_name);
+        if (num < 0)
+            continue;
+        int at = n;
+        while (at > 0 && nums[at - 1] < num) /* insertion, descending */
+            at--;
+        if (at >= max)
+            continue;
+        if (n < max)
+            n++;
+        memmove(nums + at + 1, nums + at, (size_t)(n - 1 - at) * sizeof nums[0]);
+        nums[at] = num;
+    }
+    closedir(dir);
+    return n;
+}
+
+static void history_path(int num, char *out, size_t cap)
+{
+    char name[16];
+    history_name(num, name);
+    snprintf(out, cap, "%s/%s", HISTORY_DIR, name);
+}
+
+/* The finished run, as a new file numbered after the newest one. */
+static void save_history(app *a)
+{
+    if (!a->story_len || !a->n_tokens)
+        return;
+    int newest = 0;
+    mkdir("/dslm", 0777);
+    mkdir(HISTORY_DIR, 0777);
+    scan_history(&newest, 1);
+    history_entry e;
+    memset(&e, 0, sizeof e);
+    time_t now = time(NULL);
+    struct tm *tm = localtime(&now);
+    if (tm && tm->tm_year >= 100)
+        strftime(e.date, sizeof e.date, "%Y-%m-%d %H:%M", tm);
+    snprintf(e.model, sizeof e.model, "%s", a->model_name);
+    snprintf(e.prompt, sizeof e.prompt, "%s", a->prompt);
+    e.chat = a->kind == KIND_CHAT;
+    e.question = e.chat ? a->chat_q : 0;
+    e.tokens = a->n_tokens;
+    e.stopped = a->stopped;
+    e.text = a->story;
+    e.text_len = a->story_len;
+    size_t cap = a->story_len + 512;
+    char *buf = malloc(cap);
+    if (!buf)
+        return;
+    size_t n = history_format(&e, buf, cap);
+    char path[64];
+    history_path(newest + 1, path, sizeof path);
+    if (n)
+        sd_write_file(path, buf, n);
+    free(buf);
+}
+
+typedef struct {
+    int nums[HISTORY_MAX];
+    char left[HISTORY_MAX][12];
+    char right[HISTORY_MAX][HISTORY_PROMPT_MAX + 1];
+    ui_list_item items[HISTORY_MAX];
+    int n;
+} history_list;
+
+static void load_history_list(history_list *l)
+{
+    char head[512];
+    l->n = scan_history(l->nums, HISTORY_MAX);
+    for (int i = 0; i < l->n; i++) {
+        char path[64];
+        size_t got = 0;
+        history_entry e;
+        history_path(l->nums[i], path, sizeof path);
+        if (sd_read_upto(path, head, sizeof head, &got) != SD_OK || history_parse(head, got, &e) != 0)
+            memset(&e, 0, sizeof e);
+        /* "2026-11-26 20:15" -> "11-26 20:15" */
+        snprintf(l->left[i], sizeof l->left[i], "%.11s", strlen(e.date) > 5 ? e.date + 5 : "-----");
+        snprintf(l->right[i], sizeof l->right[i], "%s", e.prompt[0] ? e.prompt : "(no prompt)");
+        l->items[i].left = l->left[i];
+        l->items[i].right = l->right[i];
+        l->items[i].accent = e.chat;
+    }
+}
+
+static void history_screen(app *a)
+{
+    /* allocated only while the screen is open: static RAM would shrink the chat context */
+    history_list *lp = malloc(sizeof *lp);
+    if (!lp)
+        return;
+#define list (*lp)
+    void *file = NULL;
+    history_entry e;
+    int sel = 0, scroll = 0, confirm = 0, loaded = -1;
+    (void)a;
+    load_history_list(&list);
+    ui_fade_out();
+    for (int fade = 1;; fade = 0) {
+        if (loaded != sel) { /* show the selected entry on the top screen */
+            free(file);
+            file = NULL;
+            memset(&e, 0, sizeof e);
+            size_t size = 0;
+            char path[64];
+            if (list.n) {
+                history_path(list.nums[sel], path, sizeof path);
+                if (sd_read_file(path, HISTORY_FILE_MAX, &file, &size) != SD_OK ||
+                    history_parse(file, size, &e) != 0)
+                    memset(&e, 0, sizeof e);
+            }
+            loaded = sel;
+            scroll = 0;
+            ui_title(e.model[0] ? e.model : "", "history");
+            ui_hint(list.n ? "Up/Down:pick  L/R:scroll  Y:delete  B:back" : "B:back");
+        }
+        if (list.n && e.text) {
+            ui_set_chat(e.chat ? e.question : -1);
+            ui_text(e.text, e.text_len, scroll);
+        } else {
+            static const char none[] = "Nothing saved yet.\n\nEvery finished story or answer is saved to "
+                                       "/dslm/history on the microSD card and listed here, newest first.";
+            ui_set_chat(-1);
+            ui_text(none, sizeof none - 1, 0);
+        }
+        ui_history(list.items, list.n, sel, confirm);
+        if (fade)
+            ui_fade_in();
+        for (int redraw = 0; !redraw;) {
+            ui_frame();
+            ui_event ev = ui_poll(UI_HISTORY);
+            if (ev.type == UI_EV_NONE)
+                continue;
+            int was_confirm = confirm;
+            confirm = 0;
+            redraw = 1;
+            switch (ev.type) {
+            case UI_EV_UP:
+                sel = sel > 0 ? sel - 1 : 0;
+                break;
+            case UI_EV_DOWN:
+                sel = sel + 1 < list.n ? sel + 1 : sel;
+                break;
+            case UI_EV_SELECT_ROW:
+                sel = ev.value;
+                break;
+            case UI_EV_PAGE_UP:
+            case UI_EV_PAGE_DOWN:
+                if (e.text) {
+                    int max = ui_text_lines(e.text, e.text_len) - UI_TEXT_ROWS;
+                    scroll += (ev.type == UI_EV_PAGE_DOWN ? 1 : -1) * (UI_TEXT_ROWS - 2);
+                    scroll = scroll > max ? max : scroll;
+                    scroll = scroll < 0 ? 0 : scroll;
+                }
+                break;
+            case UI_EV_DELETE:
+                if (!list.n)
+                    break;
+                if (!was_confirm) {
+                    confirm = 1;
+                    break;
+                }
+                {
+                    char path[64];
+                    history_path(list.nums[sel], path, sizeof path);
+                    remove(path);
+                }
+                load_history_list(&list);
+                sel = sel < list.n ? sel : (list.n ? list.n - 1 : 0);
+                loaded = -1;
+                break;
+            case UI_EV_BACK:
+                free(file);
+                free(lp);
+                return;
+            default:
+                redraw = 0;
+                break;
+            }
+        }
+    }
+}
+
+#undef list
+
 /* Prompt -> Generating -> Story, until the user asks for the menu. */
 static void prompt_screen(app *a)
 {
@@ -901,6 +1106,9 @@ int main(void)
             note = enter_mode(&a, e.value == UI_CARD_CHAT ? DSLM_MODE_CHAT : DSLM_MODE_STORIES);
             if (!note)
                 prompt_screen(&a);
+            break;
+        case UI_CARD_HISTORY:
+            history_screen(&a);
             break;
         case UI_CARD_SETTINGS:
             note = settings_screen(&a);

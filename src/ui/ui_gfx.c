@@ -108,6 +108,7 @@ static struct {
     kb_state kb;                       /* page and D-pad focus of the keyboard */
     int home_focus;
     char home_sub[2][40];              /* subtitles of the Stories and Chat cards */
+    int list_first, list_n;            /* History list scroll */
     volatile int pulse;                /* animate COL_PULSE in the VBlank interrupt */
     unsigned pulse_frame;
 } st;
@@ -690,19 +691,33 @@ void ui_panel_settings(const dslm_settings *s, int cursor, const char *note)
 
 /* ---- Home and About ----------------------------------------------------- */
 
+/* Two columns, three rows of 120x48 cards. */
 static rect card_rect(int i)
 {
-    rect r = {6 + (i % 2) * 124, 22 + (i / 2) * 76, 120, 70};
+    rect r = {6 + (i % 2) * 124, 22 + (i / 2) * 52, 120, 48};
     return r;
+}
+
+/* The card one D-pad step away; rows and columns wrap over the cards that exist. */
+static int card_move(int i, int dx, int dy)
+{
+    int rows = (UI_CARDS + 1) / 2, col = i % 2, row = i / 2;
+    if (dx)
+        col ^= 1;
+    if (dy)
+        row = (row + dy + rows) % rows;
+    int j = row * 2 + col;
+    return j < UI_CARDS ? j : row * 2;
 }
 
 static void draw_card(int i)
 {
-    static const char *const titles[UI_CARDS] = {"Stories", "Chat", "Settings", "About"};
-    static const char *const subs[UI_CARDS] = {NULL, NULL, "Sampling and models", "DSLM " DSLM_VERSION};
-    static const uint8_t *const icons[UI_CARDS] = {icon_book, icon_bubble, icon_gear, icon_info};
-    static const int iw[UI_CARDS] = {ICON_BOOK_W, ICON_BUBBLE_W, ICON_GEAR_W, ICON_INFO_W};
-    static const int ih[UI_CARDS] = {ICON_BOOK_H, ICON_BUBBLE_H, ICON_GEAR_H, ICON_INFO_H};
+    static const char *const titles[UI_CARDS] = {"Stories", "Chat", "History", "Settings", "About"};
+    static const char *const subs[UI_CARDS] = {NULL, NULL, "Saved stories", "Sampling and models",
+                                               "DSLM " DSLM_VERSION};
+    static const uint8_t *const icons[UI_CARDS] = {icon_book, icon_bubble, icon_clock, icon_gear, icon_info};
+    static const int iw[UI_CARDS] = {ICON_BOOK_W, ICON_BUBBLE_W, ICON_CLOCK_W, ICON_GEAR_W, ICON_INFO_W};
+    static const int ih[UI_CARDS] = {ICON_BOOK_H, ICON_BUBBLE_H, ICON_CLOCK_H, ICON_GEAR_H, ICON_INFO_H};
     rect r = card_rect(i);
     int focus = i == st.home_focus;
     gfx_fill(&gfx_bot, r.x - 1, r.y - 1, r.w + 2, r.h + 2, COL_BG);
@@ -713,14 +728,14 @@ static void draw_card(int i)
         gfx_round(&gfx_bot, r.x, r.y, r.w, r.h, COL_LINE);
         gfx_round(&gfx_bot, r.x, r.y + 1, r.w, r.h - 1, COL_PANEL);
     }
-    gfx_blit_scaled(&gfx_bot, r.x + (r.w - 2 * iw[i]) / 2, r.y + 8 + (24 - 2 * ih[i]) / 2, iw[i], ih[i], icons[i], 2);
-    gfx_str_centered(&gfx_bot, r.x, r.y + 40, r.w, titles[i], focus ? COL_WHITE : COL_GREY, 1);
+    /* icon on the left, title and subtitle on the right */
+    gfx_blit_scaled(&gfx_bot, r.x + 6 + (32 - 2 * iw[i]) / 2, r.y + (r.h - 2 * ih[i]) / 2, iw[i], ih[i], icons[i], 2);
+    gfx_str(&gfx_bot, r.x + 44, r.y + 12, titles[i], focus ? COL_WHITE : COL_GREY, 1);
     const char *sub = i < 2 ? st.home_sub[i] : subs[i];
     size_t n = strlen(sub);
-    while (n && gfx_text_width(sub, n, 1) > r.w - 8)
+    while (n && gfx_text_width(sub, n, 1) > r.w - 48)
         n--;
-    int sw = gfx_text_width(sub, n, 1) - 1;
-    gfx_text(&gfx_bot, r.x + (r.w - sw) / 2, r.y + 54, sub, n, COL_DIM, 1);
+    gfx_text(&gfx_bot, r.x + 44, r.y + 27, sub, n, COL_DIM, 1);
 }
 
 void ui_home(int focus, const char *stories, const char *chat, const char *note)
@@ -734,10 +749,58 @@ void ui_home(int focus, const char *stories, const char *chat, const char *note)
     for (int i = 0; i < UI_CARDS; i++)
         draw_card(i);
     if (note)
-        gfx_str_centered(&gfx_bot, 0, 174, GFX_W, note, COL_AMBER, 1);
+        gfx_str_centered(&gfx_bot, 0, 179, GFX_W, note, COL_AMBER, 1);
 }
 
 static const rect ABOUT_BACK = {68, 160, 120, 24};
+
+/* History: six 22 px rows, then Delete and Back. */
+#define LIST_Y 21
+#define LIST_ROW_H 22
+#define LIST_ROWS 6
+static const rect HIST_DELETE = {8, 160, 118, 26};
+static const rect HIST_BACK = {130, 160, 118, 26};
+
+static rect list_row(int k)
+{
+    rect r = {4, LIST_Y + k * LIST_ROW_H, GFX_W - 8, LIST_ROW_H - 2};
+    return r;
+}
+
+void ui_history(const ui_list_item *items, int n, int sel, int confirm)
+{
+    char right[24];
+    if (sel < st.list_first)
+        st.list_first = sel;
+    if (sel >= st.list_first + LIST_ROWS)
+        st.list_first = sel - LIST_ROWS + 1;
+    if (st.list_first > (n > LIST_ROWS ? n - LIST_ROWS : 0) || st.list_first < 0)
+        st.list_first = 0;
+    st.list_n = n;
+    clear_bottom();
+    snprintf(right, sizeof right, n ? "%d / %d" : "empty", sel + 1, n);
+    header("History", COL_CYAN, right);
+    for (int k = 0; k < LIST_ROWS && st.list_first + k < n; k++) {
+        int i = st.list_first + k;
+        rect r = list_row(k);
+        if (i == sel) {
+            gfx_round(&gfx_bot, r.x, r.y, r.w, r.h, COL_PANEL2);
+            gfx_fill(&gfx_bot, r.x, r.y + 3, 2, r.h - 6, COL_CYAN);
+        }
+        int ty = r.y + (r.h - 7) / 2;
+        int x = gfx_str(&gfx_bot, r.x + 7, ty, items[i].left, COL_DIM, 1) + 6;
+        const char *t = items[i].right;
+        size_t len = strlen(t);
+        while (len && x + gfx_text_width(t, len, 1) > r.x + r.w - 4)
+            len--;
+        gfx_text(&gfx_bot, x, ty, t, len, items[i].accent ? COL_CYAN_L : (i == sel ? COL_WHITE : COL_GREY), 1);
+    }
+    if (!n)
+        gfx_str_centered(&gfx_bot, 0, 70, GFX_W, "Finished stories and answers appear here.", COL_DIM, 1);
+    else
+        button(HIST_DELETE, confirm ? "Again: delete" : "Delete", "Y", BTN_DANGER, 1);
+    button(HIST_BACK, "Back", "B", BTN_NORMAL, 1);
+}
 
 void ui_about(const char *const *lines, int n)
 {
@@ -849,7 +912,8 @@ static ui_event poll_input(ui_screen screen)
     case UI_HOME:
         if (rep & (KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT)) {
             int old = st.home_focus;
-            st.home_focus ^= rep & (KEY_LEFT | KEY_RIGHT) ? 1 : 2; /* 2x2 grid, wrapping */
+            st.home_focus = card_move(old, rep & (KEY_LEFT | KEY_RIGHT) ? 1 : 0,
+                                      rep & KEY_UP ? -1 : rep & KEY_DOWN ? 1 : 0);
             ui_sound(SFX_MOVE);
             draw_card(old);
             draw_card(st.home_focus);
@@ -865,6 +929,28 @@ static ui_event poll_input(ui_screen screen)
                 draw_card(i);
                 return ev(UI_EV_OPEN, i);
             }
+        break;
+
+    case UI_HISTORY:
+        if (rep & KEY_UP)
+            return ev(UI_EV_UP, 0);
+        if (rep & KEY_DOWN)
+            return ev(UI_EV_DOWN, 0);
+        if (rep & KEY_L)
+            return ev(UI_EV_PAGE_UP, 0);
+        if (rep & KEY_R)
+            return ev(UI_EV_PAGE_DOWN, 0);
+        if (down & KEY_Y)
+            return ev(UI_EV_DELETE, 0);
+        if (down & KEY_B)
+            return ev(UI_EV_BACK, 0);
+        for (int k = 0; k < LIST_ROWS && st.list_first + k < st.list_n; k++)
+            if (hit(list_row(k), tx, ty))
+                return ev(UI_EV_SELECT_ROW, st.list_first + k);
+        if (st.list_n && hit(HIST_DELETE, tx, ty))
+            return ev(UI_EV_DELETE, 0);
+        if (hit(HIST_BACK, tx, ty))
+            return ev(UI_EV_BACK, 0);
         break;
 
     case UI_ABOUT:
@@ -931,7 +1017,8 @@ static const signed char event_sound[] = {
     [UI_EV_NEW] = SFX_OPEN,           [UI_EV_AGAIN] = SFX_START,       [UI_EV_UP] = SFX_MOVE,
     [UI_EV_DOWN] = SFX_MOVE,          [UI_EV_LEFT] = SFX_MOVE,         [UI_EV_RIGHT] = SFX_MOVE,
     [UI_EV_SELECT_ROW] = SFX_MOVE,    [UI_EV_SAVE] = SFX_OPEN,         [UI_EV_OPEN] = SFX_OPEN,
-    [UI_EV_MENU] = SFX_BACK,
+    [UI_EV_MENU] = SFX_BACK,          [UI_EV_PAGE_UP] = SFX_MOVE,      [UI_EV_PAGE_DOWN] = SFX_MOVE,
+    [UI_EV_DELETE] = SFX_DELETE,
 };
 
 ui_event ui_poll(ui_screen screen)

@@ -15,6 +15,7 @@ The DS never downloads anything. The model travels on the card with the program:
 /dslm/models/tok512.bin       the tokenizer of the story models, about 6 KB
 /dslm/models/littlekedi_q80.bin   the chat model, int8, about 2.2 MB (experimental)
 /dslm/models/littlekedi.tok       its tokenizer, about 170 KB (must sit next to it)
+/dslm/history/                    saved stories and answers (written by the DS)
 ```
 
 Developers build this tree with `python tools/dslm.py stage <card root>` (`docs/building.md`). If a file is missing, the DS shows which one and stops.
@@ -22,12 +23,13 @@ Developers build this tree with `python tools/dslm.py stage <card root>` (`docs/
 ## Screens
 
 1. **Loading.** The DSLM logo on the top screen; a progress bar and the loading steps below while the model is read into memory.
-2. **Home.** The logo on top and four cards below: **Stories**, **Chat**, **Settings** and **About**. Stories and Chat load their model if the other one is loaded, then open the prompt. The DS remembers the last one and starts with its card highlighted.
+2. **Home.** The logo on top and five cards below: **Stories**, **Chat**, **History**, **Settings** and **About**. Stories and Chat load their model if the other one is loaded, then open the prompt. The DS remembers the last one and starts with its card highlighted.
 3. **Prompt.** The top screen shows a welcome text (later, your last story). Its title bar shows the model and its state, and the bar at the bottom shows the buttons to press. The bottom screen shows your prompt, four buttons and the touch keyboard.
 4. **Generating.** The story appears word by word on the top screen (in chat, the question and the answer appear as speech bubbles). The bottom screen shows progress, the time per token, a pulsing brain and a big STOP button.
 5. **Story.** The finished story on the top screen; New prompt, Same prompt again and Menu below.
 6. **Settings** (from Home). Temperature, top-p, the number of steps and the story model, saved to `/dslm/dslm.ini`.
-7. **About** (from Home). The loaded model, its context, the free memory and the credits.
+7. **History** (from Home). Every finished story and answer is saved on the card with its date; pick one to read it again (chats in bubbles), or delete it.
+8. **About** (from Home). The loaded model, its context, the free memory and the credits.
 
 ## Controls
 
@@ -51,6 +53,10 @@ Every action works with the buttons or with the stylus.
 | Story | Same prompt again | Y | Same prompt again |
 | Story | Scroll | Up / Down | — |
 | Story | Back to Home | SELECT | Menu |
+| History | Pick an entry | Up / Down | touch its row |
+| History | Scroll the text | L / R | — |
+| History | Delete it (press twice) | Y | Delete |
+| History | Back to Home | B | Back |
 | About | Back to Home | B | Back |
 | Settings | Choose a setting | Up / Down | touch its row |
 | Settings | Change it | Left / Right | `[-]` / `[+]` |

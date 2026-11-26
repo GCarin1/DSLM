@@ -15,9 +15,9 @@
         "id": "ds-interface",
         "path": ".doctrina/specs/ds-interface/spec.md",
         "status": "active",
-        "version": "0.9.0",
+        "version": "0.10.0",
         "last_updated": "2026-11-26",
-        "implementation": "verified — bitmap screens in the DSLM palette and pixel font, logo splash, Home menu with Stories, Chat, Settings and About, own QWERTY keyboard typed by D-pad or touch, VBlank-latched input, fades, chat bubbles, synthesized interface sounds, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, the reference R4 run of the graphical build lands with the v1.3.0 release change",
+        "implementation": "verified — bitmap screens in the DSLM palette and pixel font, logo splash, Home menu with Stories, Chat, History, Settings and About, own QWERTY keyboard typed by D-pad or touch, VBlank-latched input, fades, chat bubbles, synthesized interface sounds, history on the card, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, the reference R4 run of the graphical build lands with the v1.3.0 release change",
         "realizes": [
           "SC4"
         ],
@@ -624,6 +624,20 @@
           }
         ],
         "lane": "chore (confident; signals: move)"
+      },
+      {
+        "id": "0025-history-save-every-finished",
+        "title": "History: save every finished story or chat answer to /dslm/history on the microSD with its date from the DS clock, model, prompt and text; a History card on the Home screen lists them newest first, shows the selected one on the top screen (chat in bubbles), scrolls it with L/R and deletes an entry with Y pressed twice; the file format and its parser are pure C tested on the host",
+        "path": ".doctrina/changes/archive/2026-11-26-0025-history-save-every-finished",
+        "status": "applied",
+        "applied": "2026-11-26",
+        "specs_affected": [
+          {
+            "capability": "ds-interface",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "chore (confident; signals: format)"
       }
     ],
     "skills": [

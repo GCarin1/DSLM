@@ -18,3 +18,5 @@ tests/host/test_keyboard
 tests/host/test_keyboard.exe
 tests/host/test_sfx
 tests/host/test_sfx.exe
+tests/host/test_history
+tests/host/test_history.exe

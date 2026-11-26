@@ -30,6 +30,18 @@ static sd_status open_sized(const char *path, FILE **out, size_t *size)
     return SD_OK;
 }
 
+sd_status sd_read_upto(const char *path, void *buf, size_t n, size_t *got)
+{
+    FILE *f;
+    size_t size;
+    sd_status st = open_sized(path, &f, &size);
+    if (st != SD_OK)
+        return st;
+    *got = fread(buf, 1, n, f);
+    fclose(f);
+    return SD_OK;
+}
+
 sd_status sd_read_head(const char *path, void *buf, size_t n, size_t *file_size)
 {
     FILE *f;

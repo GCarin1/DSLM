@@ -15,6 +15,7 @@
 typedef enum {
     UI_HOME,
     UI_ABOUT,
+    UI_HISTORY,
     UI_PROMPT,
     UI_GENERATING,
     UI_STORY,
@@ -40,11 +41,21 @@ typedef enum {
     UI_EV_SELECT_ROW,   /* value = settings row */
     UI_EV_SAVE,
     UI_EV_OPEN,         /* value = Home card */
-    UI_EV_MENU          /* back to Home */
+    UI_EV_MENU,         /* back to Home */
+    UI_EV_PAGE_UP,      /* scroll the top screen by a page */
+    UI_EV_PAGE_DOWN,
+    UI_EV_DELETE
 } ui_event_type;
 
 /* Home cards, in reading order of the 2x2 grid */
-enum { UI_CARD_STORIES, UI_CARD_CHAT, UI_CARD_SETTINGS, UI_CARD_ABOUT, UI_CARDS };
+enum { UI_CARD_STORIES, UI_CARD_CHAT, UI_CARD_HISTORY, UI_CARD_SETTINGS, UI_CARD_ABOUT, UI_CARDS };
+
+/* One row of a list panel. */
+typedef struct {
+    const char *left;  /* e.g. the date */
+    const char *right; /* e.g. the prompt */
+    int accent;        /* drawn in the chat colour */
+} ui_list_item;
 
 typedef struct {
     ui_event_type type;
@@ -77,6 +88,9 @@ int ui_text_lines(const char *text, size_t len);
 
 /* Home: the logo on top, four cards below; `note` (may be NULL) explains a failed load. */
 void ui_home(int focus, const char *stories, const char *chat, const char *note);
+/* History list: `n` items with `sel` highlighted; confirm asks for a second Y. */
+void ui_history(const ui_list_item *items, int n, int sel, int confirm);
+
 /* About: the logo on top, `n` lines and a Back button below. */
 void ui_about(const char *const *lines, int n);
 

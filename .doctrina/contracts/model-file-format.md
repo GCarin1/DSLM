@@ -49,6 +49,7 @@ Not applicable: hardware tests are manual scripts under `tests/hw/`.
 /dslm/models/littlekedi.tok        its tokenizer, BPE1 (named in the MLQ1 header)
 /dslm/bench.txt       written by the harness after each run
 /dslm/tokens.txt      written by the homebrew after each generation (below)
+/dslm/history/H0001.TXT ... one per finished story or chat answer (below)
 /dslm/manifest.txt    written by pc-toolchain: "<card path> <size> <sha256>" per staged file
 ```
 
@@ -89,6 +90,23 @@ gen_ms=<int>
 ```
 
 Replaced on every generation. `python tools/dslm.py parity` reads it and picks the golden file named after the checkpoint. For a chat model, `prompt` is the text the engine read (chat markers included), `prompt_tokens` has no BOS, and `steps` is the cap on answer tokens.
+
+**`/dslm/history/HNNNN.TXT`: one finished run per file**
+
+```
+dslm-history=1
+date=2026-11-26 20:39          (DS clock; empty when unknown)
+model=littlekedi_q80
+kind=story|chat
+question=<bytes of the question at the start of the text; chat only>
+tokens=<int>
+stopped=0|1
+prompt=<prompt as typed>
+
+<the text as the top screen showed it>
+```
+
+Numbered after the newest file (`H0001.TXT` upwards); the History card lists the newest 64 and deletes files on request. Unknown keys are ignored (since change 0025).
 
 **`/dslm/bench.txt`: one `key=value` per line, one block per run, appended**
 

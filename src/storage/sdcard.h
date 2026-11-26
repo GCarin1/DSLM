@@ -21,6 +21,8 @@ bool sd_mount(void);
 
 /* Read the first `n` bytes and the file size, without loading the file. */
 sd_status sd_read_head(const char *path, void *buf, size_t n, size_t *file_size);
+/* Read up to `n` bytes from the start; `got` is what the file had (shorter files are fine). */
+sd_status sd_read_upto(const char *path, void *buf, size_t n, size_t *got);
 
 /*
  * Read the whole file into a malloc'd buffer, in chunks of 32 KB.
