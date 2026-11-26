@@ -13,6 +13,8 @@
 #include "storage/ini.h"
 
 typedef enum {
+    UI_HOME,
+    UI_ABOUT,
     UI_PROMPT,
     UI_GENERATING,
     UI_STORY,
@@ -36,8 +38,13 @@ typedef enum {
     UI_EV_LEFT,         /* value = settings row, or -1 for the cursor row */
     UI_EV_RIGHT,        /* value = settings row, or -1 for the cursor row */
     UI_EV_SELECT_ROW,   /* value = settings row */
-    UI_EV_SAVE
+    UI_EV_SAVE,
+    UI_EV_OPEN,         /* value = Home card */
+    UI_EV_MENU          /* back to Home */
 } ui_event_type;
+
+/* Home cards, in reading order of the 2x2 grid */
+enum { UI_CARD_STORIES, UI_CARD_CHAT, UI_CARD_SETTINGS, UI_CARD_ABOUT, UI_CARDS };
 
 typedef struct {
     ui_event_type type;
@@ -66,6 +73,21 @@ int ui_text(const char *text, size_t len, int first_line);
 /* Lines the body would wrap `text` into. */
 int ui_text_lines(const char *text, size_t len);
 #define UI_TEXT_ROWS 14
+
+/* Home: the logo on top, four cards below; `note` (may be NULL) explains a failed load. */
+void ui_home(int focus, const char *stories, const char *chat, const char *note);
+/* About: the logo on top, `n` lines and a Back button below. */
+void ui_about(const char *const *lines, int n);
+
+/* Chat layout for the body: the first question_len bytes are the question
+ * (a bubble on the right), the rest after a blank line the answer (a bubble
+ * on the left); -1 is the plain story layout. */
+void ui_set_chat(int question_len);
+/* Animate the brain icons (during generation). */
+void ui_pulse(int on);
+/* Fade both screens out before drawing a new screen, and in after. */
+void ui_fade_out(void);
+void ui_fade_in(void);
 
 /* Bottom screen panels */
 void ui_panel_prompt(const char *prompt);

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum section { SEC_NONE, SEC_MODEL, SEC_SAMPLING };
+enum section { SEC_NONE, SEC_MODEL, SEC_SAMPLING, SEC_UI };
 
 static int is_space(char c)
 {
@@ -57,6 +57,15 @@ static void apply(enum section sec, const char *kb, const char *ke,
             set_path(s->checkpoint, vb, ve);
         else if (span_eq(kb, ke, "tokenizer"))
             set_path(s->tokenizer, vb, ve);
+        else if (span_eq(kb, ke, "chat_checkpoint"))
+            set_path(s->chat_checkpoint, vb, ve);
+        return;
+    }
+    if (sec == SEC_UI) {
+        if (span_eq(kb, ke, "mode") && span_eq(vb, ve, "stories"))
+            s->mode = DSLM_MODE_STORIES;
+        else if (span_eq(kb, ke, "mode") && span_eq(vb, ve, "chat"))
+            s->mode = DSLM_MODE_CHAT;
         return;
     }
     if (sec != SEC_SAMPLING || !value_copy(buf, sizeof buf, vb, ve))
@@ -94,10 +103,12 @@ size_t dslm_ini_format(const dslm_settings *s, char *buf, size_t cap)
     milli(t, sizeof t, s->temperature);
     milli(p, sizeof p, s->topp);
     int n = snprintf(buf, cap,
-                     "[model]\ncheckpoint = %s\ntokenizer  = %s\n\n"
+                     "[model]\ncheckpoint = %s\ntokenizer  = %s\nchat_checkpoint = %s\n\n"
                      "[sampling]\ntemperature = %s\ntopp        = %s\n"
-                     "steps       = %d\nseed        = %lu\n",
-                     s->checkpoint, s->tokenizer, t, p, s->steps, (unsigned long)s->seed);
+                     "steps       = %d\nseed        = %lu\n\n"
+                     "[ui]\nmode = %s\n",
+                     s->checkpoint, s->tokenizer, s->chat_checkpoint, t, p, s->steps, (unsigned long)s->seed,
+                     s->mode == DSLM_MODE_CHAT ? "chat" : "stories");
     return n > 0 && (size_t)n < cap ? (size_t)n : 0;
 }
 
@@ -105,6 +116,8 @@ void dslm_settings_defaults(dslm_settings *s)
 {
     strcpy(s->checkpoint, "/dslm/models/stories260K_q80.bin");
     strcpy(s->tokenizer, "/dslm/models/tok512.bin");
+    strcpy(s->chat_checkpoint, "/dslm/models/littlekedi_q80.bin");
+    s->mode = DSLM_MODE_STORIES;
     s->temperature = 0.0f;
     s->topp = 0.9f;
     s->steps = 256;
@@ -136,6 +149,8 @@ void dslm_ini_parse(const char *text, size_t len, dslm_settings *s)
                 sec = SEC_MODEL;
             else if (span_eq(nb, ne, "sampling"))
                 sec = SEC_SAMPLING;
+            else if (span_eq(nb, ne, "ui"))
+                sec = SEC_UI;
             else
                 sec = SEC_NONE;
             continue;

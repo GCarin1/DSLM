@@ -51,6 +51,8 @@ typedef struct {
     int seq_len;              /* context of the loaded model */
     dslm_settings settings;
     const char *model_name;
+    char ckpt_path[DSLM_PATH_MAX]; /* the checkpoint loaded: settings.checkpoint or chat_checkpoint */
+    int chat_q;                    /* KIND_CHAT: length of the question at the start of story */
 
     char prompt[UI_PROMPT_MAX + 1];
     char run_prompt[UI_PROMPT_MAX + 64]; /* what the engine reads: chat markers added */
@@ -147,7 +149,7 @@ static const char *load_chat_model(app *a, const unsigned char *header, size_t c
 {
     static char err[320];
     static char tok_path[DSLM_PATH_MAX];
-    const char *ckpt_path = a->settings.checkpoint;
+    const char *ckpt_path = a->ckpt_path;
     unsigned char tok_head[BPE_HEADER_BYTES];
     char name[48];
     size_t tok_size;
@@ -228,7 +230,8 @@ static const char *load_chat_model(app *a, const unsigned char *header, size_t c
 }
 
 /*
- * Load settings.checkpoint and settings.tokenizer. Returns NULL, or an error
+ * Load the mode's checkpoint (settings.checkpoint with settings.tokenizer, or
+ * settings.chat_checkpoint with the tokenizer it names). Returns NULL, or an error
  * message (and leaves nothing allocated) so the caller can recover.
  */
 static const char *load_model(app *a)
@@ -240,13 +243,15 @@ static const char *load_model(app *a)
     llama2_format fmt;
     dslm_settings *s = &a->settings;
 
-    a->model_name = model_label(s->checkpoint);
+    snprintf(a->ckpt_path, sizeof a->ckpt_path, "%s",
+             s->mode == DSLM_MODE_CHAT ? s->chat_checkpoint : s->checkpoint);
+    a->model_name = model_label(a->ckpt_path);
     ui_splash(a->model_name);
 
-    sd_status st = sd_read_head(s->checkpoint, header, sizeof header, &ckpt_size);
+    sd_status st = sd_read_head(a->ckpt_path, header, sizeof header, &ckpt_size);
     if (st != SD_OK) {
         snprintf(err, sizeof err, "%s: %s. Copy the model to /dslm/models/ on the microSD card (see README).",
-                 s->checkpoint, sd_status_text(st));
+                 a->ckpt_path, sd_status_text(st));
         return err;
     }
     if (memcmp(header, "MLQ1", 4) == 0)
@@ -257,14 +262,14 @@ static const char *load_model(app *a)
                  s->tokenizer, sd_status_text(st));
         return err;
     }
-    ui_log("found %s", s->checkpoint);
+    ui_log("found %s", a->ckpt_path);
 
     if (llama2_probe(header, sizeof header, &cfg, &fmt) != LLAMA2_OK) {
-        snprintf(err, sizeof err, "%s is not a llama2.c checkpoint (fp32 or int8 v2).", s->checkpoint);
+        snprintf(err, sizeof err, "%s is not a llama2.c checkpoint (fp32 or int8 v2).", a->ckpt_path);
         return err;
     }
     if (llama2_file_bytes(&cfg, &fmt) != ckpt_size) {
-        snprintf(err, sizeof err, "%s: %u bytes, but its header implies %u.", s->checkpoint,
+        snprintf(err, sizeof err, "%s: %u bytes, but its header implies %u.", a->ckpt_path,
                  (unsigned)ckpt_size, (unsigned)llama2_file_bytes(&cfg, &fmt));
         return err;
     }
@@ -283,9 +288,9 @@ static const char *load_model(app *a)
 
     void *tok;
     cpuStartTiming(0);
-    st = sd_read_file_progress(s->checkpoint, ckpt_size, &a->ckpt, &ckpt_size, load_progress, "model");
+    st = sd_read_file_progress(a->ckpt_path, ckpt_size, &a->ckpt, &ckpt_size, load_progress, "model");
     if (st != SD_OK) {
-        snprintf(err, sizeof err, "%s: %s", s->checkpoint, sd_status_text(st));
+        snprintf(err, sizeof err, "%s: %s", a->ckpt_path, sd_status_text(st));
         a->ckpt = NULL;
         return err;
     }
@@ -424,7 +429,7 @@ static void append_bench(app *a, int steps)
                        "tok_per_s=%u.%02u\nheap_peak_bytes=%u\n\n",
                        DSLM_VERSION,
                        a->kind == KIND_CHAT ? "chat-int8" : a->model.format.quantized ? "int8" : "fp32",
-                       a->settings.checkpoint, a->prompt, steps, a->stopped, a->load_ms, a->n_tokens,
+                       a->ckpt_path, a->prompt, steps, a->stopped, a->load_ms, a->n_tokens,
                        a->gen_ms, tps100 / 100, tps100 % 100, heap_peak);
     if (len > 0 && (size_t)len < sizeof buf)
         sd_append_file(BENCH_PATH, buf, (size_t)len);
@@ -437,7 +442,7 @@ static void write_tokens(app *a, int steps)
     if (!buf)
         return;
     int len = snprintf(buf, cap, "checkpoint=%s\nprompt=%s\nsteps=%d\nprompt_tokens=%d\ntokens=",
-                       a->settings.checkpoint, a->run_prompt, steps, a->n_prompt_tokens);
+                       a->ckpt_path, a->run_prompt, steps, a->n_prompt_tokens);
     for (int i = 0; i < a->n_tokens; i++)
         len += snprintf(buf + len, cap - len, i ? " %d" : "%d", a->tokens[i]);
     len += snprintf(buf + len, cap - len, "\nstopped=%d\nload_ms=%u\ngen_ms=%u\n", a->stopped,
@@ -454,16 +459,18 @@ static void generate(app *a)
 
     a->story_len = 0;
     a->story[0] = '\0';
+    a->chat_q = a->kind == KIND_CHAT ? (int)strlen(a->prompt) : -1;
+    ui_set_chat(a->chat_q);
     ui_title(a->model_name, "generating");
     ui_hint("B:stop");
     ui_text("", 0, 0);
     ui_panel_generating(0, steps, 0);
+    ui_pulse(1);
 
     if (a->kind == KIND_CHAT) {
-        /* steps counts the answer's tokens; the question is shown above it */
+        /* steps counts the answer's tokens; the question's bubble is shown above it */
         if (mlq_chat_prompt(a->run_prompt, sizeof a->run_prompt, a->prompt) < 0)
             a->run_prompt[0] = '\0';
-        tv_append(a->story, &a->story_len, STORY_CAP, "> ");
         tv_append(a->story, &a->story_len, STORY_CAP, a->prompt);
         tv_append(a->story, &a->story_len, STORY_CAP, "\n\n");
         ui_text(a->story, a->story_len, -1);
@@ -488,6 +495,7 @@ static void generate(app *a)
     g.ticks += cpuGetTiming();
     a->gen_ms = ticks_to_ms(g.ticks);
     a->stopped = g.stopped;
+    ui_pulse(0);
     write_tokens(a, steps);
     append_bench(a, steps);
 }
@@ -506,20 +514,31 @@ static const char welcome_chat[] =
     "Type a question with the stylus, or with the D-pad and A. L/R pick an example. START or GO asks it.\n\n"
     "It is tiny: its answers are often wrong or off-topic. Each question starts a new chat.";
 
+#define DEFAULT_STORY_MODEL "/dslm/models/stories260K_q80.bin"
+#define DEFAULT_CHAT_MODEL "/dslm/models/littlekedi_q80.bin"
+
 static void show_welcome(const app *a)
 {
+    ui_set_chat(-1);
     if (a->kind == KIND_CHAT)
         ui_text(welcome_chat, sizeof welcome_chat - 1, 0);
     else
         ui_text(welcome, sizeof welcome - 1, 0);
 }
 
-static void enter_prompt(app *a, int show_story)
+/* The last run's text, in bubbles when it was a chat. */
+static int show_story(app *a, int first_line)
+{
+    ui_set_chat(a->kind == KIND_CHAT ? a->chat_q : -1);
+    return ui_text(a->story, a->story_len, first_line);
+}
+
+static void enter_prompt(app *a, int show_last)
 {
     ui_title(a->model_name, "ready");
     ui_hint("START:go  A:key  B:del  Y:space  X:Aa");
-    if (show_story && a->story_len)
-        ui_text(a->story, a->story_len, a->scroll);
+    if (show_last && a->story_len)
+        show_story(a, a->scroll);
     else
         show_welcome(a);
     ui_panel_prompt(a->prompt);
@@ -528,15 +547,15 @@ static void enter_prompt(app *a, int show_story)
 static void enter_story(app *a)
 {
     ui_title(a->model_name, a->stopped ? "stopped" : "done");
-    ui_hint("Up/Down:scroll  A:new  Y:again");
-    a->scroll = -1;
-    int total = ui_text(a->story, a->story_len, a->scroll);
+    ui_hint("Up/Down:scroll  A:new  Y:again  SEL:menu");
+    int total = show_story(a, -1);
     a->scroll = total > UI_TEXT_ROWS ? total - UI_TEXT_ROWS : 0;
     ui_panel_story(a->n_tokens, a->gen_ms, a->stopped);
 }
 
 static void scroll_story(app *a, int delta)
 {
+    ui_set_chat(a->kind == KIND_CHAT ? a->chat_q : -1);
     int total = ui_text_lines(a->story, a->story_len);
     int max = total > UI_TEXT_ROWS ? total - UI_TEXT_ROWS : 0;
     a->scroll += delta;
@@ -581,49 +600,105 @@ static const char *model_note(const model_entry *m)
     return note;
 }
 
-/* Swap to edit's checkpoint; on failure reload the previous one. Returns the note to show. */
+static int save_settings(const dslm_settings *s)
+{
+    char buf[768];
+    size_t n = dslm_ini_format(s, buf, sizeof buf);
+    return n && sd_write_file(INI_PATH, buf, n) == SD_OK;
+}
+
+/*
+ * The settings say which mode and checkpoints to use, but an old dslm.ini may
+ * name a chat model as `checkpoint` (or a story model as `chat_checkpoint`):
+ * the mode follows the kind that actually loaded.
+ */
+static void settle_mode(app *a)
+{
+    dslm_settings *s = &a->settings;
+    if (a->kind == KIND_CHAT && s->mode != DSLM_MODE_CHAT) {
+        strcpy(s->chat_checkpoint, a->ckpt_path);
+        strcpy(s->checkpoint, DEFAULT_STORY_MODEL);
+        s->mode = DSLM_MODE_CHAT;
+    } else if (a->kind == KIND_STORY && s->mode != DSLM_MODE_STORIES) {
+        strcpy(s->checkpoint, a->ckpt_path);
+        strcpy(s->chat_checkpoint, DEFAULT_CHAT_MODEL);
+        s->mode = DSLM_MODE_STORIES;
+    }
+}
+
+/* Load edit's mode and checkpoint; on failure reload the previous one. Returns
+ * NULL when loaded, else why not (the previous model is back). */
 static const char *switch_model(app *a, const dslm_settings *edit)
 {
-    static char note[64];
-    char previous[DSLM_PATH_MAX];
-    strcpy(previous, a->settings.checkpoint);
+    static char why[64];
+    dslm_settings previous = a->settings;
     a->settings = *edit;
     unload_model(a);
     a->story_len = 0;
     a->story[0] = '\0';
     const char *err = load_model(a);
     if (err) {
-        strcpy(a->settings.checkpoint, previous);
+        a->settings = previous;
         const char *again = load_model(a);
         if (again)
             ui_fatal("%s", again);
-        /* the reason is longer than the note line: show it on the top screen */
-        snprintf(a->story, STORY_CAP, "Could not switch model:\n\n%s\n\nThe previous model is loaded again.", err);
+        /* the reason is longer than a note line: it goes on the top screen */
+        snprintf(a->story, STORY_CAP, "Could not load the model:\n\n%s\n\nThe previous model is loaded again.", err);
         a->story_len = strlen(a->story);
-        return "Not loaded, kept previous model";
+        a->chat_q = -1;
+        snprintf(why, sizeof why, "Not loaded, kept %.30s", a->model_name);
+        return why;
     }
-    char buf[512];
-    size_t n = dslm_ini_format(&a->settings, buf, sizeof buf);
-    snprintf(note, sizeof note, n && sd_write_file(INI_PATH, buf, n) == SD_OK ? "Loaded and saved" : "Loaded (not saved)");
-    return note;
+    settle_mode(a);
+    save_settings(&a->settings);
+    return NULL;
 }
 
-/* Returns when the user leaves the settings screen. */
-static void settings_screen(app *a)
+/* Home card -> the mode it needs loaded. Returns NULL when ready. */
+static const char *enter_mode(app *a, dslm_mode mode)
 {
-    model_kind entry_kind = a->kind;
+    model_kind want = mode == DSLM_MODE_CHAT ? KIND_CHAT : KIND_STORY;
+    if (a->kind == want)
+        return NULL;
     dslm_settings edit = a->settings;
-    model_entry models[MAX_MODELS];
-    int n_models = scan_models(models, MAX_MODELS);
+    edit.mode = mode;
+    model_kind before = a->kind;
+    const char *why = switch_model(a, &edit);
+    if (a->kind != before) { /* story starters and questions do not mix */
+        a->example = 0;
+        strcpy(a->prompt, examples[a->kind][0]);
+    }
+    if (!why && a->kind != want) /* the file named for this mode is the other kind */
+        return mode == DSLM_MODE_CHAT ? "That is not a chat model" : "That is not a story model";
+    return why;
+}
+
+/* Settings, opened from Home. The Model row lists the story models; saving
+ * a new one loads it now in Stories mode, or on the next Stories visit. */
+static const char *settings_screen(app *a)
+{
+    static char done[48];
+    dslm_settings edit = a->settings;
+    model_entry all[MAX_MODELS], models[MAX_MODELS];
+    int n_all = scan_models(all, MAX_MODELS), n_models = 0;
+    for (int i = 0; i < n_all; i++)
+        if (strcmp(all[i].kind, "chat") != 0)
+            models[n_models++] = all[i];
     int current = -1;
     for (int i = 0; i < n_models; i++)
         if (strcmp(models[i].path, edit.checkpoint) == 0)
             current = i;
     int cursor = 0;
-    const char *note = n_models > 1 ? NULL : "Only one model in /dslm/models";
+    const char *note = n_models > 1 ? NULL : "Only one story model in /dslm/models";
+    ui_fade_out();
     ui_title(a->model_name, "settings");
     ui_hint("START:save  B:back");
+    if (a->story_len)
+        show_story(a, 0);
+    else
+        show_welcome(a);
     ui_panel_settings(&edit, cursor, note);
+    ui_fade_in();
     for (;;) {
         ui_frame();
         ui_event e = ui_poll(UI_SETTINGS);
@@ -654,30 +729,24 @@ static void settings_screen(app *a)
             }
             break;
         case UI_EV_SAVE:
-            if (strcmp(edit.checkpoint, a->settings.checkpoint) != 0) {
-                note = switch_model(a, &edit);
+            if (a->kind == KIND_STORY && strcmp(edit.checkpoint, a->settings.checkpoint) != 0) {
+                const char *why = switch_model(a, &edit);
                 edit = a->settings;
-                /* clear the loading bar; after a failure, show why */
-                if (a->story_len)
-                    ui_text(a->story, a->story_len, 0);
-                else
-                    show_welcome(a);
+                note = why ? why : "Loaded and saved";
                 ui_title(a->model_name, "settings");
                 ui_hint("START:save  B:back");
+                if (a->story_len)
+                    show_story(a, 0);
+                else
+                    show_welcome(a);
             } else {
-                char buf[512];
-                size_t n = dslm_ini_format(&edit, buf, sizeof buf);
                 a->settings = edit;
-                note = n && sd_write_file(INI_PATH, buf, n) == SD_OK ? "Saved to /dslm/dslm.ini"
-                                                                      : "Applied (could not save)";
+                note = save_settings(&edit) ? "Saved to /dslm/dslm.ini" : "Applied (could not save)";
             }
             break;
         case UI_EV_BACK:
-            if (a->kind != entry_kind) { /* story starters and questions do not mix */
-                a->example = 0;
-                strcpy(a->prompt, examples[a->kind][0]);
-            }
-            return;
+            snprintf(done, sizeof done, "%s", note && strncmp(note, "Not loaded", 10) == 0 ? note : "");
+            return done[0] ? done : NULL;
         default:
             continue;
         }
@@ -685,55 +754,72 @@ static void settings_screen(app *a)
     }
 }
 
-int main(void)
+static void about_screen(app *a)
 {
-    static app a;
+    char model[64], kind[48], ram[48];
+    snprintf(model, sizeof model, "Model: %s", a->model_name);
+    snprintf(kind, sizeof kind, "Kind: %s, context %d tokens",
+             a->kind == KIND_CHAT ? "chat (MLQ1 int8)" : a->model.format.quantized ? "story (int8)" : "story (fp32)",
+             a->seq_len);
+    snprintf(ram, sizeof ram, "RAM free: %u KB", (unsigned)(heap_available() / 1024));
+    const char *lines[] = {
+        "Tiny language models, 100% offline.",
+        "Runs on the Nintendo DS from an R4 card.",
+        "",
+        model,
+        kind,
+        ram,
+        "",
+        "Engine after llama2.c (MIT); BlocksDS.",
+        "Models: see THIRD_PARTY.txt on the card.",
+    };
+    ui_fade_out();
+    ui_about(lines, (int)(sizeof lines / sizeof lines[0]));
+    ui_fade_in();
+    for (;;) {
+        ui_frame();
+        if (ui_poll(UI_ABOUT).type == UI_EV_BACK)
+            return;
+    }
+}
 
-    ui_init();
-    boot(&a);
-    strcpy(a.prompt, examples[a.kind][0]);
-    a.example = 0;
-    a.scroll = 0;
-
-    enter_prompt(&a, 0);
+/* Prompt -> Generating -> Story, until the user asks for the menu. */
+static void prompt_screen(app *a)
+{
+    ui_fade_out();
+    enter_prompt(a, 1);
+    ui_fade_in();
     for (;;) {
         ui_frame();
         ui_event e = ui_poll(UI_PROMPT);
-        size_t len = strlen(a.prompt);
+        size_t len = strlen(a->prompt);
         switch (e.type) {
         case UI_EV_CHAR:
             if (len < UI_PROMPT_MAX) {
-                a.prompt[len] = (char)e.value;
-                a.prompt[len + 1] = '\0';
-                ui_panel_prompt(a.prompt);
+                a->prompt[len] = (char)e.value;
+                a->prompt[len + 1] = '\0';
+                ui_panel_prompt(a->prompt);
             }
             break;
         case UI_EV_BACKSPACE:
             if (len > 0) {
-                a.prompt[len - 1] = '\0';
-                ui_panel_prompt(a.prompt);
+                a->prompt[len - 1] = '\0';
+                ui_panel_prompt(a->prompt);
             }
             break;
         case UI_EV_EXAMPLE_PREV:
         case UI_EV_EXAMPLE_NEXT:
-            a.example = (a.example + (e.type == UI_EV_EXAMPLE_NEXT ? 1 : N_EXAMPLES - 1)) % N_EXAMPLES;
-            strcpy(a.prompt, examples[a.kind][a.example]);
-            ui_panel_prompt(a.prompt);
+            a->example = (a->example + (e.type == UI_EV_EXAMPLE_NEXT ? 1 : N_EXAMPLES - 1)) % N_EXAMPLES;
+            strcpy(a->prompt, examples[a->kind][a->example]);
+            ui_panel_prompt(a->prompt);
             break;
-        case UI_EV_UP:
-        case UI_EV_DOWN:
-            if (a.story_len)
-                scroll_story(&a, e.type == UI_EV_DOWN ? 1 : -1);
-            break;
-        case UI_EV_SETTINGS:
-            settings_screen(&a);
-            enter_prompt(&a, 1);
-            break;
+        case UI_EV_MENU:
+            return;
         case UI_EV_GO:
-            /* Story loop: generate, then New / Again / Settings. */
+            /* Story loop: generate, then New / Again / Menu. */
             for (int again = 1; again;) {
-                generate(&a);
-                enter_story(&a);
+                generate(a);
+                enter_story(a);
                 again = 0;
                 for (int waiting = 1; waiting;) {
                     ui_frame();
@@ -741,16 +827,14 @@ int main(void)
                     switch (s.type) {
                     case UI_EV_UP:
                     case UI_EV_DOWN:
-                        scroll_story(&a, s.type == UI_EV_DOWN ? 1 : -1);
+                        scroll_story(a, s.type == UI_EV_DOWN ? 1 : -1);
                         break;
                     case UI_EV_AGAIN:
                         again = 1;
                         waiting = 0;
                         break;
-                    case UI_EV_SETTINGS:
-                        settings_screen(&a);
-                        enter_story(&a);
-                        break;
+                    case UI_EV_MENU:
+                        return;
                     case UI_EV_NEW:
                         waiting = 0;
                         break;
@@ -759,10 +843,60 @@ int main(void)
                     }
                 }
             }
-            enter_prompt(&a, 1);
+            enter_prompt(a, 1);
             break;
         default:
             break;
         }
+    }
+}
+
+static void show_home(app *a, int focus, const char *note)
+{
+    char stories[DSLM_PATH_MAX], chat[DSLM_PATH_MAX];
+    snprintf(stories, sizeof stories, "%s", model_label(a->settings.checkpoint));
+    snprintf(chat, sizeof chat, "%s", model_label(a->settings.chat_checkpoint));
+    ui_fade_out();
+    ui_home(focus, stories, chat, note);
+    ui_fade_in();
+    a->model_name = model_label(a->ckpt_path); /* model_label's buffer was reused */
+}
+
+int main(void)
+{
+    static app a;
+
+    ui_init();
+    boot(&a);
+    settle_mode(&a);
+    a.chat_q = -1;
+    strcpy(a.prompt, examples[a.kind][0]);
+    a.example = 0;
+    a.scroll = 0;
+
+    int focus = a.kind == KIND_CHAT ? UI_CARD_CHAT : UI_CARD_STORIES;
+    show_home(&a, focus, NULL);
+    for (;;) {
+        ui_frame();
+        ui_event e = ui_poll(UI_HOME);
+        if (e.type != UI_EV_OPEN)
+            continue;
+        const char *note = NULL;
+        focus = e.value;
+        switch (e.value) {
+        case UI_CARD_STORIES:
+        case UI_CARD_CHAT:
+            note = enter_mode(&a, e.value == UI_CARD_CHAT ? DSLM_MODE_CHAT : DSLM_MODE_STORIES);
+            if (!note)
+                prompt_screen(&a);
+            break;
+        case UI_CARD_SETTINGS:
+            note = settings_screen(&a);
+            break;
+        case UI_CARD_ABOUT:
+            about_screen(&a);
+            break;
+        }
+        show_home(&a, focus, note);
     }
 }

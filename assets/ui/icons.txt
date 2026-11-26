@@ -2,15 +2,62 @@
 # "== <name>" then rows; letters are UI palette colours (tools/ui_assets.py),
 # '.' is transparent.
 == brain
-..cccc....cccc..
-.c....c..c....c.
-c..cc.c..c.cc..c
-c.c...c..c...c.c
-c...c.c..c.c...c
-.cc.c.c..c.c.cc.
-c...c.c..c.c...c
-c.cc..c..c..cc.c
-c...c.c..c.c...c
-.c..c.c..c.c..c.
-..c...c..c...c..
-..cccc....cccc..
+..uuuu....uuuu..
+.u....u..u....u.
+u..uu.u..u.uu..u
+u.u...u..u...u.u
+u...u.u..u.u...u
+.uu.u.u..u.u.uu.
+u...u.u..u.u...u
+u.uu..u..u..uu.u
+u...u.u..u.u...u
+.u..u.u..u.u..u.
+..u...u..u...u..
+..uuuu....uuuu..
+== book
+.cccccc..cccccc.
+.c.....cc.....c.
+.c.www.cc.www.c.
+.c.....cc.....c.
+.c.www.cc.www.c.
+.c.....cc.....c.
+.c.www.cc.www.c.
+.c.....cc.....c.
+.c.....cc.....c.
+.cccccccccccccc.
+== bubble
+..cccccccccccc..
+.c............c.
+.c............c.
+.c.ww..ww..ww.c.
+.c............c.
+.c............c.
+..ccccc..ccccc..
+......c.c.......
+......cc........
+......c.........
+== gear
+.....cccc.....
+..cc.cccc.cc..
+..cccccccccc..
+...cccccccc...
+.cccc....cccc.
+.ccc......ccc.
+.ccc......ccc.
+.cccc....cccc.
+...cccccccc...
+..cccccccccc..
+..cc.cccc.cc..
+.....cccc.....
+== info
+....cccccc....
+..cc......cc..
+.c....ww....c.
+.c..........c.
+c.....ww.....c
+c.....ww.....c
+c.....ww.....c
+.c....ww....c.
+.c...wwww...c.
+..cc......cc..
+....cccccc....

@@ -31,8 +31,9 @@ void gfx_load_palette(void);
 void gfx_fill(gfx_surface *s, int x, int y, int w, int h, uint8_t c);
 /* Filled rectangle with 2 px rounded corners (the corner pixels are left untouched). */
 void gfx_round(gfx_surface *s, int x, int y, int w, int h, uint8_t c);
-/* Indexed image; index 0 is transparent. */
+/* Indexed image, each pixel drawn as a scale x scale block; index 0 is transparent. */
 void gfx_blit(gfx_surface *s, int x, int y, int w, int h, const uint8_t *src);
+void gfx_blit_scaled(gfx_surface *s, int x, int y, int w, int h, const uint8_t *src, int scale);
 
 /* Advance in pixels of each byte at scale 1 (UTF-8 lead bytes draw '?', continuation bytes 0). */
 extern unsigned char gfx_advance[256];

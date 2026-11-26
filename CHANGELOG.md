@@ -10,6 +10,8 @@ All notable changes to DSLM are listed here. The format follows [Keep a Changelo
 - The top screen shows 14 lines of text instead of 20 (more fit on each line).
 - **New keyboard** (change 0022, ADR 0012): a QWERTY keyboard in the same style with keys twice as large, typed by touch or without the stylus: the D-pad moves the highlight and A types the key; B deletes, Y adds a space, X makes the next letter a capital, `?123` opens numbers and symbols. On the prompt screen START (or GO) generates; A now types.
 - A short press of B stops a generation; it no longer has to be held.
+- **Home screen** (change 0023, ADR 0013): after the logo, four cards: Stories, Chat, Settings and About. Chat loads LittleKedi by itself and Stories goes back to the story model; the DS remembers the last one (`[ui] mode` and `chat_checkpoint` in `dslm.ini`) and starts with its card highlighted. SELECT returns to Home from the prompt and story screens; Settings is opened from Home and lists the story models.
+- Chat questions and answers appear as speech bubbles; screens fade into each other, and the brain icon pulses while the model writes.
 
 ### Fixed
 

@@ -2,8 +2,8 @@
 """Unattended melonDS parity run (Windows): test-harness criterion 1.
 
 Launches the portable melonDS from .tools/melonds (docs/building.md) with
-dslm.nds and the .tools/card sync folder, presses START by posting a key to
-its window (no mouse or focus change; melonDS must map START to Enter),
+dslm.nds and the .tools/card sync folder, presses START twice (the Home card
+of the loaded model, then generate) by posting a key to its window (no mouse or focus change; melonDS must map START to Enter),
 waits for the generation, closes melonDS normally so it writes the card back,
 then runs `tools/dslm.py parity` on /dslm/tokens.txt.
 
@@ -64,6 +64,8 @@ def set_run(ini, steps, model):
     text = ini.read_text(encoding="utf-8")
     new = re.sub(r"(?m)^steps\s*=.*$", f"steps       = {steps}", text)
     new = re.sub(r"(?m)^checkpoint\s*=.*$", f"checkpoint = {CHECKPOINTS[model]}", new)
+    # boot in Stories mode on `checkpoint`; the DS moves to Chat by itself when it is a chat model
+    new = re.sub(r"(?m)^mode\s*=.*$", "mode = stories", new)
     ini.write_text(new, encoding="utf-8", newline="\n")
     return text
 
@@ -90,7 +92,9 @@ def main():
     try:
         hwnd = find_window(proc.pid)
         time.sleep(6)  # boot and model load
-        press_start(hwnd)
+        press_start(hwnd)  # Home: open the card of the loaded model
+        time.sleep(1.5)
+        press_start(hwnd)  # Prompt: generate the first example
         print(f"generating {args.steps} steps, waiting {wait:.0f} s")
         time.sleep(wait)
         ctypes.windll.user32.PostMessageW(hwnd, WM_CLOSE, 0, 0)

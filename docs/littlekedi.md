@@ -33,7 +33,7 @@ Chain of evidence: llama.cpp ≡ numpy oracle ≡ C engine.
 
 ## Step 3: chat on the DS (done in melonDS)
 
-- The loader recognises MLQ1 by its magic, reads the tokenizer file named in its header from the same folder, and sizes the context from the RAM left after the files (at least 128 tokens are required, up to 1024). The Settings picker lists it as `chat`.
+- The loader recognises MLQ1 by its magic, reads the tokenizer file named in its header from the same folder, and sizes the context from the RAM left after the files (at least 128 tokens are required, up to 1024). It is opened from the Chat card on the Home screen (`chat_checkpoint` in `dslm.ini`); the Settings picker lists story models only.
 - Chat mode (`src/engine/mlq_chat.c`, shared by the DS and the host driver): the typed question becomes `<|user|>question<|end|><|assistant|>`, the answer stops at `<|end|>`, and the repeat penalty 1.15 is always on. Each question is a new, single-turn chat; the top screen shows `> question` and the answer.
 - melonDS: 40/40 tokens identical to the host golden on "What causes the seasons?" (`tests/golden/littlekedi_q80.json`, run by `tests/parity/run_melonds.py --model littlekedi`), about 3 tokens/s emulated.
 - The package ships `littlekedi_q80.bin` and `littlekedi.tok` with the Apache License 2.0 in `THIRD_PARTY.txt`.

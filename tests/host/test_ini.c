@@ -118,6 +118,28 @@ static void test_format_round_trips(void)
     CHECK(b.topp > 0.949f && b.topp < 0.951f);
     CHECK(b.steps == 96);
     CHECK(b.seed == 1234);
+    CHECK(strcmp(b.chat_checkpoint, "/dslm/models/littlekedi_q80.bin") == 0);
+    CHECK(b.mode == DSLM_MODE_STORIES);
+}
+
+static void test_chat_model_and_mode(void)
+{
+    dslm_settings a, b;
+    char buf[512];
+    dslm_settings_defaults(&a);
+    CHECK(a.mode == DSLM_MODE_STORIES);
+    const char *t = "[model]\nchat_checkpoint = /dslm/models/c.bin\n[ui]\nmode = chat\n";
+    dslm_ini_parse(t, strlen(t), &a);
+    CHECK(strcmp(a.chat_checkpoint, "/dslm/models/c.bin") == 0);
+    CHECK(a.mode == DSLM_MODE_CHAT);
+    const char *bad = "[ui]\nmode = karaoke\n";
+    dslm_ini_parse(bad, strlen(bad), &a);
+    CHECK(a.mode == DSLM_MODE_CHAT); /* an unknown value keeps the previous one */
+    size_t n = dslm_ini_format(&a, buf, sizeof buf);
+    CHECK(n > 0 && strstr(buf, "mode = chat") != NULL);
+    dslm_settings_defaults(&b);
+    dslm_ini_parse(buf, n, &b);
+    CHECK(b.mode == DSLM_MODE_CHAT && strcmp(b.chat_checkpoint, "/dslm/models/c.bin") == 0);
 }
 
 static void test_format_refuses_small_buffer(void)
@@ -131,6 +153,7 @@ static void test_format_refuses_small_buffer(void)
 int main(void)
 {
     test_format_round_trips();
+    test_chat_model_and_mode();
     test_format_refuses_small_buffer();
     test_defaults_on_empty();
     test_full_file();

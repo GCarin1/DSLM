@@ -111,6 +111,14 @@ void gfx_blit(gfx_surface *s, int x, int y, int w, int h, const uint8_t *src)
         }
 }
 
+void gfx_blit_scaled(gfx_surface *s, int x, int y, int w, int h, const uint8_t *src, int scale)
+{
+    for (int j = 0; j < h; j++)
+        for (int i = 0; i < w; i++)
+            if (src[j * w + i])
+                gfx_fill(s, x + i * scale, y + j * scale, scale, scale, src[j * w + i]);
+}
+
 int gfx_text_width(const char *t, size_t n, int scale)
 {
     int w = 0;

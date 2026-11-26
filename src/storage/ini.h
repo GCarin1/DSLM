@@ -7,9 +7,13 @@
 
 #define DSLM_PATH_MAX 128
 
+typedef enum { DSLM_MODE_STORIES, DSLM_MODE_CHAT } dslm_mode;
+
 typedef struct {
-    char checkpoint[DSLM_PATH_MAX];
-    char tokenizer[DSLM_PATH_MAX];
+    char checkpoint[DSLM_PATH_MAX];      /* the story model */
+    char tokenizer[DSLM_PATH_MAX];       /* the story models' tokenizer */
+    char chat_checkpoint[DSLM_PATH_MAX]; /* the chat model (names its own tokenizer) */
+    dslm_mode mode;                      /* the Home card used last */
     float temperature;
     float topp;
     int steps;

@@ -20,6 +20,7 @@
 #include "keyboard.h"
 #include "splash.h"
 #include "textview.h"
+#include "version.h"
 
 typedef struct {
     int x, y, w, h;
@@ -100,8 +101,14 @@ static struct {
     int loading_panel;                 /* the bottom shows the loading panel */
     char rows[UI_TEXT_ROWS][ROW_CHARS]; /* what each body line shows now */
     unsigned char row_len[UI_TEXT_ROWS];
+    unsigned char row_style[UI_TEXT_ROWS];
     int body_valid;                    /* rows[] matches the screen */
+    int chat_q;                        /* question length in chat layout, or -1 */
     kb_state kb;                       /* page and D-pad focus of the keyboard */
+    int home_focus;
+    char home_sub[2][40];              /* subtitles of the Stories and Chat cards */
+    volatile int pulse;                /* animate COL_PULSE in the VBlank interrupt */
+    unsigned pulse_frame;
 } st;
 
 /* ---- input latched in the VBlank interrupt ------------------------------ */
@@ -121,6 +128,49 @@ static void on_vblank(void)
         latch_tx = tp.px;
         latch_ty = tp.py;
     }
+    if (st.pulse) { /* brain icons breathe between dark and light cyan, 64 frames a cycle */
+        unsigned ph = st.pulse_frame++ & 63, t = ph < 32 ? ph : 63 - ph;
+        uint16_t a = art_palette[COL_CYAN_D], b = art_palette[COL_CYAN_L], c = 0;
+        for (int sh = 0; sh < 15; sh += 5) {
+            int ca = (a >> sh) & 31, cb = (b >> sh) & 31;
+            c |= (uint16_t)((ca + (cb - ca) * (int)t / 31) << sh);
+        }
+        BG_PALETTE[COL_PULSE] = c;
+        BG_PALETTE_SUB[COL_PULSE] = c;
+    }
+}
+
+void ui_pulse(int on)
+{
+    st.pulse = on;
+    if (!on) {
+        BG_PALETTE[COL_PULSE] = art_palette[COL_PULSE];
+        BG_PALETTE_SUB[COL_PULSE] = art_palette[COL_PULSE];
+    }
+}
+
+/* Master brightness steps of 4 per frame: about 70 ms each way. */
+void ui_fade_out(void)
+{
+    for (int v = 4; v <= 16; v += 4) {
+        swiWaitForVBlank();
+        setBrightness(3, -v);
+    }
+}
+
+void ui_fade_in(void)
+{
+    for (int v = 12; v >= 0; v -= 4) {
+        swiWaitForVBlank();
+        setBrightness(3, -v);
+    }
+}
+
+void ui_set_chat(int question_len)
+{
+    if (st.chat_q != question_len)
+        st.body_valid = 0;
+    st.chat_q = question_len;
 }
 
 static void body_invalidate(void)
@@ -132,6 +182,7 @@ void ui_init(void)
 {
     gfx_init();
     kb_init(&st.kb);
+    st.chat_q = -1;
     keysSetRepeat(15, 4);
     irqSet(IRQ_VBLANK, on_vblank);
     irqEnable(IRQ_VBLANK);
@@ -173,12 +224,17 @@ static void tagline(void)
     gfx_str(&gfx_top, x, y, tag, COL_GREY, 1);
 }
 
-void ui_splash(const char *model)
+static void logo_top(void)
 {
     decompress(splashBitmap, (void *)gfx_top.px, LZ77Vram);
     tagline();
     st.splash = 1;
     body_invalidate();
+}
+
+void ui_splash(const char *model)
+{
+    logo_top();
 
     clear_bottom();
     header("Loading", COL_CYAN, model && model[0] ? model : NULL);
@@ -279,24 +335,66 @@ void ui_hint(const char *hint)
     }
 }
 
-int ui_text_lines(const char *text, size_t len)
+/* Chat layout: bubbles 206 px wide, text inset 5 px. */
+#define CHAT_TEXT_W 196
+#define BUBBLE_W 206
+#define Q_X (GFX_W - 4 - BUBBLE_W)
+#define A_X 4
+
+enum { ROW_PLAIN, ROW_Q, ROW_A, ROW_KIND = 3, ROW_TOP = 4, ROW_BOTTOM = 8 };
+
+static int wrap_width(void)
 {
-    return tv_wrap_px(text, len, BODY_W, gfx_advance, NULL, 0);
+    return st.chat_q >= 0 ? CHAT_TEXT_W : BODY_W;
 }
 
-/* Redraws only the body lines whose text changed, so streaming a token
- * usually repaints one line. */
-static void body_line(int r, const char *s, size_t n, uint8_t colour)
+int ui_text_lines(const char *text, size_t len)
+{
+    return tv_wrap_px(text, len, wrap_width(), gfx_advance, NULL, 0);
+}
+
+/* Redraws only the body lines whose text or bubble shape changed, so
+ * streaming a token usually repaints one line. */
+static void body_line(int r, const char *s, size_t n, int style)
 {
     if (n > ROW_CHARS)
         n = ROW_CHARS;
-    if (st.body_valid && st.row_len[r] == n && memcmp(st.rows[r], s, n) == 0)
+    if (st.body_valid && st.row_len[r] == n && st.row_style[r] == style && memcmp(st.rows[r], s, n) == 0)
         return;
     int y = BODY_Y + r * GFX_LINE_H;
     gfx_fill(&gfx_top, 0, y, GFX_W, GFX_LINE_H, COL_BG);
-    gfx_text(&gfx_top, BODY_X, y, s, n, colour, 1);
+    int kind = style & ROW_KIND;
+    if (kind == ROW_PLAIN) {
+        gfx_text(&gfx_top, BODY_X, y, s, n, COL_WHITE, 1);
+    } else {
+        int x0 = kind == ROW_Q ? Q_X : A_X;
+        uint8_t fill = kind == ROW_Q ? COL_CYAN_D : COL_PANEL2;
+        gfx_fill(&gfx_top, x0, y, BUBBLE_W, GFX_LINE_H, fill);
+        for (int side = 0; side < 2; side++) { /* 2 px rounded corners */
+            int xa = side ? x0 + BUBBLE_W - 2 : x0, xb = side ? x0 + BUBBLE_W - 1 : x0;
+            if (style & ROW_TOP) {
+                gfx_fill(&gfx_top, xa, y, 2, 1, COL_BG);
+                gfx_fill(&gfx_top, xb, y + 1, 1, 1, COL_BG);
+            }
+            if (style & ROW_BOTTOM) {
+                gfx_fill(&gfx_top, xa, y + GFX_LINE_H - 1, 2, 1, COL_BG);
+                gfx_fill(&gfx_top, xb, y + GFX_LINE_H - 2, 1, 1, COL_BG);
+            }
+        }
+        gfx_text(&gfx_top, x0 + 5, y + 1, s, n, COL_WHITE, 1);
+    }
     memcpy(st.rows[r], s, n);
     st.row_len[r] = (unsigned char)n;
+    st.row_style[r] = (unsigned char)style;
+}
+
+static int line_kind(const tv_line *l)
+{
+    if (st.chat_q < 0)
+        return ROW_PLAIN;
+    if (l->start < (size_t)st.chat_q)
+        return ROW_Q;
+    return l->len ? ROW_A : ROW_PLAIN;
 }
 
 int ui_text(const char *text, size_t len, int first_line)
@@ -304,16 +402,24 @@ int ui_text(const char *text, size_t len, int first_line)
     static tv_line lines[512];
     if (st.splash)
         ui_title("", "ready");
-    int total = tv_wrap_px(text, len, BODY_W, gfx_advance, lines, 512);
+    int total = tv_wrap_px(text, len, wrap_width(), gfx_advance, lines, 512);
     int shown = total < 512 ? total : 512;
     if (first_line < 0 || first_line > shown - UI_TEXT_ROWS)
         first_line = shown > UI_TEXT_ROWS ? shown - UI_TEXT_ROWS : 0;
     for (int r = 0; r < UI_TEXT_ROWS; r++) {
         int i = first_line + r;
-        if (i < shown)
-            body_line(r, text + lines[i].start, lines[i].len, COL_WHITE);
-        else
-            body_line(r, "", 0, COL_WHITE);
+        if (i >= shown) {
+            body_line(r, "", 0, ROW_PLAIN);
+            continue;
+        }
+        int kind = line_kind(&lines[i]), style = kind;
+        if (kind != ROW_PLAIN) {
+            if (i == 0 || line_kind(&lines[i - 1]) != kind)
+                style |= ROW_TOP;
+            if (i == shown - 1 || line_kind(&lines[i + 1]) != kind)
+                style |= ROW_BOTTOM;
+        }
+        body_line(r, text + lines[i].start, lines[i].len, style);
     }
     st.body_valid = 1;
     return total;
@@ -407,7 +513,7 @@ void ui_panel_prompt(const char *prompt)
 
     button(PR_PREV, "<", NULL, BTN_NORMAL, 1);
     button(PR_NEXT, ">", NULL, BTN_NORMAL, 1);
-    button(PR_SET, "SET", NULL, BTN_NORMAL, 1);
+    button(PR_SET, "MENU", NULL, BTN_NORMAL, 1);
     button(PR_GO, "GO", "START", BTN_PRIMARY, 1);
     for (int i = 0; i < KB_KEYS; i++)
         draw_key(i);
@@ -421,10 +527,11 @@ void ui_panel_generating(int tokens, int steps, unsigned ms_per_token)
     if (tokens == 0) {
         clear_bottom();
         header("Writing...", COL_AMBER, NULL);
+        gfx_blit_scaled(&gfx_bot, (GFX_W - 2 * ICON_BRAIN_W) / 2, 68, ICON_BRAIN_W, ICON_BRAIN_H, icon_brain, 2);
         button(GEN_STOP, "STOP", "B", BTN_DANGER, 2);
         gfx_str_centered(&gfx_bot, 0, 166, GFX_W, "Press B or touch STOP to stop.", COL_DIM, 1);
     }
-    gfx_fill(&gfx_bot, 0, 24, GFX_W, 46, COL_BG);
+    gfx_fill(&gfx_bot, 0, 24, GFX_W, 42, COL_BG);
     snprintf(buf, sizeof buf, "%d / %d tokens", tokens, steps);
     gfx_str(&gfx_bot, 16, 26, buf, COL_WHITE, 1);
     bar(&gfx_bot, 16, 40, GFX_W - 32, 10, tokens, steps);
@@ -452,7 +559,7 @@ void ui_panel_story(int tokens, unsigned total_ms, int stopped)
     gfx_str(&gfx_bot, 16, 37, "Up/Down scrolls the story", COL_DIM, 1);
     button(STORY_NEW, "New prompt", "A", BTN_PRIMARY, 1);
     button(STORY_AGAIN, "Same prompt again", "Y", BTN_NORMAL, 1);
-    button(STORY_SET, "Settings", "SELECT", BTN_NORMAL, 1);
+    button(STORY_SET, "Menu", "SELECT", BTN_NORMAL, 1);
 }
 
 #define SET_Y 22
@@ -528,6 +635,67 @@ void ui_panel_settings(const dslm_settings *s, int cursor, const char *note)
     gfx_str_centered(&gfx_bot, 0, 176, GFX_W, "Up/Down select   Left/Right change", COL_DIM, 1);
 }
 
+/* ---- Home and About ----------------------------------------------------- */
+
+static rect card_rect(int i)
+{
+    rect r = {6 + (i % 2) * 124, 22 + (i / 2) * 76, 120, 70};
+    return r;
+}
+
+static void draw_card(int i)
+{
+    static const char *const titles[UI_CARDS] = {"Stories", "Chat", "Settings", "About"};
+    static const char *const subs[UI_CARDS] = {NULL, NULL, "Sampling and models", "DSLM " DSLM_VERSION};
+    static const uint8_t *const icons[UI_CARDS] = {icon_book, icon_bubble, icon_gear, icon_info};
+    static const int iw[UI_CARDS] = {ICON_BOOK_W, ICON_BUBBLE_W, ICON_GEAR_W, ICON_INFO_W};
+    static const int ih[UI_CARDS] = {ICON_BOOK_H, ICON_BUBBLE_H, ICON_GEAR_H, ICON_INFO_H};
+    rect r = card_rect(i);
+    int focus = i == st.home_focus;
+    gfx_fill(&gfx_bot, r.x - 1, r.y - 1, r.w + 2, r.h + 2, COL_BG);
+    if (focus) {
+        gfx_round(&gfx_bot, r.x - 1, r.y - 1, r.w + 2, r.h + 2, COL_CYAN);
+        gfx_round(&gfx_bot, r.x + 1, r.y + 1, r.w - 2, r.h - 2, COL_PANEL2);
+    } else {
+        gfx_round(&gfx_bot, r.x, r.y, r.w, r.h, COL_LINE);
+        gfx_round(&gfx_bot, r.x, r.y + 1, r.w, r.h - 1, COL_PANEL);
+    }
+    gfx_blit_scaled(&gfx_bot, r.x + (r.w - 2 * iw[i]) / 2, r.y + 8 + (24 - 2 * ih[i]) / 2, iw[i], ih[i], icons[i], 2);
+    gfx_str_centered(&gfx_bot, r.x, r.y + 40, r.w, titles[i], focus ? COL_WHITE : COL_GREY, 1);
+    const char *sub = i < 2 ? st.home_sub[i] : subs[i];
+    size_t n = strlen(sub);
+    while (n && gfx_text_width(sub, n, 1) > r.w - 8)
+        n--;
+    int sw = gfx_text_width(sub, n, 1) - 1;
+    gfx_text(&gfx_bot, r.x + (r.w - sw) / 2, r.y + 54, sub, n, COL_DIM, 1);
+}
+
+void ui_home(int focus, const char *stories, const char *chat, const char *note)
+{
+    logo_top();
+    st.home_focus = focus;
+    snprintf(st.home_sub[0], sizeof st.home_sub[0], "%s", stories);
+    snprintf(st.home_sub[1], sizeof st.home_sub[1], "%s", chat);
+    clear_bottom();
+    header("DSLM", COL_CYAN, "D-pad + A or touch");
+    for (int i = 0; i < UI_CARDS; i++)
+        draw_card(i);
+    if (note)
+        gfx_str_centered(&gfx_bot, 0, 174, GFX_W, note, COL_AMBER, 1);
+}
+
+static const rect ABOUT_BACK = {68, 160, 120, 24};
+
+void ui_about(const char *const *lines, int n)
+{
+    logo_top();
+    clear_bottom();
+    header("About", COL_CYAN, "DSLM " DSLM_VERSION);
+    for (int i = 0; i < n && i < 11; i++)
+        gfx_str(&gfx_bot, 10, 24 + i * 12, lines[i], i == 0 ? COL_WHITE : COL_GREY, 1);
+    button(ABOUT_BACK, "Back", "B", BTN_NORMAL, 1);
+}
+
 /* ---- input -------------------------------------------------------------- */
 
 static ui_event ev(ui_event_type t, int v)
@@ -585,7 +753,7 @@ ui_event ui_poll(ui_screen screen)
         if (down & KEY_R)
             return ev(UI_EV_EXAMPLE_NEXT, 0);
         if (down & KEY_SELECT)
-            return ev(UI_EV_SETTINGS, 0);
+            return ev(UI_EV_MENU, 0);
         if (rep & (KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT)) {
             int dx = rep & KEY_LEFT ? -1 : rep & KEY_RIGHT ? 1 : 0;
             int dy = dx ? 0 : rep & KEY_UP ? -1 : 1;
@@ -598,7 +766,7 @@ ui_event ui_poll(ui_screen screen)
             if (hit(PR_NEXT, tx, ty))
                 return ev(UI_EV_EXAMPLE_NEXT, 0);
             if (hit(PR_SET, tx, ty))
-                return ev(UI_EV_SETTINGS, 0);
+                return ev(UI_EV_MENU, 0);
             if (hit(PR_GO, tx, ty))
                 return ev(UI_EV_GO, 0);
             int key = kb_hit(tx, ty);
@@ -622,13 +790,38 @@ ui_event ui_poll(ui_screen screen)
         }
         break;
 
+    case UI_HOME:
+        if (rep & (KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT)) {
+            int old = st.home_focus;
+            st.home_focus ^= rep & (KEY_LEFT | KEY_RIGHT) ? 1 : 2; /* 2x2 grid, wrapping */
+            draw_card(old);
+            draw_card(st.home_focus);
+            return ev(UI_EV_NONE, 0);
+        }
+        if (down & (KEY_A | KEY_START))
+            return ev(UI_EV_OPEN, st.home_focus);
+        for (int i = 0; i < UI_CARDS; i++)
+            if (hit(card_rect(i), tx, ty)) {
+                int old = st.home_focus;
+                st.home_focus = i;
+                draw_card(old);
+                draw_card(i);
+                return ev(UI_EV_OPEN, i);
+            }
+        break;
+
+    case UI_ABOUT:
+        if ((down & (KEY_A | KEY_B | KEY_START)) || hit(ABOUT_BACK, tx, ty))
+            return ev(UI_EV_BACK, 0);
+        break;
+
     case UI_STORY:
         if (down & KEY_A)
             return ev(UI_EV_NEW, 0);
         if (down & KEY_Y)
             return ev(UI_EV_AGAIN, 0);
         if (down & KEY_SELECT)
-            return ev(UI_EV_SETTINGS, 0);
+            return ev(UI_EV_MENU, 0);
         if (rep & KEY_UP)
             return ev(UI_EV_UP, 0);
         if (rep & KEY_DOWN)
@@ -638,7 +831,7 @@ ui_event ui_poll(ui_screen screen)
         if (hit(STORY_AGAIN, tx, ty))
             return ev(UI_EV_AGAIN, 0);
         if (hit(STORY_SET, tx, ty))
-            return ev(UI_EV_SETTINGS, 0);
+            return ev(UI_EV_MENU, 0);
         break;
 
     case UI_SETTINGS:

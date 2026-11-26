@@ -15,9 +15,9 @@
         "id": "ds-interface",
         "path": ".doctrina/specs/ds-interface/spec.md",
         "status": "active",
-        "version": "0.7.0",
+        "version": "0.8.0",
         "last_updated": "2026-11-26",
-        "implementation": "verified — bitmap screens in the DSLM palette and pixel font, logo splash, own QWERTY keyboard typed by D-pad or touch, VBlank-latched input, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, the reference R4 run of the graphical build lands with the v1.3.0 release change",
+        "implementation": "verified — bitmap screens in the DSLM palette and pixel font, logo splash, Home menu with Stories, Chat, Settings and About, own QWERTY keyboard typed by D-pad or touch, VBlank-latched input, fades, chat bubbles, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, the reference R4 run of the graphical build lands with the v1.3.0 release change",
         "realizes": [
           "SC4"
         ],
@@ -212,6 +212,15 @@
         "date": "2026-11-26",
         "landed": "2026-11-26 — `src/ui/keyboard.c`, `src/ui/ui_gfx.c`, `tests/hw/ui-keyboard.md`",
         "summary": "An own QWERTY keyboard, drawn in the ADR 0011 style, replaces the libnds one."
+      },
+      {
+        "id": "0013",
+        "path": ".doctrina/decisions/0013-home-menu-with-stories-and-chat-modes-select-opens-it-motion-by-hardware-fades-and-palette-animation.md",
+        "title": "Home menu with Stories and Chat modes; SELECT opens it; motion by hardware fades and palette animation",
+        "status": "accepted",
+        "date": "2026-11-26",
+        "landed": "2026-11-26 — `src/main.c`, `src/ui/ui_gfx.c`, `tests/hw/ui-home.md`",
+        "summary": "Stories and Chat load their mode's model only when the other kind is loaded, using the existing load-with-fallback, then open the prompt."
       }
     ],
     "changes": [],
@@ -578,6 +587,20 @@
           }
         ],
         "lane": "product (uncertain)"
+      },
+      {
+        "id": "0023-home-menu-motion-after",
+        "title": "Home menu and motion: after the splash a Home screen with Stories, Chat, Settings and About cards (D-pad + A or touch); choosing Chat loads the chat model and Stories loads the story model from Settings, with the existing load-and-fallback; the last mode is saved in dslm.ini and focused on the next boot; B returns to Home from the prompt; an About screen with the logo, version and models on the card; motion: fade transitions between screens, a pulsing brain while generating, and chat questions and answers drawn as bubbles",
+        "path": ".doctrina/changes/archive/2026-11-26-0023-home-menu-motion-after",
+        "status": "applied",
+        "applied": "2026-11-26",
+        "specs_affected": [
+          {
+            "capability": "ds-interface",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "product (uncertain)"
       }
     ],
     "skills": [
@@ -605,7 +628,7 @@
         "id": "model-file-format",
         "path": ".doctrina/contracts/model-file-format.md",
         "status": "active",
-        "last_updated": "2026-11-25"
+        "last_updated": "2026-11-26"
       }
     ],
     "entrypoint": {

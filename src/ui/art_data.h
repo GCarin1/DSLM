@@ -21,6 +21,7 @@
 #define COL_AMBER 45
 #define COL_GREY_D 46
 #define COL_BLACK 47
+#define COL_PULSE 48
 
 extern const uint16_t art_palette[256];
 
@@ -35,5 +36,17 @@ extern const uint8_t font_rows[FONT_COUNT * FONT_HEIGHT];
 #define ICON_BRAIN_W 16
 #define ICON_BRAIN_H 12
 extern const uint8_t icon_brain[192];
+#define ICON_BOOK_W 16
+#define ICON_BOOK_H 10
+extern const uint8_t icon_book[160];
+#define ICON_BUBBLE_W 16
+#define ICON_BUBBLE_H 10
+extern const uint8_t icon_bubble[160];
+#define ICON_GEAR_W 14
+#define ICON_GEAR_H 12
+extern const uint8_t icon_gear[168];
+#define ICON_INFO_W 14
+#define ICON_INFO_H 11
+extern const uint8_t icon_info[154];
 
 #endif

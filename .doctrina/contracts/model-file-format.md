@@ -2,7 +2,7 @@
 
 **Contract:** model-file-format
 **Status:** active
-**Last updated:** 2026-11-25
+**Last updated:** 2026-11-26
 
 ## Purpose
 
@@ -60,15 +60,19 @@ The same tree, minus the kernel files, is the melonDS "Sync SD to folder" direct
 [model]
 checkpoint = /dslm/models/stories260K_q80.bin
 tokenizer  = /dslm/models/tok512.bin
+chat_checkpoint = /dslm/models/littlekedi_q80.bin
 
 [sampling]
 temperature = 0.0
 topp        = 0.9
 steps       = 256
 seed        = 0
+
+[ui]
+mode = stories
 ```
 
-Unknown keys are ignored. A missing file falls back to these defaults.
+Unknown keys are ignored. A missing file falls back to these defaults. `checkpoint` is the story model (with `tokenizer`), `chat_checkpoint` the chat model (it names its own tokenizer), and `mode` (`stories` or `chat`) the Home card used last, whose model the DS loads at boot. An older file without `[ui]` boots on `checkpoint`; if that is a chat model, the DS treats it as the chat model and Chat mode (since change 0023).
 
 **`/dslm/tokens.txt`: the last generation, one `key=value` per line**
 

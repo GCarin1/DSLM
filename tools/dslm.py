@@ -501,17 +501,20 @@ Install
 Controls
 --------
 Every action works with buttons or with the stylus.
+  Home:        D-pad and A (or touch) open Stories, Chat (the
+               LittleKedi chat model), Settings or About.
   Prompt:      type with the stylus, or move on the keyboard with the
                D-pad and press A; B deletes, Y adds a space, X shifts,
-               L/R example prompts, START or GO generates, SELECT opens
-               settings.
+               L/R example prompts, START or GO generates, SELECT goes
+               back to Home.
   Generating:  B or touch STOP to stop and keep the text.
-  Story:       Up/Down scroll, A new prompt, Y same prompt again.
+  Story:       Up/Down scroll, A new prompt, Y same prompt again,
+               SELECT Home.
   Settings:    Up/Down choose, Left/Right change, START saves, B back.
-               The Model row picks any checkpoint in dslm/models:
-               stories260K_q80 (about 7 tokens/s), tiny1m_q80
-               (about 4.5 tokens/s, richer stories) or littlekedi_q80
-               (chat: type a question; its answers are often wrong).
+               The Model row picks the story model in dslm/models:
+               stories260K_q80 (about 7 tokens/s) or tiny1m_q80
+               (about 4.5 tokens/s, richer stories). Chat uses
+               littlekedi_q80 (type a question; answers are often wrong).
 Each token takes about half a second; a 256-token story takes minutes.
 
 Troubleshooting

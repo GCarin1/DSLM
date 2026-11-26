@@ -52,6 +52,7 @@ UI_COLOURS = [
     ("AMBER",   "a", (0xFF, 0xC8, 0x4D)),
     ("GREY_D",  "h", (0x5A, 0x65, 0x80)),
     ("BLACK",   "b", (0x00, 0x00, 0x00)),
+    ("PULSE",   "u", (0x2C, 0xC8, 0xFF)),  # cyan; animated while generating
 ]
 UI_FIRST = 32
 ART_FIRST = 64

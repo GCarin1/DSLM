@@ -18,7 +18,7 @@ Controls, settings and troubleshooting: [`docs/user-guide.md`](docs/user-guide.m
 
 ### Models in the package
 
-All run offline; pick one on the Settings screen (SELECT, row `Model`). The story models share the tokenizer `tok512.bin`; LittleKedi brings its own. With LittleKedi the prompt is a question: DSLM wraps it in the model's chat format and stops at the end of the answer ([`docs/littlekedi.md`](docs/littlekedi.md)).
+All run offline; pick Stories or Chat on the Home screen, and the story model on the Settings screen (row `Model`). The story models share the tokenizer `tok512.bin`; LittleKedi brings its own. With LittleKedi the prompt is a question: DSLM wraps it in the model's chat format and stops at the end of the answer ([`docs/littlekedi.md`](docs/littlekedi.md)).
 
 | Model | File | Size | On a real DS | Stories | Source |
 |---|---|---|---|---|---|
