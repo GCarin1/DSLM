@@ -54,6 +54,7 @@ Every action works with the buttons or with the stylus.
 | About | Back to Home | B | Back |
 | Settings | Choose a setting | Up / Down | touch its row |
 | Settings | Change it | Left / Right | `[-]` / `[+]` |
+| Settings | Sounds on or off (row `Sound`) | Left / Right, then START | `[<]` / `[>]`, then Save |
 | Settings | Pick another model (row `Model`) | Left / Right, then START | `[<]` / `[>]`, then Save |
 | Settings | Save to the card | START | Save |
 | Settings | Back to Home without saving | B | Back |
@@ -62,6 +63,7 @@ Without the stylus, the D-pad moves the highlight over the keyboard and A types 
 
 ## Settings
 
+- **Sound** switches the interface sounds (clicks, chimes) on or off. They are original sounds made by the DS sound chip itself.
 - **Temperature** 0 always picks the most likely next word, so the same prompt gives the same story. Higher values (up to 2.0) give more varied stories.
 - **Top-p** limits sampling to the most likely words when temperature is above 0.
 - **Steps** is the story length in tokens (16 to 512). The int8 model writes about 6 to 7 tokens per second on a DS; later tokens take a little longer.

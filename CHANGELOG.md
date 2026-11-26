@@ -13,6 +13,10 @@ All notable changes to DSLM are listed here. The format follows [Keep a Changelo
 - **Home screen** (change 0023, ADR 0013): after the logo, four cards: Stories, Chat, Settings and About. Chat loads LittleKedi by itself and Stories goes back to the story model; the DS remembers the last one (`[ui] mode` and `chat_checkpoint` in `dslm.ini`) and starts with its card highlighted. SELECT returns to Home from the prompt and story screens; Settings is opened from Home and lists the story models.
 - Chat questions and answers appear as speech bubbles; screens fade into each other, and the brain icon pulses while the model writes.
 
+### Added
+
+- **Sounds** (change 0024, ADR 0014): clicks, blips and chimes for typing, moving, opening, going back, starting and stopping a generation, a finished story, errors and the boot. They are original and made by the DS sound chip itself (no recordings, no extra memory). Settings has a `Sound` row to switch them off (`[ui] sound` in `dslm.ini`).
+
 ### Fixed
 
 - Touching Back on the Settings screen could type a character on the keyboard of the prompt screen.

@@ -142,6 +142,25 @@ static void test_chat_model_and_mode(void)
     CHECK(b.mode == DSLM_MODE_CHAT && strcmp(b.chat_checkpoint, "/dslm/models/c.bin") == 0);
 }
 
+static void test_sound_switch(void)
+{
+    dslm_settings a, b;
+    char buf[512];
+    dslm_settings_defaults(&a);
+    CHECK(a.sound == 1);
+    const char *t = "[ui]\nsound = off\n";
+    dslm_ini_parse(t, strlen(t), &a);
+    CHECK(a.sound == 0);
+    const char *bad = "[ui]\nsound = loud\n";
+    dslm_ini_parse(bad, strlen(bad), &a);
+    CHECK(a.sound == 0); /* an unknown value keeps the previous one */
+    size_t n = dslm_ini_format(&a, buf, sizeof buf);
+    CHECK(n > 0 && strstr(buf, "sound = off") != NULL);
+    dslm_settings_defaults(&b);
+    dslm_ini_parse(buf, n, &b);
+    CHECK(b.sound == 0);
+}
+
 static void test_format_refuses_small_buffer(void)
 {
     dslm_settings s;
@@ -154,6 +173,7 @@ int main(void)
 {
     test_format_round_trips();
     test_chat_model_and_mode();
+    test_sound_switch();
     test_format_refuses_small_buffer();
     test_defaults_on_empty();
     test_full_file();

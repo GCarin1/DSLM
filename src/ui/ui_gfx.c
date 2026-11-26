@@ -18,6 +18,7 @@
 
 #include "gfx.h"
 #include "keyboard.h"
+#include "sfx.h"
 #include "splash.h"
 #include "textview.h"
 #include "version.h"
@@ -111,6 +112,54 @@ static struct {
     unsigned pulse_frame;
 } st;
 
+/* ---- sound: one PSG voice stepped in the VBlank interrupt ---------------- */
+
+static sfx_player voice;
+static volatile int sound_on = 1;
+static volatile int sound_next = SFX_NONE; /* started by the next VBlank */
+static int psg = -1;                       /* libnds sound id of the playing note */
+
+static void sound_tick(void)
+{
+    int next = sound_next;
+    if (next != SFX_NONE) {
+        sound_next = SFX_NONE;
+        sfx_start(&voice, (sfx_id)next);
+    }
+    sfx_step s = sfx_tick(&voice);
+    switch (s.action) {
+    case SFX_NOTE:
+        if (psg >= 0)
+            soundKill(psg);
+        /* a PSG square wave takes 8 timer steps per cycle: the rate is 8x the pitch */
+        psg = soundPlayPSG((DutyCycle)s.duty, (u16)(s.freq * 8), s.vol, 64);
+        break;
+    case SFX_VOLUME:
+        if (psg >= 0)
+            soundSetVolume(psg, s.vol);
+        break;
+    case SFX_SILENCE:
+    case SFX_END:
+        if (psg >= 0)
+            soundKill(psg);
+        psg = -1;
+        break;
+    default:
+        break;
+    }
+}
+
+void ui_sound(int sfx)
+{
+    if (sound_on)
+        sound_next = sfx;
+}
+
+void ui_sound_enable(int on)
+{
+    sound_on = on;
+}
+
 /* ---- input latched in the VBlank interrupt ------------------------------ */
 
 static volatile uint32_t latch_down, latch_rep;
@@ -128,6 +177,7 @@ static void on_vblank(void)
         latch_tx = tp.px;
         latch_ty = tp.py;
     }
+    sound_tick();
     if (st.pulse) { /* brain icons breathe between dark and light cyan, 64 frames a cycle */
         unsigned ph = st.pulse_frame++ & 63, t = ph < 32 ? ph : 63 - ph;
         uint16_t a = art_palette[COL_CYAN_D], b = art_palette[COL_CYAN_L], c = 0;
@@ -183,6 +233,7 @@ void ui_init(void)
     gfx_init();
     kb_init(&st.kb);
     st.chat_q = -1;
+    soundEnable();
     keysSetRepeat(15, 4);
     irqSet(IRQ_VBLANK, on_vblank);
     irqEnable(IRQ_VBLANK);
@@ -442,6 +493,7 @@ void ui_fatal(const char *fmt, ...)
     for (int i = 0; i < n && i < UI_TEXT_ROWS - 2; i++)
         gfx_text(&gfx_top, BODY_X, BODY_Y + (i + 2) * GFX_LINE_H, msg + lines[i].start, lines[i].len, COL_WHITE, 1);
     ui_hint("Fix the card, then restart.");
+    ui_sound(SFX_ERROR);
     ui_halt();
 }
 
@@ -481,6 +533,7 @@ static void draw_key(int i)
 
 static void focus_key(int key)
 {
+    ui_sound(SFX_MOVE);
     int old = st.kb.focus;
     st.kb.focus = key;
     if (old != key)
@@ -563,7 +616,7 @@ void ui_panel_story(int tokens, unsigned total_ms, int stopped)
 }
 
 #define SET_Y 22
-#define SET_ROW_H 24
+#define SET_ROW_H 20
 #define SET_MINUS_X 100
 #define SET_VALUE_X 124
 #define SET_VALUE_W 96
@@ -604,8 +657,8 @@ void ui_panel_settings(const dslm_settings *s, int cursor, const char *note)
     char *dot = strrchr(model, '.');
     if (dot && dot != model)
         *dot = '\0';
-    const char *labels[UI_SETTINGS_ROWS] = {"Temperature", "Top-p", "Steps", "Model"};
-    const char *values[UI_SETTINGS_ROWS] = {t, p, stp, model};
+    const char *labels[UI_SETTINGS_ROWS] = {"Temperature", "Top-p", "Steps", "Model", "Sound"};
+    const char *values[UI_SETTINGS_ROWS] = {t, p, stp, model, s->sound ? "on" : "off"};
 
     clear_bottom();
     header("Settings", COL_CYAN, NULL);
@@ -618,9 +671,9 @@ void ui_panel_settings(const dslm_settings *s, int cursor, const char *note)
         }
         int ty = r.y + (r.h - 7) / 2;
         gfx_str(&gfx_bot, r.x + 7, ty, labels[i], sel ? COL_WHITE : COL_GREY, 1);
-        int model_row = i == UI_SETTINGS_MODEL_ROW;
-        step_button(SET_MINUS_X, r.y + 3, model_row ? "<" : "-");
-        step_button(SET_PLUS_X, r.y + 3, model_row ? ">" : "+");
+        int pick_row = i >= UI_SETTINGS_MODEL_ROW;
+        step_button(SET_MINUS_X, r.y + 1, pick_row ? "<" : "-");
+        step_button(SET_PLUS_X, r.y + 1, pick_row ? ">" : "+");
         size_t n = strlen(values[i]);
         while (n && gfx_text_width(values[i], n, 1) > SET_VALUE_W - 4)
             n--;
@@ -714,10 +767,12 @@ static ui_event key_event(int key)
         return ev(UI_EV_GO, 0);
     for (int i = 0; i < KB_KEYS; i++) /* the page or shift may have changed */
         draw_key(i);
+    if (code <= 0)
+        ui_sound(SFX_PAGE);
     return code > 0 ? ev(UI_EV_CHAR, code) : ev(UI_EV_NONE, 0);
 }
 
-ui_event ui_poll(ui_screen screen)
+static ui_event poll_input(ui_screen screen)
 {
     int ime = REG_IME;
     REG_IME = 0;
@@ -746,6 +801,7 @@ ui_event ui_poll(ui_screen screen)
             st.kb.mode = st.kb.mode == KB_LOWER ? KB_UPPER : KB_LOWER;
             for (int i = 0; i < KB_KEYS; i++)
                 draw_key(i);
+            ui_sound(SFX_PAGE);
             return ev(UI_EV_NONE, 0);
         }
         if (down & KEY_L)
@@ -794,6 +850,7 @@ ui_event ui_poll(ui_screen screen)
         if (rep & (KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT)) {
             int old = st.home_focus;
             st.home_focus ^= rep & (KEY_LEFT | KEY_RIGHT) ? 1 : 2; /* 2x2 grid, wrapping */
+            ui_sound(SFX_MOVE);
             draw_card(old);
             draw_card(st.home_focus);
             return ev(UI_EV_NONE, 0);
@@ -864,6 +921,25 @@ ui_event ui_poll(ui_screen screen)
         break;
     }
     return ev(UI_EV_NONE, 0);
+}
+
+/* The sound of each event; focus moves and page changes play inside poll_input. */
+static const signed char event_sound[] = {
+    [UI_EV_NONE] = SFX_NONE,          [UI_EV_CHAR] = SFX_KEY,          [UI_EV_BACKSPACE] = SFX_DELETE,
+    [UI_EV_GO] = SFX_START,           [UI_EV_STOP] = SFX_STOP,         [UI_EV_EXAMPLE_PREV] = SFX_PAGE,
+    [UI_EV_EXAMPLE_NEXT] = SFX_PAGE,  [UI_EV_SETTINGS] = SFX_OPEN,     [UI_EV_BACK] = SFX_BACK,
+    [UI_EV_NEW] = SFX_OPEN,           [UI_EV_AGAIN] = SFX_START,       [UI_EV_UP] = SFX_MOVE,
+    [UI_EV_DOWN] = SFX_MOVE,          [UI_EV_LEFT] = SFX_MOVE,         [UI_EV_RIGHT] = SFX_MOVE,
+    [UI_EV_SELECT_ROW] = SFX_MOVE,    [UI_EV_SAVE] = SFX_OPEN,         [UI_EV_OPEN] = SFX_OPEN,
+    [UI_EV_MENU] = SFX_BACK,
+};
+
+ui_event ui_poll(ui_screen screen)
+{
+    ui_event e = poll_input(screen);
+    if (e.type != UI_EV_NONE)
+        ui_sound(event_sound[e.type]);
+    return e;
 }
 
 void ui_frame(void)

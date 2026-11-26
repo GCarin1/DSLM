@@ -51,8 +51,9 @@ typedef struct {
     int value;
 } ui_event;
 
-#define UI_SETTINGS_ROWS 4      /* temperature, top-p, steps, model */
+#define UI_SETTINGS_ROWS 5      /* temperature, top-p, steps, model, sound */
 #define UI_SETTINGS_MODEL_ROW 3 /* Left/Right picks a checkpoint from /dslm/models */
+#define UI_SETTINGS_SOUND_ROW 4 /* Left/Right switches the sounds on or off */
 #define UI_PROMPT_MAX 90   /* fits the three prompt lines on the bottom screen */
 
 void ui_init(void);
@@ -85,6 +86,11 @@ void ui_about(const char *const *lines, int n);
 void ui_set_chat(int question_len);
 /* Animate the brain icons (during generation). */
 void ui_pulse(int on);
+/* Play one of the sfx.h sounds (the interface plays the ones for input
+ * events itself); off silences everything. */
+void ui_sound(int sfx);
+void ui_sound_enable(int on);
+
 /* Fade both screens out before drawing a new screen, and in after. */
 void ui_fade_out(void);
 void ui_fade_in(void);

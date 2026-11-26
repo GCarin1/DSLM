@@ -19,6 +19,7 @@
 #include "engine/mlq_chat.h"
 #include "storage/ini.h"
 #include "storage/sdcard.h"
+#include "ui/sfx.h"
 #include "ui/textview.h"
 #include "ui/ui.h"
 #include "version.h"
@@ -550,6 +551,8 @@ static void enter_story(app *a)
     ui_hint("Up/Down:scroll  A:new  Y:again  SEL:menu");
     int total = show_story(a, -1);
     a->scroll = total > UI_TEXT_ROWS ? total - UI_TEXT_ROWS : 0;
+    if (!a->stopped) /* a stop already played its own sound */
+        ui_sound(SFX_DONE);
     ui_panel_story(a->n_tokens, a->gen_ms, a->stopped);
 }
 
@@ -588,6 +591,10 @@ static void adjust(dslm_settings *s, int row, int dir, int seq_len)
             s->steps = 16;
         if (s->steps > seq_len)
             s->steps = seq_len;
+        break;
+    case UI_SETTINGS_SOUND_ROW:
+        s->sound = !s->sound;
+        ui_sound_enable(s->sound); /* hear the choice before saving it */
         break;
     }
 }
@@ -745,6 +752,7 @@ static const char *settings_screen(app *a)
             }
             break;
         case UI_EV_BACK:
+            ui_sound_enable(a->settings.sound); /* an unsaved switch does not stick */
             snprintf(done, sizeof done, "%s", note && strncmp(note, "Not loaded", 10) == 0 ? note : "");
             return done[0] ? done : NULL;
         default:
@@ -858,6 +866,8 @@ static void show_home(app *a, int focus, const char *note)
     snprintf(chat, sizeof chat, "%s", model_label(a->settings.chat_checkpoint));
     ui_fade_out();
     ui_home(focus, stories, chat, note);
+    if (note)
+        ui_sound(SFX_ERROR);
     ui_fade_in();
     a->model_name = model_label(a->ckpt_path); /* model_label's buffer was reused */
 }
@@ -868,6 +878,7 @@ int main(void)
 
     ui_init();
     boot(&a);
+    ui_sound_enable(a.settings.sound);
     settle_mode(&a);
     a.chat_q = -1;
     strcpy(a.prompt, examples[a.kind][0]);
@@ -876,6 +887,7 @@ int main(void)
 
     int focus = a.kind == KIND_CHAT ? UI_CARD_CHAT : UI_CARD_STORIES;
     show_home(&a, focus, NULL);
+    ui_sound(SFX_BOOT);
     for (;;) {
         ui_frame();
         ui_event e = ui_poll(UI_HOME);

@@ -16,3 +16,5 @@ tests/host/test_fxmath.exe
 dist/
 tests/host/test_keyboard
 tests/host/test_keyboard.exe
+tests/host/test_sfx
+tests/host/test_sfx.exe

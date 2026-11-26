@@ -511,6 +511,7 @@ Every action works with buttons or with the stylus.
   Story:       Up/Down scroll, A new prompt, Y same prompt again,
                SELECT Home.
   Settings:    Up/Down choose, Left/Right change, START saves, B back.
+               The Sound row switches the interface sounds on or off.
                The Model row picks the story model in dslm/models:
                stories260K_q80 (about 7 tokens/s) or tiny1m_q80
                (about 4.5 tokens/s, richer stories). Chat uses
