@@ -228,7 +228,13 @@ def main():
         OUT_GRIT: b"# 8bpp bitmap, LZ77, no palette (art_palette holds it)\n-gb -gB8 -gzl -p!\n",
         OUT_ICON: png_bytes(build_icon()),
     }
-    stale = [p for p, data in outputs.items() if not p.exists() or p.read_bytes() != data]
+    def same(p, data):  # a Windows checkout may hold the text outputs with CRLF
+        if not p.exists():
+            return False
+        have = p.read_bytes()
+        return have == data or (p.suffix != ".png" and have.replace(b"\r\n", b"\n") == data)
+
+    stale = [p for p, data in outputs.items() if not same(p, data)]
     if check:
         for p in stale:
             print(f"stale: {p.relative_to(ROOT)}")
