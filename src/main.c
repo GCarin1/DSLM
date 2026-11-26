@@ -470,7 +470,7 @@ static void generate(app *a)
     ui_hint("B:stop");
     ui_text("", 0, 0);
     ui_panel_generating(0, steps, 0);
-    ui_pulse(1);
+    ui_generating(1);
 
     if (a->kind == KIND_CHAT) {
         /* steps counts the answer's tokens; the question's bubble is shown above it */
@@ -500,7 +500,7 @@ static void generate(app *a)
     g.ticks += cpuGetTiming();
     a->gen_ms = ticks_to_ms(g.ticks);
     a->stopped = g.stopped;
-    ui_pulse(0);
+    ui_generating(0);
     write_tokens(a, steps);
     append_bench(a, steps);
     save_history(a);

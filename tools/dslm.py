@@ -509,7 +509,8 @@ Every action works with buttons or with the stylus.
                D-pad and press A; B deletes, Y adds a space, X shifts,
                L/R example prompts, START or GO generates, SELECT goes
                back to Home.
-  Generating:  B or touch STOP to stop and keep the text.
+  Generating:  B or touch STOP to stop and keep the text. Closing the
+               lid turns the screens off and the story keeps going.
   Story:       Up/Down scroll, A new prompt, Y same prompt again,
                SELECT Home.
   Settings:    Up/Down choose, Left/Right change, START saves, B back.

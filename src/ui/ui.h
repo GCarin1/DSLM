@@ -99,8 +99,13 @@ void ui_about(const char *const *lines, int n);
  * (a bubble on the right), the rest after a blank line the answer (a bubble
  * on the left); -1 is the plain story layout. */
 void ui_set_chat(int question_len);
-/* Animate the brain icons (during generation). */
-void ui_pulse(int on);
+/*
+ * A generation is running (on) or over (off): the brain icons pulse, and
+ * closing the lid turns the backlights off instead of sleeping, so the model
+ * keeps writing. If the lid is still closed when it ends, the DS sleeps once
+ * the done sound has played (in ui_frame()) and wakes when it is opened.
+ */
+void ui_generating(int on);
 /* Play one of the sfx.h sounds (the interface plays the ones for input
  * events itself); off silences everything. */
 void ui_sound(int sfx);

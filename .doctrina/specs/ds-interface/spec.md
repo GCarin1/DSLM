@@ -6,7 +6,7 @@
 **Realizes:** SC4
 **Depends on:** inference-engine
 **Last updated:** 2026-11-26
-**Version:** 0.11.0
+**Version:** 0.12.0
 
 ## Purpose
 
@@ -41,10 +41,13 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - When the user switches Sound off on the Settings screen and saves, the interface shall stop playing sounds and save the choice to /dslm/dslm.ini.
 - When a generation finishes or is stopped, the interface shall save its text, prompt, model and date to a new file in /dslm/history.
 - When the user picks My DS on the Colour row of the Settings screen and saves, the interface shall draw its accent in the favourite colour from the DS settings and save the choice to /dslm/dslm.ini.
+- When a generation ends with the lid closed, the interface shall play the done sound and then put the DS to sleep, showing the result when the lid is opened.
 
 ### State-driven
 
 - While generation is running, the interface shall show on the bottom screen that the model is working and how many tokens have been produced.
+- While a generation is running, closing the lid shall turn both backlights off and let the generation continue instead of putting the DS to sleep.
+- While the battery is low, the interface shall show a red battery icon in the title bar.
 
 ### Unwanted-behavior (must-not)
 
@@ -78,6 +81,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 18. [verified] Finished runs are saved with the clock date, listed newest first, shown again with chat bubbles and deleted by a double press — verified by `tests/hw/ui-history.md`
 19. [verified] The 16 favourite colours are distinct and readable, their shades bracket them, and firmware names convert to trimmed ASCII — verified by `tests/host/test_theme.c`
 20. [verified] The greeting, the personal example and the saved favourite-colour accent show on melonDS with a firmware name and colour — verified by `tests/hw/ui-personal.md`
+21. [verified] With the lid closed mid-generation the tokens keep coming, the DS sleeps after the done sound and wakes on the finished story, and a low battery shows the red icon — verified by `tests/hw/ui-battery.md`
 
 ## Maturity
 
@@ -89,6 +93,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - Original interface sounds synthesized on the PSG channels, with a Sound switch in Settings (ADR 0014).
 - History of finished stories and answers in /dslm/history, browsed from the Home screen.
 - Personal touches from the DS settings: a greeting with the user's name, a story example with it, and an optional accent in their favourite colour.
+- Battery mode: the lid can close during a generation (screens off, model keeps writing, sleep when done); low battery shown in the title bar.
 - Settings screen for temperature, top-p and steps, saved to /dslm/dslm.ini.
 
 **Future (aspirational, not committed):**

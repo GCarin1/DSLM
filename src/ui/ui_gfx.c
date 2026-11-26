@@ -112,6 +112,9 @@ static struct {
     int list_first, list_n;            /* History list scroll */
     volatile int pulse;                /* animate COL_PULSE in the VBlank interrupt */
     uint16_t acc, acc_d, acc_l;        /* the accent and its shades now in the palette */
+    volatile int busy;                 /* a generation is running: the lid does not sleep */
+    volatile int dark;                 /* backlights off because the lid closed while busy */
+    int sleep_pending;                 /* sleep after the done sound, if the lid is still closed */
     unsigned pulse_frame;
 } st;
 
@@ -181,6 +184,16 @@ static void on_vblank(void)
         latch_ty = tp.py;
     }
     sound_tick();
+    if (st.busy) { /* lid closed while writing: screens off, keep going */
+        int lid = (keysHeld() & KEY_LID) != 0;
+        if (lid && !st.dark) {
+            powerOff(PM_BACKLIGHT_TOP | PM_BACKLIGHT_BOTTOM);
+            st.dark = 1;
+        } else if (!lid && st.dark) {
+            powerOn(PM_BACKLIGHT_TOP | PM_BACKLIGHT_BOTTOM);
+            st.dark = 0;
+        }
+    }
     if (st.pulse) { /* brain icons breathe between dark and light cyan, 64 frames a cycle */
         unsigned ph = st.pulse_frame++ & 63, t = ph < 32 ? ph : 63 - ph;
         uint16_t a = st.acc_d, b = st.acc_l, c = 0;
@@ -193,12 +206,25 @@ static void on_vblank(void)
     }
 }
 
-void ui_pulse(int on)
+static void ui_pulse(int on)
 {
     st.pulse = on;
     if (!on) {
         BG_PALETTE[COL_PULSE] = st.acc;
         BG_PALETTE_SUB[COL_PULSE] = st.acc;
+    }
+}
+
+void ui_generating(int on)
+{
+    ui_pulse(on);
+    if (on) {
+        disableSleep();
+        st.busy = 1;
+    } else {
+        st.busy = 0;
+        enableSleep();
+        st.sleep_pending = st.dark;
     }
 }
 
@@ -370,6 +396,13 @@ void ui_title(const char *model, const char *state)
     int px = GFX_W - 5 - sw;
     gfx_round(&gfx_top, px, 3, sw, 12, state_colour(state));
     gfx_str(&gfx_top, px + 4, 5, state, COL_BG, 1);
+    if ((getBatteryLevel() & BATTERY_LEVEL_MASK) <= BATTERY_LEVEL_DS_LOW) { /* red battery, 13x8 */
+        px -= 18;
+        gfx_fill(&gfx_top, px, 5, 12, 8, COL_RED);
+        gfx_fill(&gfx_top, px + 1, 6, 10, 6, COL_PANEL);
+        gfx_fill(&gfx_top, px + 2, 7, 2, 4, COL_RED);
+        gfx_fill(&gfx_top, px + 12, 7, 1, 4, COL_RED);
+    }
 
     /* model name between the two, clipped to the room left */
     size_t n = strlen(model);
@@ -1064,4 +1097,11 @@ ui_event ui_poll(ui_screen screen)
 void ui_frame(void)
 {
     swiWaitForVBlank();
+    if (st.sleep_pending && !voice.playing) { /* finished in the dark: sleep now */
+        st.sleep_pending = 0;
+        st.dark = 0;
+        powerOn(PM_BACKLIGHT_TOP | PM_BACKLIGHT_BOTTOM);
+        if (keysHeld() & KEY_LID)
+            systemSleep();
+    }
 }
