@@ -37,3 +37,11 @@ deleted and the capability is recorded in the change archive only.
 ---
 
 <!-- delta body below -->
+
+```ops
+append-requirement event: When voice mode is on and the microphone hears a sustained loud sound, the interface shall start the generation with a temperature set by its loudness for that run only.
+append-requirement state: While voice mode is off, the interface shall keep the microphone switched off.
+append-criterion [verified] Blows shorter than the trigger time are ignored, sustained ones report their peak once per cooldown, and louder peaks never give a lower temperature — verified by `tests/host/test_mic.c`
+append-criterion [verified] With voice mode on, a sustained sound starts the run at its voice temperature and the saved temperature is unchanged — verified by `tests/hw/ui-voice.md`
+bump-version minor
+```

@@ -1,12 +1,12 @@
 # ADR 0015 — Voice mode on the microphone: X toggles it on the prompt screen; a sustained loud sound starts the run and sets its temperature
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2026-11-27
 - **Deciders:** Carini (approved the v1.6 microphone features on 2026-11-26)
 - **Supersedes:** —
 - **Superseded by:** —
 - **Evidence:** `src/ui/mic.c`, `src/ui/ui_gfx.c`, `src/main.c`, `tests/host/test_mic.c`
-- **Landed:** —
+- **Landed:** 2026-11-27 — `src/ui/mic.c`, `src/ui/ui_gfx.c`, `tests/hw/ui-voice.md`
 
 ## Context
 

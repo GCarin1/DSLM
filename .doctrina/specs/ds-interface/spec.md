@@ -6,7 +6,7 @@
 **Realizes:** SC4
 **Depends on:** inference-engine
 **Last updated:** 2026-11-26
-**Version:** 0.17.0
+**Version:** 0.18.0
 
 ## Purpose
 
@@ -46,12 +46,14 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - When the user presses Y while a story model generates, the interface shall offer the five most likely next tokens at each step and use the one the user picks, until Y gives the choice back to the model or B stops.
 - When the user presses X on the Story screen of a story model with room left in the context, the interface shall write three alternative continuations, append the one the user picks, and offer three more until B finishes.
 - When the user presses START on the Story screen or A on a History entry, the interface shall show the text as a book on rotated pages across both screens, turning pages on A, R or a touch and closing on B or START.
+- When voice mode is on and the microphone hears a sustained loud sound, the interface shall start the generation with a temperature set by its loudness for that run only.
 
 ### State-driven
 
 - While generation is running, the interface shall show on the bottom screen that the model is working and how many tokens have been produced.
 - While a generation is running, closing the lid shall turn both backlights off and let the generation continue instead of putting the DS to sleep.
 - While the battery is low, the interface shall show a red battery icon in the title bar.
+- While voice mode is off, the interface shall keep the microphone switched off.
 
 ### Unwanted-behavior (must-not)
 
@@ -92,6 +94,8 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 24. [verified] Picks by D-pad and by touch are appended, Y hands the pen back and B stops with the co-written text kept — verified by `tests/hw/ui-cowrite.md`
 25. [verified] Three paths are offered, a picked path (by D-pad or touch) is appended and the next paths continue it coherently — verified by `tests/hw/ui-paths.md`
 26. [verified] Stories and history entries open as rotated book pages with page numbers and close back to their screen — verified by `tests/hw/ui-book.md`
+27. [verified] Blows shorter than the trigger time are ignored, sustained ones report their peak once per cooldown, and louder peaks never give a lower temperature — verified by `tests/host/test_mic.c`
+28. [verified] With voice mode on, a sustained sound starts the run at its voice temperature and the saved temperature is unchanged — verified by `tests/hw/ui-voice.md`
 
 ## Maturity
 

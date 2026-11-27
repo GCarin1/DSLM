@@ -15,6 +15,7 @@ All notable changes to DSLM are listed here. The format follows [Keep a Changelo
 
 ### Added
 
+- **Voice mode** (change 0033, ADR 0015): X on the prompt screen turns the microphone on with a level meter; blow on the DS (or speak loudly) for a moment and the story starts, and the louder it was, the more creative that story (temperature 0.2 to 1.2, your settings unchanged). Shift moved to the `Aa` key only.
 - **Book mode** (change 0032): START on the Story screen (or A in History) shows the text on light pages across both screens; hold the DS sideways like a book. A/R or a touch turn the page, Y/L go back, B closes. The rotation is done by the DS graphics hardware.
 - **What happens next?** (change 0031): after a story, X writes three different continuations; pick one (D-pad and A, or touch) and it is added, then three more follow, until B. The engine continues from its memory of the story (KV cache), proven to match an uninterrupted run.
 - **Write together** (change 0030): press Y while a story model writes and pick each next token yourself among its five favourites (Up/Down and A, or touch); Y gives the pen back, B stops. Speed figures leave out the time you spend choosing.

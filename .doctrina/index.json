@@ -15,7 +15,7 @@
         "id": "ds-interface",
         "path": ".doctrina/specs/ds-interface/spec.md",
         "status": "active",
-        "version": "0.17.0",
+        "version": "0.18.0",
         "last_updated": "2026-11-26",
         "implementation": "verified — bitmap screens in the DSLM palette and pixel font, logo splash, Home menu with Stories, Chat, History, Settings and About, own QWERTY keyboard typed by D-pad or touch, VBlank-latched input, fades, chat bubbles, synthesized interface sounds, history on the card, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, the reference R4 run of the graphical build lands with the v1.3.0 release change",
         "realizes": [
@@ -235,21 +235,13 @@
         "id": "0015",
         "path": ".doctrina/decisions/0015-voice-mode-on-the-microphone-x-toggles-it-on-the-prompt-screen-a-sustained-loud-sound-starts-the-run-and-sets-its-temperature.md",
         "title": "Voice mode on the microphone: X toggles it on the prompt screen; a sustained loud sound starts the run and sets its temperature",
-        "status": "proposed",
+        "status": "accepted",
         "date": "2026-11-27",
-        "summary": "What was decided."
+        "landed": "2026-11-27 — `src/ui/mic.c`, `src/ui/ui_gfx.c`, `tests/hw/ui-voice.md`",
+        "summary": "X on the prompt screen switches voice mode on or off."
       }
     ],
-    "changes": [
-      {
-        "id": "0033-voice-mode-microphone-prompt",
-        "title": "Voice mode with the microphone: X on the prompt screen switches the microphone on or off and shows a live level meter; blowing or speaking loudly for about a quarter of a second starts the generation, and how loud it was sets the temperature for that run (soft 0.2 to strong 1.2) without changing the saved settings; shift stays on the Aa key; blow detection and the loudness-to-temperature mapping are pure C tested on the host",
-        "path": ".doctrina/changes/0033-voice-mode-microphone-prompt",
-        "status": "proposed",
-        "opened": "2026-11-27",
-        "lane": "product (uncertain)"
-      }
-    ],
+    "changes": [],
     "changes_archive": [
       {
         "id": "0001-r4-research-and-delivery-roadmap",
@@ -752,6 +744,20 @@
         "id": "0032-book-mode-read-story",
         "title": "Book mode: read a story or a saved history entry with the DS held sideways like a book, the text rotated by the background hardware and laid out on light pages across both screens with page numbers; START on the Story screen or A in History opens it, A, R or a touch turn the page forward, Y or L back, B or START close it",
         "path": ".doctrina/changes/archive/2026-11-27-0032-book-mode-read-story",
+        "status": "applied",
+        "applied": "2026-11-27",
+        "specs_affected": [
+          {
+            "capability": "ds-interface",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "product (uncertain)"
+      },
+      {
+        "id": "0033-voice-mode-microphone-prompt",
+        "title": "Voice mode with the microphone: X on the prompt screen switches the microphone on or off and shows a live level meter; blowing or speaking loudly for about a quarter of a second starts the generation, and how loud it was sets the temperature for that run (soft 0.2 to strong 1.2) without changing the saved settings; shift stays on the Aa key; blow detection and the loudness-to-temperature mapping are pure C tested on the host",
+        "path": ".doctrina/changes/archive/2026-11-27-0033-voice-mode-microphone-prompt",
         "status": "applied",
         "applied": "2026-11-27",
         "specs_affected": [
