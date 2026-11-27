@@ -22,6 +22,7 @@ typedef enum {
     SFX_DONE,   /* the story or answer is finished */
     SFX_ERROR,  /* a load failed or a fatal error */
     SFX_BOOT,   /* the model is loaded at boot */
+    SFX_WAKE,   /* the boot notes, detuned and broken */
     SFX_COUNT
 } sfx_id;
 

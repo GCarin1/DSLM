@@ -34,8 +34,8 @@ static void test_tables_are_playable(void)
             CHECK(notes[i].freq == 0 || (notes[i].freq >= 100 && notes[i].freq <= 8000));
             CHECK(notes[i].freq != 0 || i > 0); /* no sound starts with a rest */
         }
-        /* interface sounds stay short; only the boot chime may be long */
-        CHECK(total_frames((sfx_id)id) <= (id == SFX_BOOT ? 90 : 40));
+        /* interface sounds stay short; only the boot chimes may be long */
+        CHECK(total_frames((sfx_id)id) <= (id == SFX_BOOT || id == SFX_WAKE ? 90 : 40));
     }
     /* feedback for frequent actions is a blip, never longer than 4 frames */
     CHECK(total_frames(SFX_KEY) <= 4 && total_frames(SFX_MOVE) <= 4 && total_frames(SFX_DELETE) <= 4);

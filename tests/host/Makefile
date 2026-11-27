@@ -2,7 +2,7 @@ CC     ?= cc
 CFLAGS ?= -std=c99 -Wall -Wextra -Werror -O1 -I../../src/storage -I../../src/ui -I../../src/engine
 
 .PHONY: all clean
-all: test_ini test_history test_textview test_keyboard test_sfx test_theme test_topk test_mic test_fxmath
+all: test_ini test_history test_textview test_keyboard test_sfx test_theme test_topk test_mic test_fxmath test_overlay
 	./test_ini
 	./test_history
 	./test_textview
@@ -12,6 +12,7 @@ all: test_ini test_history test_textview test_keyboard test_sfx test_theme test_
 	./test_topk
 	./test_mic
 	./test_fxmath
+	./test_overlay
 
 # No libnds on the include path: storage and text layout must build without it.
 test_ini: test_ini.c ../../src/storage/ini.c
@@ -41,5 +42,8 @@ test_mic: test_mic.c ../../src/ui/mic.c ../../src/ui/mic.h
 test_fxmath: test_fxmath.c ../../src/engine/fxmath.arm.c ../../src/engine/fxtables.h
 	$(CC) $(CFLAGS) -o $@ test_fxmath.c ../../src/engine/fxmath.arm.c -lm
 
+test_overlay: test_overlay.c ../../src/ui/overlay.c ../../src/ui/overlay.h ../../src/ui/art_data.c
+	$(CC) $(CFLAGS) -o $@ test_overlay.c ../../src/ui/overlay.c ../../src/ui/art_data.c
+
 clean:
-	rm -f test_ini test_ini.exe test_history test_history.exe test_textview test_textview.exe test_keyboard test_keyboard.exe test_sfx test_sfx.exe test_theme test_theme.exe test_topk test_topk.exe test_mic test_mic.exe test_fxmath test_fxmath.exe
+	rm -f test_ini test_ini.exe test_history test_history.exe test_textview test_textview.exe test_keyboard test_keyboard.exe test_sfx test_sfx.exe test_theme test_theme.exe test_topk test_topk.exe test_mic test_mic.exe test_fxmath test_fxmath.exe test_overlay test_overlay.exe

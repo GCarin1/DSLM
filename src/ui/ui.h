@@ -55,7 +55,8 @@ typedef enum {
     UI_EV_PATHS,        /* continue the story with choices */
     UI_EV_BOOK,         /* read it as a book */
     UI_EV_MIC,          /* switch voice mode on or off (prompt screen) */
-    UI_EV_BLOW          /* value = peak loudness of a detected blow */
+    UI_EV_BLOW,         /* value = peak loudness of a detected blow */
+    UI_EV_OVERLAY       /* play the overlay (generating screen) */
 } ui_event_type;
 
 /* Home cards, in reading order of the 2x2 grid */
@@ -115,6 +116,10 @@ void ui_book_close(void);
 
 /* About: the logo on top, `n` lines and a Back button below. */
 void ui_about(const char *const *lines, int n);
+
+/* Play the overlay.h script over both screens (B held for a second ends it),
+ * then clear them; the caller redraws its screen. */
+void ui_overlay(void);
 
 /* Chat layout for the body: the first question_len bytes are the question
  * (a bubble on the right), the rest after a blank line the answer (a bubble

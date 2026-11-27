@@ -24,6 +24,7 @@
 #include "storage/ini.h"
 #include "storage/sdcard.h"
 #include "ui/mic.h"
+#include "ui/overlay.h"
 #include "ui/sfx.h"
 #include "ui/textview.h"
 #include "ui/ui.h"
@@ -63,6 +64,7 @@ typedef struct {
     int gen_tokens;                /* n_tokens when the generation ended (paths may add more) */
     int mic;                       /* voice mode is on (prompt screen) */
     int voice_milli;               /* > 0: temperature x1000 set by a blow, for the next run only */
+    int overlay;                   /* 1: the next run plays the overlay; 2: it has played this session */
 
     char prompt[UI_PROMPT_MAX + 1];
     char run_prompt[UI_PROMPT_MAX + 64]; /* what the engine reads: chat markers added */
@@ -402,6 +404,8 @@ typedef struct {
     int stop_req;  /* B while choosing: stop at the next token */
 } gen_ctx;
 
+static void gen_chrome(const app *a);
+
 static void peek_texts(gen_ctx *g, const char **pieces);
 static void gen_panel(gen_ctx *g);
 
@@ -529,6 +533,16 @@ static int on_token(int token, const char *piece, void *user)
     if (g->a->kind == KIND_STORY && g->a->settings.peek && g->peek_n)
         show_peek(g, token);
     ui_event e = g->cowrite ? (ui_event){UI_EV_NONE, 0} : ui_poll(UI_GENERATING);
+    if (g->a->overlay != 2 && !g->a->benchmark &&
+        (e.type == UI_EV_OVERLAY || (g->a->overlay == 1 && (g->produced == 12 || g->produced == g->steps)))) {
+        ui_overlay();
+        g->a->overlay = 2;
+        gen_chrome(g->a);
+        ui_text(g->a->story, g->a->story_len, -1);
+        gen_panel(g);
+        cpuStartTiming(0); /* the pause is not generation time */
+        return 0;
+    }
     if (e.type == UI_EV_PEEK) { /* only offered for story models */
         g->a->settings.peek = !g->a->settings.peek;
         g->peek_n = 0;
@@ -578,6 +592,19 @@ static void write_tokens(app *a, int steps)
     free(buf);
 }
 
+/* Title and hint bars of the generating screen. */
+static void gen_chrome(const app *a)
+{
+    ui_title(a->model_name, "generating");
+    if (a->voice_milli > 0) {
+        char hint[40];
+        snprintf(hint, sizeof hint, "B:stop  voice:temp %d.%d", a->voice_milli / 1000, a->voice_milli % 1000 / 100);
+        ui_hint(hint);
+    } else {
+        ui_hint("B:stop");
+    }
+}
+
 static void generate(app *a)
 {
     int seq_len = a->seq_len;
@@ -590,16 +617,10 @@ static void generate(app *a)
     a->story[0] = '\0';
     a->chat_q = a->kind == KIND_CHAT ? (int)strlen(a->prompt) : -1;
     ui_set_chat(a->chat_q);
-    ui_title(a->model_name, "generating");
     float user_temp = a->settings.temperature;
-    if (a->voice_milli > 0) { /* this run only: the saved settings keep theirs */
-        char hint[40];
+    if (a->voice_milli > 0) /* this run only: the saved settings keep theirs */
         a->settings.temperature = (float)a->voice_milli / 1000.0f;
-        snprintf(hint, sizeof hint, "B:stop  voice:temp %d.%d", a->voice_milli / 1000, a->voice_milli % 1000 / 100);
-        ui_hint(hint);
-    } else {
-        ui_hint("B:stop");
-    }
+    gen_chrome(a);
     ui_text("", 0, 0);
     ui_panel_generating(0, steps, 0);
     ui_generating(1);
@@ -1064,6 +1085,9 @@ static void about_screen(app *a)
              a->kind == KIND_CHAT ? "chat (MLQ1 int8)" : a->model.format.quantized ? "story (int8)" : "story (fp32)",
              a->seq_len);
     snprintf(ram, sizeof ram, "RAM free: %u KB", (unsigned)(heap_available() / 1024));
+    char log[2][OV_TEXT_MAX + 1];
+    ov_text(OV_LOG_TEXT, log[0], sizeof log[0]);
+    ov_text(OV_LOG_TEXT + 1, log[1], sizeof log[1]);
     const char *lines[] = {
         "Tiny language models, 100% offline.",
         "Runs on the Nintendo DS from an R4 card.",
@@ -1071,12 +1095,19 @@ static void about_screen(app *a)
         model,
         kind,
         ram,
+        log[0],
+        log[1],
         "",
         "Engine after llama2.c (MIT); BlocksDS.",
         "Models: see THIRD_PARTY.txt on the card.",
     };
+    int n = (int)(sizeof lines / sizeof lines[0]);
+    if (a->overlay != 2) {
+        memmove(&lines[6], &lines[8], 3 * sizeof lines[0]);
+        n -= 2;
+    }
     ui_fade_out();
-    ui_about(lines, (int)(sizeof lines / sizeof lines[0]));
+    ui_about(lines, n);
     ui_fade_in();
     for (;;) {
         ui_frame();
@@ -1394,6 +1425,8 @@ static void prompt_screen(app *a)
         case UI_EV_MENU:
             return;
         case UI_EV_GO:
+            if (a->overlay != 2)
+                a->overlay = ov_match(a->prompt);
             /* Story loop: generate, then New / Again / Menu. */
             for (int again = 1; again;) {
                 generate(a);

@@ -18,6 +18,9 @@ static const sfx_note done[] = {N(1047, 4, 52, 1), N(1319, 4, 52, 1), N(1568, 4,
 static const sfx_note error[] = {N(220, 7, 60, 3), N(0, 2, 0, 0), N(196, 14, 60, 3)};
 static const sfx_note boot[] = {N(784, 6, 46, 1),  N(1047, 6, 46, 1), N(1319, 6, 46, 1),
                                 N(1568, 6, 46, 1), N(0, 3, 0, 0),     N(2093, 24, 52, 1)};
+static const sfx_note wake[] = {N(740, 6, 46, 0),  N(0, 2, 0, 0),  N(1001, 5, 46, 0), N(1262, 7, 46, 2),
+                                N(0, 4, 0, 0),     N(1497, 3, 46, 0), N(1480, 3, 40, 0), N(0, 6, 0, 0),
+                                N(1976, 10, 50, 0), N(988, 30, 44, 0)};
 
 #define SEQ(a) {a, (int)(sizeof a / sizeof a[0])}
 
@@ -28,6 +31,7 @@ static const struct {
     [SFX_NONE] = {NULL, 0},     [SFX_KEY] = SEQ(key),     [SFX_MOVE] = SEQ(move),   [SFX_DELETE] = SEQ(del),
     [SFX_PAGE] = SEQ(page),     [SFX_OPEN] = SEQ(open),   [SFX_BACK] = SEQ(back),   [SFX_START] = SEQ(start),
     [SFX_STOP] = SEQ(stop),     [SFX_DONE] = SEQ(done),   [SFX_ERROR] = SEQ(error), [SFX_BOOT] = SEQ(boot),
+    [SFX_WAKE] = SEQ(wake),
 };
 
 const sfx_note *sfx_notes(sfx_id id, int *n)

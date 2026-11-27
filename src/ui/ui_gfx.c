@@ -20,6 +20,7 @@
 #include "gfx.h"
 #include "keyboard.h"
 #include "mic.h"
+#include "overlay.h"
 #include "sfx.h"
 #include "theme.h"
 #include "splash.h"
@@ -211,6 +212,7 @@ static void mic_meter(void)
 
 static volatile uint32_t latch_down, latch_rep;
 static volatile int latch_tx = -1, latch_ty = -1; /* where the last touch began */
+static volatile int lr_frames;                      /* frames L and R have been held together */
 
 static void on_vblank(void)
 {
@@ -218,6 +220,7 @@ static void on_vblank(void)
     uint32_t down = keysDown();
     latch_down |= down;
     latch_rep |= keysDownRepeat();
+    lr_frames = (keysHeld() & (KEY_L | KEY_R)) == (KEY_L | KEY_R) ? lr_frames + 1 : 0;
     if (down & KEY_TOUCH) {
         touchPosition tp;
         touchRead(&tp);
@@ -1120,6 +1123,106 @@ void ui_about(const char *const *lines, int n)
     button(ABOUT_BACK, "Back", "B", BTN_NORMAL, 1);
 }
 
+/* ---- overlay ------------------------------------------------------------ */
+
+static int ov_tone_id = -1, ov_noise_id = -1;
+
+static void ov_quiet(void)
+{
+    int ime = REG_IME;
+    REG_IME = 0;
+    voice.playing = 0;
+    sound_next = SFX_NONE;
+    if (psg >= 0)
+        soundKill(psg);
+    psg = -1;
+    REG_IME = ime;
+    if (ov_tone_id >= 0)
+        soundKill(ov_tone_id);
+    if (ov_noise_id >= 0)
+        soundKill(ov_noise_id);
+    ov_tone_id = ov_noise_id = -1;
+}
+
+static void ov_draw(const ov_cmd *c)
+{
+    static const uint8_t col[] = {COL_WHITE, COL_RED, COL_BLACK, COL_GREY};
+    uint8_t k = col[c->colour & 3];
+    for (int sc = OV_TOP; sc <= OV_BOT; sc <<= 1) {
+        if (!(c->screen & sc))
+            continue;
+        gfx_surface *s = sc == OV_TOP ? &gfx_top : &gfx_bot;
+        if (c->op == OV_CLEAR) {
+            gfx_fill(s, 0, 0, GFX_W, GFX_H, k);
+            continue;
+        }
+        char t[OV_TEXT_MAX + 1];
+        size_t n = ov_text(c->arg, t, sizeof t);
+        int scale = c->flags & OV_LARGE ? 2 : 1;
+        int x = c->flags & OV_CENTRE ? (GFX_W - gfx_text_width(t, n, scale)) / 2 : 12;
+        gfx_text(s, x, c->row * OV_ROW_PX, t, c->len < n ? c->len : n, k, scale);
+    }
+}
+
+static void ov_sound(const ov_cmd *c)
+{
+    if (!sound_on)
+        return;
+    switch (c->op) {
+    case OV_TONE:
+        if (ov_tone_id >= 0)
+            soundKill(ov_tone_id);
+        ov_tone_id = c->arg ? soundPlayPSG(DutyCycle_50, 55 * 8, c->arg, 64) : -1;
+        break;
+    case OV_NOISE:
+        if (ov_noise_id >= 0)
+            soundKill(ov_noise_id);
+        ov_noise_id = c->arg ? soundPlayNoise(9000, c->arg, 64) : -1;
+        break;
+    case OV_SFX:
+        sound_next = c->arg;
+        break;
+    case OV_HUSH:
+        ov_quiet();
+        break;
+    }
+}
+
+void ui_overlay(void)
+{
+    ov_player p;
+    ov_cmd c;
+    int held = 0;
+    unsigned f = 0;
+    ov_quiet();
+    ov_start(&p);
+    do {
+        while (ov_poll(&p, &c)) {
+            if (c.op == OV_CLEAR || c.op == OV_LINE)
+                ov_draw(&c);
+            else
+                ov_sound(&c);
+        }
+        swiWaitForVBlank();
+        if (ov_tone_id >= 0 && (++f & 7) == 0) /* a slow, uneven wobble */
+            soundSetFreq(ov_tone_id, (u16)((52 + (f >> 3) * 5 % 9) * 8));
+        held = keysHeld() & KEY_B ? held + 1 : 0;
+    } while (held < 60 && ov_advance(&p));
+    ov_quiet();
+    gfx_fill(&gfx_top, 0, 0, GFX_W, GFX_H, COL_BG);
+    gfx_fill(&gfx_bot, 0, 0, GFX_W, GFX_H, COL_BG);
+    while (keysHeld() & KEY_B) /* a held B would stop the generation */
+        swiWaitForVBlank();
+    int ime = REG_IME;
+    REG_IME = 0;
+    latch_down = latch_rep = 0;
+    latch_tx = latch_ty = -1;
+    lr_frames = 0;
+    REG_IME = ime;
+    body_invalidate();
+    gen_redraw = 1;
+}
+
 /* ---- input -------------------------------------------------------------- */
 
 static ui_event ev(ui_event_type t, int v)
@@ -1220,6 +1323,10 @@ static ui_event poll_input(ui_screen screen)
             return ev(UI_EV_PEEK, 0);
         if ((down & KEY_Y) && peek_mode)
             return ev(UI_EV_COWRITE, 0);
+        if (lr_frames >= 180) {
+            lr_frames = 0;
+            return ev(UI_EV_OVERLAY, 0);
+        }
         break;
 
     case UI_CHOOSE:
@@ -1385,7 +1492,7 @@ static const signed char event_sound[] = {
     [UI_EV_MENU] = SFX_BACK,          [UI_EV_PAGE_UP] = SFX_MOVE,      [UI_EV_PAGE_DOWN] = SFX_MOVE,
     [UI_EV_DELETE] = SFX_DELETE,      [UI_EV_PEEK] = SFX_PAGE,         [UI_EV_COWRITE] = SFX_OPEN,
     [UI_EV_PICK] = SFX_KEY,           [UI_EV_PATHS] = SFX_START,       [UI_EV_BOOK] = SFX_OPEN,
-    [UI_EV_MIC] = SFX_PAGE,           [UI_EV_BLOW] = SFX_START,
+    [UI_EV_MIC] = SFX_PAGE,           [UI_EV_BLOW] = SFX_START,       [UI_EV_OVERLAY] = SFX_NONE,
 };
 
 ui_event ui_poll(ui_screen screen)

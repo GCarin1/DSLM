@@ -2,6 +2,12 @@
 
 All notable changes to DSLM are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/). Each entry links to the Doctrina change that delivered it (`.doctrina/changes/archive/`).
 
+## [1.3.0-1] - 2026-11-27
+
+### Changed
+
+- Parallel build of 1.3.0 from the `release/1.3.0-1` branch: the same models, settings and card layout.
+
 ## [1.3.0] - 2026-11-26
 
 ### Changed
@@ -124,6 +130,7 @@ First release: a tiny Llama 2 language model that runs 100% offline on a Nintend
 | int8 fixed point | 124 ms | 152.7 ms | 6.55 | 257/257 vs host build | `benchmarks/2026-11-25-r4-ysmenu-int8.txt` |
 | fp32 reference | 249 ms | 627.5 ms | 1.59 | 153/153 vs `run.c` | `benchmarks/2026-11-25-r4-ysmenu.txt` |
 
+[1.3.0-1]: https://github.com/GCarin1/DSLM/releases/tag/v1.3.0-1
 [1.2.0]: https://github.com/GCarin1/DSLM/releases/tag/v1.2.0
 [1.1.0]: https://github.com/GCarin1/DSLM/releases/tag/v1.1.0
 [1.0.0]: https://github.com/GCarin1/DSLM/releases/tag/v1.0.0
