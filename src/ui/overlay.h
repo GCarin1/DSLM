@@ -9,7 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-enum { OV_CLEAR, OV_LINE, OV_TONE, OV_NOISE, OV_SFX, OV_HUSH, OV_END };
+enum { OV_CLEAR, OV_LINE, OV_TONE, OV_NOISE, OV_SFX, OV_HUSH, OV_GLITCH, OV_END };
 enum { OV_TOP = 1, OV_BOT = 2, OV_BOTH = 3 };
 enum { OV_WHITE, OV_RED, OV_BLACK, OV_GREY };
 
@@ -30,7 +30,7 @@ typedef struct {
     uint8_t colour; /* OV_WHITE... */
     uint8_t flags;  /* OV_CENTRE | OV_TYPED | OV_LARGE */
     uint8_t row;    /* OV_LINE: y = row * OV_ROW_PX */
-    uint8_t arg;    /* OV_LINE text, OV_SFX sound, OV_TONE/OV_NOISE level (0 = off) */
+    uint8_t arg;    /* OV_LINE text, OV_SFX sound, OV_TONE/OV_NOISE level (0 = off), OV_GLITCH frames */
     uint8_t len;    /* OV_LINE: characters of the text to draw */
 } ov_cmd;
 
@@ -50,6 +50,26 @@ int ov_poll(ov_player *p, ov_cmd *c);
 int ov_advance(ov_player *p);
 /* Length of the whole script in frames. */
 int ov_length(void);
+
+/* A screen glitch burst lasts at most this many frames. */
+#define OV_GLITCH_FRAMES 12
+
+/* One shape of a glitch frame; the shapes of a frame cover under a quarter of the screen. */
+enum { OV_G_TEAR, OV_G_BLOCK, OV_G_SCAN };
+typedef struct {
+    uint8_t kind;  /* OV_G_TEAR: rows shifted by dx and tinted; OV_G_BLOCK: striped box; OV_G_SCAN: every other row dark */
+    uint8_t tint;  /* 0 or 1: which of the two glitch colours */
+    int16_t x, y, w, h;
+    int16_t dx;
+} ov_shape;
+#define OV_SHAPES_MAX 8
+
+/* xorshift32; the state must not be 0. */
+uint32_t ov_rand(uint32_t *state);
+/* The shapes of one glitch frame (returns how many, at most OV_SHAPES_MAX). */
+int ov_glitch(uint32_t *state, ov_shape *out);
+/* Whole-screen shake for one glitch frame, -3..3 px. */
+int ov_jitter(uint32_t *state);
 
 /* Text `id` into out (NUL-terminated, truncated to cap); returns its length. */
 size_t ov_text(int id, char *out, size_t cap);

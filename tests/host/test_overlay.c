@@ -119,12 +119,70 @@ static void test_typed_lines_reveal_one_character_at_a_time(void)
     CHECK(ok);
 }
 
+/* Photosensitivity: at most 3 large brightness changes in any second, every
+ * glitch burst short, none in the quiet ending, and each glitch frame covers
+ * less than a quarter of the screen. */
+static void test_flashes_stay_within_safe_limits(void)
+{
+    enum { MAX_EVENTS = 64 };
+    int events[MAX_EVENTS], n_events = 0, fill[2] = {-1, -1};
+    int frame = 0, last_tone_off = -1, last_glitch = -1, bursts = 0;
+    ov_player p;
+    ov_cmd c;
+    ov_start(&p);
+    do {
+        while (ov_poll(&p, &c)) {
+            if (c.op == OV_CLEAR)
+                for (int sc = 0; sc < 2; sc++)
+                    if ((c.screen & (1 << sc)) && fill[sc] != c.colour) {
+                        fill[sc] = c.colour;
+                        if (n_events < MAX_EVENTS)
+                            events[n_events++] = frame;
+                    }
+            if (c.op == OV_TONE && c.arg == 0)
+                last_tone_off = frame;
+            if (c.op == OV_GLITCH) {
+                CHECK(c.arg >= 1 && c.arg <= OV_GLITCH_FRAMES);
+                last_glitch = frame;
+                bursts++;
+            }
+        }
+        frame++;
+    } while (ov_advance(&p));
+    for (int i = 0; i < n_events; i++) {
+        int in_window = 0;
+        for (int j = i; j < n_events && events[j] < events[i] + 60; j++)
+            in_window++;
+        CHECK(in_window <= 3);
+    }
+    CHECK(bursts >= 4);
+    CHECK(last_glitch >= 0 && last_glitch < last_tone_off);
+
+    uint32_t rng = 1;
+    ov_shape sh[OV_SHAPES_MAX];
+    for (int f = 0; f < 5000; f++) {
+        int n = ov_glitch(&rng, sh), area = 0;
+        CHECK(n >= 3 && n <= OV_SHAPES_MAX);
+        for (int i = 0; i < n; i++) {
+            CHECK(sh[i].x >= 0 && sh[i].y >= 0 && sh[i].x + sh[i].w <= 256 && sh[i].y + sh[i].h <= 192);
+            CHECK(sh[i].dx % 2 == 0 && sh[i].dx >= -24 && sh[i].dx <= 24);
+            area += sh[i].kind == OV_G_SCAN ? sh[i].w * sh[i].h / 2 : sh[i].w * sh[i].h;
+        }
+        CHECK(area * 4 < 256 * 192);
+        int j = ov_jitter(&rng);
+        CHECK(j >= -3 && j <= 3);
+    }
+    uint32_t a = 7, b = 7;
+    CHECK(ov_rand(&a) == ov_rand(&b) && a != 0); /* the same burst plays the same way */
+}
+
 int main(void)
 {
     test_texts_decode_to_printable_lines();
     test_matching_is_exact_after_normalising();
     test_script_plays_once_within_its_length();
     test_typed_lines_reveal_one_character_at_a_time();
+    test_flashes_stay_within_safe_limits();
     puts(failures ? "FAILED" : "all overlay tests passed");
     return failures ? 1 : 0;
 }

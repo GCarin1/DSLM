@@ -14,19 +14,29 @@ typedef struct {
 
 static const ov_step script[] = {
     S(OV_HUSH, 0, 0, 0, 0, 0, 0),
+    S(OV_NOISE, 0, 0, 0, 0, 40, 0),
+    S(OV_GLITCH, OV_BOTH, 0, 0, 0, 8, 8),
+    S(OV_NOISE, 0, 0, 0, 0, 0, 0),
     S(OV_CLEAR, OV_BOTH, OV_BLACK, 0, 0, 0, 24),
     S(OV_LINE, OV_BOT, OV_WHITE, OV_CENTRE, 3, 0, 36),
     S(OV_LINE, OV_BOT, OV_GREY, OV_CENTRE, 6, 1, 8),
-    S(OV_LINE, OV_BOT, OV_GREY, OV_CENTRE, 7, 2, 120),
+    S(OV_LINE, OV_BOT, OV_GREY, OV_CENTRE, 7, 2, 110),
+    S(OV_NOISE, 0, 0, 0, 0, 36, 0),
+    S(OV_GLITCH, OV_BOT, 0, 0, 0, 6, 6),
+    S(OV_NOISE, 0, 0, 0, 0, 0, 4),
     S(OV_LINE, OV_BOT, OV_WHITE, OV_CENTRE | OV_TYPED, 10, 3, 80),
     S(OV_TONE, 0, 0, 0, 0, 40, 60),
     S(OV_LINE, OV_TOP, OV_WHITE, OV_TYPED, 3, 4, 36),
     S(OV_LINE, OV_TOP, OV_WHITE, OV_TYPED, 4, 5, 36),
     S(OV_LINE, OV_TOP, OV_WHITE, OV_TYPED, 5, 6, 40),
-    S(OV_LINE, OV_TOP, OV_WHITE, OV_TYPED, 6, 7, 90),
+    S(OV_LINE, OV_TOP, OV_WHITE, OV_TYPED, 6, 7, 72),
+    S(OV_NOISE, 0, 0, 0, 0, 40, 0),
+    S(OV_GLITCH, OV_TOP, 0, 0, 0, 8, 8),
+    S(OV_NOISE, 0, 0, 0, 0, 0, 10),
     S(OV_TONE, 0, 0, 0, 0, 56, 0),
     S(OV_LINE, OV_TOP, OV_RED, OV_TYPED, 8, 8, 80),
-    S(OV_NOISE, 0, 0, 0, 0, 48, 6),
+    S(OV_NOISE, 0, 0, 0, 0, 48, 0),
+    S(OV_GLITCH, OV_BOTH, 0, 0, 0, 10, 10),
     S(OV_NOISE, 0, 0, 0, 0, 0, 0),
     S(OV_CLEAR, OV_BOTH, OV_BLACK, 0, 0, 0, 12),
     S(OV_LINE, OV_TOP, OV_GREY, 0, 1, 9, 10),
@@ -37,7 +47,10 @@ static const ov_step script[] = {
     S(OV_LINE, OV_TOP, OV_WHITE, OV_TYPED, 9, 14, 36),
     S(OV_LINE, OV_TOP, OV_WHITE, OV_TYPED, 10, 15, 50),
     S(OV_LINE, OV_BOT, OV_GREY, 0, 3, 16, 30),
-    S(OV_LINE, OV_BOT, OV_GREY, 0, 4, 17, 60),
+    S(OV_LINE, OV_BOT, OV_GREY, 0, 4, 17, 48),
+    S(OV_NOISE, 0, 0, 0, 0, 48, 0),
+    S(OV_GLITCH, OV_BOT, 0, 0, 0, 12, 12),
+    S(OV_NOISE, 0, 0, 0, 0, 0, 0),
     S(OV_CLEAR, OV_BOT, OV_BLACK, 0, 0, 0, 20),
     S(OV_LINE, OV_BOT, OV_RED, OV_CENTRE | OV_LARGE, 7, 18, 24),
     S(OV_TONE, 0, 0, 0, 0, 0, 90),
@@ -151,6 +164,62 @@ int ov_match(const char *prompt)
         if (ov_keys[i] == k)
             return 1;
     return 0;
+}
+
+uint32_t ov_rand(uint32_t *state)
+{
+    uint32_t x = *state;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    *state = x ? x : 0x2545F491u;
+    return *state;
+}
+
+static int pick(uint32_t *s, int lo, int hi)
+{
+    return lo + (int)(ov_rand(s) % (uint32_t)(hi - lo + 1));
+}
+
+int ov_glitch(uint32_t *state, ov_shape *out)
+{
+    int n = 0;
+    for (int i = pick(state, 2, 4); i > 0; i--, n++) { /* torn rows: at most 4 x 8 rows */
+        ov_shape *t = &out[n];
+        t->kind = OV_G_TEAR;
+        t->tint = (uint8_t)(ov_rand(state) & 1);
+        t->h = (int16_t)pick(state, 2, 8);
+        t->y = (int16_t)pick(state, 0, 192 - t->h);
+        t->x = 0;
+        t->w = 256;
+        t->dx = (int16_t)(2 * pick(state, 2, 12) * (ov_rand(state) & 1 ? 1 : -1));
+    }
+    for (int i = pick(state, 1, 3); i > 0; i--, n++) { /* small striped boxes */
+        ov_shape *b = &out[n];
+        b->kind = OV_G_BLOCK;
+        b->tint = (uint8_t)(ov_rand(state) & 1);
+        b->w = (int16_t)pick(state, 8, 40);
+        b->h = (int16_t)pick(state, 4, 12);
+        b->x = (int16_t)pick(state, 0, 256 - b->w);
+        b->y = (int16_t)pick(state, 0, 192 - b->h);
+        b->dx = 0;
+    }
+    if (ov_rand(state) & 1) { /* a band of dark scanlines */
+        ov_shape *c = &out[n++];
+        c->kind = OV_G_SCAN;
+        c->tint = 0;
+        c->h = (int16_t)pick(state, 4, 12);
+        c->y = (int16_t)pick(state, 0, 192 - c->h);
+        c->x = 0;
+        c->w = 256;
+        c->dx = 0;
+    }
+    return n;
+}
+
+int ov_jitter(uint32_t *state)
+{
+    return pick(state, -3, 3);
 }
 
 void ov_start(ov_player *p)

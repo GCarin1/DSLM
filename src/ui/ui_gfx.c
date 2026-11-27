@@ -1125,7 +1125,22 @@ void ui_about(const char *const *lines, int n)
 
 /* ---- overlay ------------------------------------------------------------ */
 
+/* Glitch colours in palette entries 1-4, unused by the interface on both screens. */
+enum { GL_CYAN = 1, GL_MAGENTA, GL_CYAN_D, GL_MAGENTA_D };
+static const uint16_t gl_colours[] = {0x7FE0, 0x7C1F, 0x4200, 0x4010};
+
+#define OV_HIST 16
+
 static int ov_tone_id = -1, ov_noise_id = -1;
+static ov_cmd ov_hist[2][OV_HIST]; /* lines on each screen since its last clear */
+static int ov_hist_n[2];
+static uint8_t ov_fill[2];
+static int ov_painted[2];          /* the screen has been cleared by the script */
+
+static gfx_surface *ov_surface(int i)
+{
+    return i ? &gfx_bot : &gfx_top;
+}
 
 static void ov_quiet(void)
 {
@@ -1144,24 +1159,107 @@ static void ov_quiet(void)
     ov_tone_id = ov_noise_id = -1;
 }
 
-static void ov_draw(const ov_cmd *c)
+static uint8_t ov_colour(int c)
 {
     static const uint8_t col[] = {COL_WHITE, COL_RED, COL_BLACK, COL_GREY};
-    uint8_t k = col[c->colour & 3];
-    for (int sc = OV_TOP; sc <= OV_BOT; sc <<= 1) {
-        if (!(c->screen & sc))
-            continue;
-        gfx_surface *s = sc == OV_TOP ? &gfx_top : &gfx_bot;
-        if (c->op == OV_CLEAR) {
-            gfx_fill(s, 0, 0, GFX_W, GFX_H, k);
-            continue;
+    return col[c & 3];
+}
+
+/* Where a line starts, its text and scale. */
+static int ov_layout(const ov_cmd *c, char *t, size_t *n, int *scale)
+{
+    *n = ov_text(c->arg, t, OV_TEXT_MAX + 1);
+    *scale = c->flags & OV_LARGE ? 2 : 1;
+    return c->flags & OV_CENTRE ? (GFX_W - gfx_text_width(t, *n, *scale)) / 2 : 12;
+}
+
+static void ov_line(gfx_surface *s, const ov_cmd *c, int dx, uint8_t colour)
+{
+    char t[OV_TEXT_MAX + 1];
+    size_t n;
+    int scale, x = ov_layout(c, t, &n, &scale);
+    gfx_text(s, x + dx, c->row * OV_ROW_PX, t, c->len < n ? c->len : n, colour, scale);
+}
+
+static void ov_remember(int i, const ov_cmd *c)
+{
+    for (int k = 0; k < ov_hist_n[i]; k++)
+        if (ov_hist[i][k].arg == c->arg) {
+            ov_hist[i][k] = *c;
+            return;
         }
-        char t[OV_TEXT_MAX + 1];
-        size_t n = ov_text(c->arg, t, sizeof t);
-        int scale = c->flags & OV_LARGE ? 2 : 1;
-        int x = c->flags & OV_CENTRE ? (GFX_W - gfx_text_width(t, n, scale)) / 2 : 12;
-        gfx_text(s, x, c->row * OV_ROW_PX, t, c->len < n ? c->len : n, k, scale);
+    if (ov_hist_n[i] < OV_HIST)
+        ov_hist[i][ov_hist_n[i]++] = *c;
+}
+
+static void ov_draw(const ov_cmd *c)
+{
+    for (int i = 0; i < 2; i++) {
+        if (!(c->screen & (1 << i)))
+            continue;
+        if (c->op == OV_CLEAR) {
+            gfx_fill(ov_surface(i), 0, 0, GFX_W, GFX_H, ov_colour(c->colour));
+            ov_fill[i] = ov_colour(c->colour);
+            ov_hist_n[i] = 0;
+            ov_painted[i] = 1;
+        } else {
+            ov_line(ov_surface(i), c, 0, ov_colour(c->colour));
+            ov_remember(i, c);
+        }
     }
+}
+
+/* Clear a screen and draw its lines again, optionally with colour fringes. */
+static void ov_repaint(int i, int fringe)
+{
+    gfx_surface *s = ov_surface(i);
+    gfx_fill(s, 0, 0, GFX_W, GFX_H, ov_fill[i]);
+    for (int k = 0; k < ov_hist_n[i]; k++) {
+        const ov_cmd *c = &ov_hist[i][k];
+        if (fringe) {
+            ov_line(s, c, -fringe, GL_MAGENTA);
+            ov_line(s, c, fringe, GL_CYAN);
+        }
+        ov_line(s, c, 0, ov_colour(c->colour));
+    }
+}
+
+static uint8_t ov_tinted(uint8_t c, uint8_t tint)
+{
+    if (c == COL_WHITE || c == COL_GREY || c == COL_RED || c == COL_CYAN || c == COL_CYAN_L || c == COL_DIM)
+        return tint;
+    return c;
+}
+
+static void ov_shape_draw(gfx_surface *s, const ov_shape *g)
+{
+    uint8_t tint = g->tint ? GL_MAGENTA : GL_CYAN;
+    if (g->kind == OV_G_TEAR) {
+        uint8_t row[GFX_W];
+        for (int y = g->y; y < g->y + g->h; y++) {
+            volatile uint16_t *p = s->px + y * (GFX_W / 2);
+            for (int k = 0; k < GFX_W / 2; k++) {
+                uint16_t v = p[k];
+                row[2 * k] = (uint8_t)v;
+                row[2 * k + 1] = (uint8_t)(v >> 8);
+            }
+            for (int k = 0; k < GFX_W / 2; k++) {
+                uint8_t a = ov_tinted(row[(2 * k - g->dx) & (GFX_W - 1)], tint);
+                uint8_t b = ov_tinted(row[(2 * k + 1 - g->dx) & (GFX_W - 1)], tint);
+                p[k] = (uint16_t)(a | (b << 8));
+            }
+        }
+    } else {
+        int stripe = g->kind == OV_G_BLOCK ? (g->tint ? GL_MAGENTA_D : GL_CYAN_D) : COL_BLACK;
+        for (int y = g->y; y < g->y + g->h; y += 2)
+            gfx_fill(s, g->x, y, g->w, 1, (uint8_t)stripe);
+    }
+}
+
+static void ov_shake(int top, int bot)
+{
+    REG_BG2X = top << 8;
+    REG_BG2X_SUB = bot << 8;
 }
 
 static void ov_sound(const ov_cmd *c)
@@ -1192,16 +1290,78 @@ void ui_overlay(void)
 {
     ov_player p;
     ov_cmd c;
-    int held = 0;
+    ov_shape shapes[OV_SHAPES_MAX];
+    uint32_t rng = 0x2545F491u;
+    int held = 0, burst = 0, burst_scr = 0, bursts = 0;
     unsigned f = 0;
+    struct { /* random glyphs ahead of a line being typed */
+        int on, scr, x, y, w;
+        uint8_t fill;
+    } dec = {0, 0, 0, 0, 0, 0};
+
     ov_quiet();
+    for (int i = 0; i < 4; i++)
+        BG_PALETTE[1 + i] = BG_PALETTE_SUB[1 + i] = gl_colours[i];
+    BG_PALETTE[0] = BG_PALETTE_SUB[0] = 0; /* black where a shaken screen leaves a gap */
+    ov_hist_n[0] = ov_hist_n[1] = 0;
+    ov_painted[0] = ov_painted[1] = 0;
     ov_start(&p);
     do {
+        if (dec.w) {
+            gfx_fill(ov_surface(dec.scr), dec.x, dec.y, dec.w, FONT_HEIGHT, dec.fill);
+            dec.w = 0;
+        }
         while (ov_poll(&p, &c)) {
-            if (c.op == OV_CLEAR || c.op == OV_LINE)
+            if (c.op == OV_CLEAR || c.op == OV_LINE) {
                 ov_draw(&c);
-            else
+                dec.on = 0;
+                if (c.op == OV_LINE && (c.flags & OV_TYPED)) {
+                    char t[OV_TEXT_MAX + 1];
+                    size_t n;
+                    int scale, x = ov_layout(&c, t, &n, &scale);
+                    if (c.len < n) {
+                        dec.on = 1;
+                        dec.scr = c.screen == OV_BOT;
+                        dec.x = x + gfx_text_width(t, c.len, scale);
+                        dec.y = c.row * OV_ROW_PX;
+                        dec.fill = ov_fill[dec.scr];
+                    }
+                }
+            } else if (c.op == OV_GLITCH) {
+                burst = c.arg;
+                burst_scr = c.screen;
+                rng = 0x2545F491u + 0x9E3779B9u * (uint32_t)++bursts;
+            } else {
                 ov_sound(&c);
+            }
+        }
+        if (dec.on) {
+            char g[3] = {(char)(33 + ov_rand(&rng) % 94), (char)(33 + ov_rand(&rng) % 94), 0};
+            int w = 1 + (int)(ov_rand(&rng) & 1);
+            dec.w = gfx_text_width(g, (size_t)w, 1) + 1;
+            gfx_text(ov_surface(dec.scr), dec.x + 1, dec.y, g, (size_t)w, GL_CYAN_D, 1);
+        }
+        if (burst > 0) {
+            int jt = 0, jb = 0;
+            for (int i = 0; i < 2; i++) {
+                if (!(burst_scr & (1 << i)))
+                    continue;
+                if (ov_painted[i])
+                    ov_repaint(i, 2 + (int)(ov_rand(&rng) & 1));
+                int n = ov_glitch(&rng, shapes);
+                for (int k = 0; k < n; k++)
+                    ov_shape_draw(ov_surface(i), &shapes[k]);
+                *(i ? &jb : &jt) = ov_jitter(&rng);
+            }
+            ov_shake(jt, jb);
+            if (ov_noise_id >= 0)
+                soundSetFreq(ov_noise_id, (u16)(6000 + ov_rand(&rng) % 12000));
+            if (--burst == 0) {
+                ov_shake(0, 0);
+                for (int i = 0; i < 2; i++)
+                    if ((burst_scr & (1 << i)) && ov_painted[i])
+                        ov_repaint(i, 0);
+            }
         }
         swiWaitForVBlank();
         if (ov_tone_id >= 0 && (++f & 7) == 0) /* a slow, uneven wobble */
@@ -1209,6 +1369,8 @@ void ui_overlay(void)
         held = keysHeld() & KEY_B ? held + 1 : 0;
     } while (held < 60 && ov_advance(&p));
     ov_quiet();
+    ov_shake(0, 0);
+    BG_PALETTE[0] = BG_PALETTE_SUB[0] = art_palette[COL_BG];
     gfx_fill(&gfx_top, 0, 0, GFX_W, GFX_H, COL_BG);
     gfx_fill(&gfx_bot, 0, 0, GFX_W, GFX_H, COL_BG);
     while (keysHeld() & KEY_B) /* a held B would stop the generation */
