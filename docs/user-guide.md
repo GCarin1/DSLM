@@ -26,7 +26,7 @@ Developers build this tree with `python tools/dslm.py stage <card root>` (`docs/
 2. **Home.** The logo on top and six cards below (with a greeting when your name is set in the DS System Settings): **Stories**, **Chat**, **History**, **Settings**, **Benchmark** and **About**. Stories and Chat load their model if the other one is loaded, then open the prompt. The DS remembers the last one and starts with its card highlighted.
 3. **Prompt.** The top screen shows a welcome text (later, your last story). Its title bar shows the model and its state, and the bar at the bottom shows the buttons to press. The bottom screen shows your prompt, four buttons and the touch keyboard.
 4. **Generating.** The story appears word by word on the top screen (in chat, the question and the answer appear as speech bubbles). The bottom screen shows progress, the time per token, a pulsing brain and a big STOP button. You can close the lid while it writes: the screens turn off to save battery, the model keeps going, and the DS sleeps when it is done (open it to read the result). A red battery in the title bar means the battery is low. With a story model, X shows the five words (tokens) the model found most likely at each step, with their odds; the one it picked is highlighted. It costs about 3% of speed, and X hides it again. Y lets you write together with the model: at each step you pick the next token among its five favourites (Up/Down and A, or touch one), and Y hands the pen back.
-5. **Story.** The finished story on the top screen; New prompt, Same prompt again and Menu below.
+5. **Story.** The finished story on the top screen; New prompt, Same prompt again, What happens next? and Menu below. "What happens next?" (story models) writes three different ways the story could go on; pick one and it is added, then three more follow, until you press B.
 6. **Settings** (from Home). Temperature, top-p, the number of steps and the story model, saved to `/dslm/dslm.ini`.
 7. **History** (from Home). Every finished story and answer is saved on the card with its date; pick one to read it again (chats in bubbles), or delete it.
 8. **Benchmark** (from Home). Measures this DS: the first example at temperature 0 for 128 tokens, then tokens per second, time per token, load time and memory. The result is added to `/dslm/bench.txt`; your settings and history are not touched.
@@ -55,6 +55,7 @@ Every action works with the buttons or with the stylus.
 | Story | New prompt (keeps the old one for editing) | A | New prompt |
 | Story | Same prompt again | Y | Same prompt again |
 | Story | Scroll | Up / Down | — |
+| Story | What happens next? (pick one of three continuations) | X, then Up / Down and A; B finishes | touch a path |
 | Story | Back to Home | SELECT | Menu |
 | History | Pick an entry | Up / Down | touch its row |
 | History | Scroll the text | L / R | — |

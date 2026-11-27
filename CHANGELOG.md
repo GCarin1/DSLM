@@ -15,6 +15,7 @@ All notable changes to DSLM are listed here. The format follows [Keep a Changelo
 
 ### Added
 
+- **What happens next?** (change 0031): after a story, X writes three different continuations; pick one (D-pad and A, or touch) and it is added, then three more follow, until B. The engine continues from its memory of the story (KV cache), proven to match an uninterrupted run.
 - **Write together** (change 0030): press Y while a story model writes and pick each next token yourself among its five favourites (Up/Down and A, or touch); Y gives the pen back, B stops. Speed figures leave out the time you spend choosing.
 - **Peek inside the model** (change 0029): press X while a story model writes to see the five tokens it found most likely at each step, with probability bars; the one it picked lights up. Remembered as `[ui] peek`; costs about 3% of speed while shown. Under the hood, the engine gained a read-only step hook and a fixed-point top-k (generation is unchanged when unused).
 - **Benchmark card** (change 0028): measures your DS with the standard run (first example, temperature 0, 128 tokens) and shows tokens per second, time per token, load time and memory; the result is appended to `/dslm/bench.txt` for sharing, and your settings and history stay as they were.

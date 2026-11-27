@@ -569,6 +569,23 @@ static int printable(const char *piece)
     return 1;
 }
 
+int llama2_next(llama2 *m, int token, int pos)
+{
+    if (m->format.quantized) {
+        fx_begin(m); /* the temperature may have changed since the last call */
+        return fx_sample(m, fx_forward(m, token, pos));
+    }
+    return llama2_sample(m, llama2_forward(m, token, pos));
+}
+
+void llama2_feed(llama2 *m, int token, int pos)
+{
+    if (m->format.quantized)
+        fx_forward(m, token, pos);
+    else
+        llama2_forward(m, token, pos);
+}
+
 const char *llama2_token_text(llama2 *m, int prev, int token)
 {
     if (token < 0 || token >= m->config.vocab_size)

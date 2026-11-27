@@ -15,7 +15,7 @@
         "id": "ds-interface",
         "path": ".doctrina/specs/ds-interface/spec.md",
         "status": "active",
-        "version": "0.15.0",
+        "version": "0.16.0",
         "last_updated": "2026-11-26",
         "implementation": "verified — bitmap screens in the DSLM palette and pixel font, logo splash, Home menu with Stories, Chat, History, Settings and About, own QWERTY keyboard typed by D-pad or touch, VBlank-latched input, fades, chat bubbles, synthesized interface sounds, history on the card, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, the reference R4 run of the graphical build lands with the v1.3.0 release change",
         "realizes": [
@@ -44,7 +44,7 @@
         "id": "inference-engine",
         "path": ".doctrina/specs/inference-engine/spec.md",
         "status": "active",
-        "version": "0.5.0",
+        "version": "0.6.0",
         "last_updated": "2026-11-24",
         "implementation": "verified — fp32 engine (`src/engine/llama2.c`), parity with run.c on melonDS and the reference R4",
         "realizes": [
@@ -708,6 +708,24 @@
         "specs_affected": [
           {
             "capability": "ds-interface",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "product (uncertain)"
+      },
+      {
+        "id": "0031-choose-your-path-stories-story-screen",
+        "title": "Choose-your-path stories: from the Story screen of a story model, X continues the story with three alternative short continuations generated from the end of the text; the user picks one (D-pad and A or touch), it is appended and three new ones follow, until B finishes; the engine gains llama2_next and llama2_feed to step and rebuild the cache from any position, proven to continue exactly like an uninterrupted generation",
+        "path": ".doctrina/changes/archive/2026-11-27-0031-choose-your-path-stories-story-screen",
+        "status": "applied",
+        "applied": "2026-11-27",
+        "specs_affected": [
+          {
+            "capability": "ds-interface",
+            "operation": "MODIFIED"
+          },
+          {
+            "capability": "inference-engine",
             "operation": "MODIFIED"
           }
         ],

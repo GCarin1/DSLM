@@ -728,24 +728,29 @@ void ui_panel_generating(int tokens, int steps, unsigned ms_per_token)
     }
 }
 
-static const rect STORY_NEW = {12, 54, 232, 32};
-static const rect STORY_AGAIN = {12, 92, 232, 32};
-static const rect STORY_SET = {12, 130, 232, 32};
+static const rect STORY_NEW = {12, 50, 232, 27};
+static const rect STORY_AGAIN = {12, 81, 232, 27};
+static const rect STORY_PATHS = {12, 112, 232, 27};
+static const rect STORY_SET = {12, 143, 232, 27};
+static int story_branch;
 
-void ui_panel_story(int tokens, unsigned total_ms, int stopped)
+void ui_panel_story(int tokens, int gen_tokens, unsigned total_ms, int stopped, int can_branch)
 {
+    story_branch = can_branch;
     char right[24], stats[48];
     clear_bottom();
     snprintf(right, sizeof right, "%d tokens", tokens);
     header(stopped ? "Stopped" : "Done", stopped ? COL_AMBER : COL_GREEN, right);
     /* positions per second (the BOS token is not generated), integer math */
-    unsigned tps10 = total_ms && tokens > 1 ? (unsigned)((uint64_t)(tokens - 1) * 10000 / total_ms) : 0;
+    unsigned tps10 = total_ms && gen_tokens > 1 ? (unsigned)((uint64_t)(gen_tokens - 1) * 10000 / total_ms) : 0;
     snprintf(stats, sizeof stats, "%u.%u s    %u.%u tokens/s", total_ms / 1000, (total_ms % 1000) / 100,
              tps10 / 10, tps10 % 10);
     gfx_str(&gfx_bot, 16, 24, stats, COL_WHITE, 1);
     gfx_str(&gfx_bot, 16, 37, "Up/Down scrolls the story", COL_DIM, 1);
     button(STORY_NEW, "New prompt", "A", BTN_PRIMARY, 1);
     button(STORY_AGAIN, "Same prompt again", "Y", BTN_NORMAL, 1);
+    if (can_branch)
+        button(STORY_PATHS, "What happens next?", "X", BTN_NORMAL, 1);
     button(STORY_SET, "Menu", "SELECT", BTN_NORMAL, 1);
 }
 
@@ -891,6 +896,46 @@ void ui_home(int focus, const char *stories, const char *chat, const char *note)
 }
 
 static const rect ABOUT_BACK = {68, 160, 120, 24};
+
+/* Choose-your-path: three continuation cards and Finish. */
+static const rect PATHS_FINISH = {68, 166, 120, 22};
+static int paths_n;
+
+static rect path_card(int i)
+{
+    rect r = {6, 22 + i * 47, GFX_W - 12, 44};
+    return r;
+}
+
+void ui_paths(const char *const *texts, int n, int sel, const char *status)
+{
+    clear_bottom();
+    header("What happens next?", COL_CYAN, status ? NULL : "pick a path");
+    paths_n = texts ? n : 0;
+    if (!texts) {
+        gfx_str_centered(&gfx_bot, 0, 60, GFX_W, status, COL_WHITE, 1);
+        gfx_blit_scaled(&gfx_bot, (GFX_W - 2 * ICON_BRAIN_W) / 2, 84, ICON_BRAIN_W, ICON_BRAIN_H, icon_brain, 2);
+        gfx_str_centered(&gfx_bot, 0, 124, GFX_W, "Three ways the story could go.", COL_DIM, 1);
+    }
+    for (int i = 0; i < paths_n; i++) {
+        rect r = path_card(i);
+        int focus = i == sel;
+        if (focus) {
+            gfx_round(&gfx_bot, r.x - 1, r.y - 1, r.w + 2, r.h + 2, COL_CYAN);
+            gfx_round(&gfx_bot, r.x + 1, r.y + 1, r.w - 2, r.h - 2, COL_PANEL2);
+        } else {
+            gfx_round(&gfx_bot, r.x, r.y, r.w, r.h, COL_LINE);
+            gfx_round(&gfx_bot, r.x, r.y + 1, r.w, r.h - 1, COL_PANEL);
+        }
+        const char *t = texts[i][0] ? texts[i] : "(the story ends here)";
+        tv_line lines[3];
+        int nl = tv_wrap_px(t, strlen(t), r.w - 12, gfx_advance, lines, 3);
+        for (int k = 0; k < nl && k < 3; k++)
+            gfx_text(&gfx_bot, r.x + 6, r.y + 6 + k * GFX_LINE_H, t + lines[k].start, lines[k].len,
+                     focus ? COL_WHITE : COL_GREY, 1);
+    }
+    button(PATHS_FINISH, status ? "Cancel" : "Finish", "B", BTN_NORMAL, 1);
+}
 static const rect REPORT_AGAIN = {8, 160, 118, 26};
 static const rect REPORT_BACK = {130, 160, 118, 26};
 
@@ -1123,6 +1168,20 @@ static ui_event poll_input(ui_screen screen)
             return ev(UI_EV_BACK, 0);
         break;
 
+    case UI_PATHS:
+        if (rep & KEY_UP)
+            return ev(UI_EV_UP, 0);
+        if (rep & KEY_DOWN)
+            return ev(UI_EV_DOWN, 0);
+        if (down & KEY_A)
+            return ev(UI_EV_PICK, -1);
+        if ((down & KEY_B) || hit(PATHS_FINISH, tx, ty))
+            return ev(UI_EV_BACK, 0);
+        for (int i = 0; i < paths_n; i++)
+            if (hit(path_card(i), tx, ty))
+                return ev(UI_EV_PICK, i);
+        break;
+
     case UI_REPORT:
         if ((down & KEY_A) || hit(REPORT_AGAIN, tx, ty))
             return ev(UI_EV_AGAIN, 0);
@@ -1152,6 +1211,8 @@ static ui_event poll_input(ui_screen screen)
             return ev(UI_EV_AGAIN, 0);
         if (hit(STORY_SET, tx, ty))
             return ev(UI_EV_MENU, 0);
+        if (story_branch && ((down & KEY_X) || hit(STORY_PATHS, tx, ty)))
+            return ev(UI_EV_PATHS, 0);
         break;
 
     case UI_SETTINGS:
@@ -1196,7 +1257,7 @@ static const signed char event_sound[] = {
     [UI_EV_SELECT_ROW] = SFX_MOVE,    [UI_EV_SAVE] = SFX_OPEN,         [UI_EV_OPEN] = SFX_OPEN,
     [UI_EV_MENU] = SFX_BACK,          [UI_EV_PAGE_UP] = SFX_MOVE,      [UI_EV_PAGE_DOWN] = SFX_MOVE,
     [UI_EV_DELETE] = SFX_DELETE,      [UI_EV_PEEK] = SFX_PAGE,         [UI_EV_COWRITE] = SFX_OPEN,
-    [UI_EV_PICK] = SFX_KEY,
+    [UI_EV_PICK] = SFX_KEY,           [UI_EV_PATHS] = SFX_START,
 };
 
 ui_event ui_poll(ui_screen screen)

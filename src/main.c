@@ -59,6 +59,7 @@ typedef struct {
     char ckpt_path[DSLM_PATH_MAX]; /* the checkpoint loaded: settings.checkpoint or chat_checkpoint */
     int chat_q;                    /* KIND_CHAT: length of the question at the start of story */
     int benchmark;                 /* the run is the Benchmark card's: not saved to history */
+    int gen_tokens;                /* n_tokens when the generation ended (paths may add more) */
 
     char prompt[UI_PROMPT_MAX + 1];
     char run_prompt[UI_PROMPT_MAX + 64]; /* what the engine reads: chat markers added */
@@ -623,6 +624,7 @@ static void generate(app *a)
     a->gen_ms = ticks_to_ms(g.ticks);
     a->stopped = g.stopped;
     ui_generating(0);
+    a->gen_tokens = a->n_tokens;
     a->model.on_step = NULL; /* g lives on this stack frame */
     if (a->settings.peek != peek_before)
         save_settings(&a->settings);
@@ -688,6 +690,111 @@ static void enter_prompt(app *a, int show_last)
     ui_panel_prompt(a->prompt);
 }
 
+/* ---- choose-your-path ---------------------------------------------------- */
+
+#define PATHS 3
+#define PATH_TOKENS 24
+
+static int can_branch(const app *a)
+{
+    return a->kind == KIND_STORY && a->n_tokens > 1 && a->n_tokens + PATH_TOKENS < a->seq_len;
+}
+
+static void enter_story(app *a);
+
+/*
+ * Three continuations from the end of the story (KV cache valid up to
+ * n_tokens - 2), the user picks one, repeat. Paths are written one after the
+ * other over the same cache positions, so a pick other than the last one is
+ * fed again before the next round (llama2_feed).
+ */
+static void paths_screen(app *a)
+{
+    static int path_tok[PATHS][PATH_TOKENS];
+    static char path_text[PATHS][PATH_TOKENS * 16 + 1];
+    static char shown[PATHS][PATH_TOKENS * 16 + 4];
+    const char *texts[PATHS];
+    int path_len[PATHS], added = 0;
+    float saved_t = a->model.temperature;
+    llama2 *m = &a->model;
+
+    while (can_branch(a)) {
+        int base = a->n_tokens, cancelled = 0;
+        ui_title(a->model_name, "paths");
+        ui_hint("Up/Down:pick  A:choose  B:finish");
+        ui_set_chat(-1);
+        ui_text(a->story, a->story_len, -1);
+        /* paths need some randomness to differ */
+        m->temperature = a->settings.temperature < 0.8f ? 0.8f : a->settings.temperature;
+        m->topp = a->settings.topp;
+        ui_generating(1);
+        for (int b = 0; b < PATHS && !cancelled; b++) {
+            char status[40];
+            snprintf(status, sizeof status, "Writing path %d of %d...", b + 1, PATHS);
+            ui_paths(NULL, 0, 0, status);
+            int tok = a->tokens[base - 1], pos = base - 1, len = 0;
+            size_t tl = 0;
+            path_text[b][0] = '\0';
+            while (len < PATH_TOKENS) {
+                int next = llama2_next(m, tok, pos++);
+                if (next == LLAMA2_BOS)
+                    break;
+                path_tok[b][len++] = next;
+                tv_append(path_text[b], &tl, sizeof path_text[b], llama2_token_text(m, tok, next));
+                tok = next;
+                if (ui_poll(UI_PATHS).type == UI_EV_BACK) {
+                    cancelled = 1;
+                    break;
+                }
+            }
+            path_len[b] = len;
+            /* a path that goes on inside the last word reads better after "..." */
+            if (path_text[b][0] == ' ' || path_text[b][0] == '\n' || !path_text[b][0])
+                snprintf(shown[b], sizeof shown[b], "%.384s", path_text[b][0] ? path_text[b] + 1 : "");
+            else
+                snprintf(shown[b], sizeof shown[b], "...%.384s", path_text[b]);
+            texts[b] = shown[b];
+        }
+        ui_generating(0);
+        m->temperature = saved_t;
+        if (cancelled)
+            break;
+        ui_sound(SFX_DONE);
+
+        int sel = 0, pick = -1;
+        ui_paths(texts, PATHS, sel, NULL);
+        while (pick < 0) {
+            ui_frame();
+            ui_event e = ui_poll(UI_PATHS);
+            if (e.type == UI_EV_UP)
+                sel = (sel + PATHS - 1) % PATHS;
+            else if (e.type == UI_EV_DOWN)
+                sel = (sel + 1) % PATHS;
+            else if (e.type == UI_EV_PICK)
+                pick = e.value >= 0 ? e.value : sel;
+            else if (e.type == UI_EV_BACK)
+                break;
+            else
+                continue;
+            if (pick < 0)
+                ui_paths(texts, PATHS, sel, NULL);
+        }
+        if (pick < 0 || path_len[pick] == 0)
+            break; /* finished, or the chosen path ends the story */
+        if (pick != PATHS - 1) { /* the cache holds the last path: feed the chosen one */
+            llama2_feed(m, a->tokens[base - 1], base - 1);
+            for (int i = 0; i + 1 < path_len[pick]; i++)
+                llama2_feed(m, path_tok[pick][i], base + i);
+        }
+        for (int i = 0; i < path_len[pick]; i++)
+            a->tokens[a->n_tokens++] = path_tok[pick][i];
+        tv_append(a->story, &a->story_len, STORY_CAP, path_text[pick]);
+        added = 1;
+    }
+    if (added)
+        save_history(a);
+}
+
 static void enter_story(app *a)
 {
     ui_title(a->model_name, a->stopped ? "stopped" : "done");
@@ -696,7 +803,7 @@ static void enter_story(app *a)
     a->scroll = total > UI_TEXT_ROWS ? total - UI_TEXT_ROWS : 0;
     if (!a->stopped) /* a stop already played its own sound */
         ui_sound(SFX_DONE);
-    ui_panel_story(a->n_tokens, a->gen_ms, a->stopped);
+    ui_panel_story(a->n_tokens, a->gen_tokens, a->gen_ms, a->stopped, can_branch(a));
 }
 
 static void scroll_story(app *a, int delta)
@@ -1242,6 +1349,10 @@ static void prompt_screen(app *a)
                     case UI_EV_AGAIN:
                         again = 1;
                         waiting = 0;
+                        break;
+                    case UI_EV_PATHS:
+                        paths_screen(a);
+                        enter_story(a);
                         break;
                     case UI_EV_MENU:
                         return;

@@ -94,6 +94,20 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    /* DSLM_CONTINUE: the run above stopped after stop_after tokens; carry on
+     * with llama2_next to `steps` positions. Must equal the uninterrupted run. */
+    if (getenv("DSLM_CONTINUE")) {
+        int pos = n - 1, token = out[n - 1];
+        while (pos < steps && pos < m.config.seq_len) {
+            int next = llama2_next(&m, token, pos);
+            pos++;
+            if (next == 1) /* BOS ends the story, as in llama2_generate */
+                break;
+            out[n++] = next;
+            token = next;
+        }
+    }
+
     printf("P %d\nT", n_prompt);
     for (int i = 0; i < n; i++)
         printf(" %d", out[i]);

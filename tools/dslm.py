@@ -515,6 +515,7 @@ Every action works with buttons or with the stylus.
                yourself (story models). Closing the
                lid turns the screens off and the story keeps going.
   Story:       Up/Down scroll, A new prompt, Y same prompt again,
+               X what happens next (pick one of three continuations),
                SELECT Home.
   Settings:    Up/Down choose, Left/Right change, START saves, B back.
                The Sound row switches the interface sounds on or off;

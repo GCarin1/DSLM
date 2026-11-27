@@ -6,7 +6,7 @@
 **Realizes:** SC1, SC2
 **Depends on:** model-loading
 **Last updated:** 2026-11-24
-**Version:** 0.5.0
+**Version:** 0.6.0
 
 ## Purpose
 
@@ -20,6 +20,7 @@ A port of the core of `llama2.c`'s `run.c` to the Nintendo DS ARM9. It covers th
 - The engine shall be plain C with no dependency beyond the toolchain's C library and libnds.
 - The engine shall also run LittleKedi-style checkpoints (DeepSeek-V3 multi-head latent attention, sigmoid-gated top-k experts plus a shared expert, GPT-2 byte-level BPE) from the MLA1 and BPE1 files written by tools/m8/convert_littlekedi.py.
 - The engine shall offer an optional step hook that sees the logits before each generated token is sampled and may force the token, and shall generate exactly as without it when no hook is set.
+- The engine shall let generation continue step by step from the end of a previous run, using the positions already in its cache, and shall then produce exactly the tokens an uninterrupted run would.
 
 ### Event-driven
 
@@ -50,6 +51,7 @@ A port of the core of `llama2.c`'s `run.c` to the Nintendo DS ARM9. It covers th
 6. [verified] The LittleKedi C engine and tokenizer reproduce the numpy oracle token for token on every golden prompt; the oracle equals llama.cpp greedy output with the repeat penalty off — verified by `tools/tests/test_mla_host.py`
 7. [verified] A hook forcing the top-1 token at temperature 1 reproduces the temperature-0 golden token for token, and the goldens still match with no hook — verified by `tools/tests/test_engine_host.py`
 8. [verified] The top-k helper ranks tokens and gives softmax probabilities that match a double-precision reference — verified by `tests/host/test_topk.c`
+9. [verified] Stopping after 1, 17 or 60 tokens and continuing with llama2_next reproduces the int8 golden token for token — verified by `tools/tests/test_engine_host.py`
 
 ## Maturity
 

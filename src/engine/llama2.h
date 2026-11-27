@@ -184,6 +184,16 @@ int llama2_generate(llama2 *m, const char *prompt, int steps,
 /* Text of `token` after `prev` as generation prints it ("" when nothing would print). */
 const char *llama2_token_text(llama2 *m, int prev, int token);
 
+/*
+ * Step by step from any position whose earlier positions are in the KV cache
+ * (after llama2_generate returned n tokens, positions 0..n-2 are): feed
+ * `token` at `pos` and sample the next token with the current temperature and
+ * top-p (llama2_next), or only feed it to fill the cache (llama2_feed).
+ * Continuing this way gives exactly what an uninterrupted generation gives.
+ */
+int llama2_next(llama2 *m, int token, int pos);
+void llama2_feed(llama2 *m, int token, int pos);
+
 float *llama2_forward(llama2 *m, int token, int pos);
 int llama2_sample(llama2 *m, float *logits);
 

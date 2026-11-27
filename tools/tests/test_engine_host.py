@@ -51,6 +51,20 @@ class EngineHost(unittest.TestCase):
             tokens = [int(t) for t in next(l for l in out.splitlines() if l.startswith("T ")).split()[1:]]
             self.assertEqual(tokens, run["tokens"], run["prompt"])
 
+    def test_stepwise_continuation_equals_uninterrupted(self):
+        """Choose-your-path continues a finished run with llama2_next from its last token:
+        stopping after k tokens and stepping on must give the golden sequence exactly."""
+        import os
+        for model in ("stories260K",):
+            q, tok = dslm.ensure_q80(model)
+            golden = json.loads((dslm.GOLDEN_DIR / f"{model}_q80.json").read_text(encoding="utf-8"))
+            env = dict(os.environ, DSLM_CONTINUE="1")
+            for run, stop_after in zip(golden["runs"][:3], (1, 17, 60)):
+                out = subprocess.run([str(self.exe), str(q), str(tok), str(golden["steps"]), run["prompt"],
+                                      str(stop_after)], check=True, capture_output=True, text=True, env=env).stdout
+                tokens = [int(t) for t in next(l for l in out.splitlines() if l.startswith("T ")).split()[1:]]
+                self.assertEqual(tokens, run["tokens"], (model, run["prompt"], stop_after))
+
     def test_int8_matches_its_golden_exactly(self):
         """The DS reference: the fixed-point engine is integer-only, so any change shows here."""
         for model in MIN_MATCH:

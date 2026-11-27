@@ -6,7 +6,7 @@
 **Realizes:** SC4
 **Depends on:** inference-engine
 **Last updated:** 2026-11-26
-**Version:** 0.15.0
+**Version:** 0.16.0
 
 ## Purpose
 
@@ -44,6 +44,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - When a generation ends with the lid closed, the interface shall play the done sound and then put the DS to sleep, showing the result when the lid is opened.
 - When the user opens the Benchmark card, the interface shall generate the first example prompt at temperature 0 for 128 steps on the loaded model, show its speed, time per token, load time and heap peak, and append the run to /dslm/bench.txt without changing the settings or the history.
 - When the user presses Y while a story model generates, the interface shall offer the five most likely next tokens at each step and use the one the user picks, until Y gives the choice back to the model or B stops.
+- When the user presses X on the Story screen of a story model with room left in the context, the interface shall write three alternative continuations, append the one the user picks, and offer three more until B finishes.
 
 ### State-driven
 
@@ -88,6 +89,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 22. [verified] The Benchmark card reports the standard run, appends it to bench.txt and leaves dslm.ini and the history untouched — verified by `tests/hw/ui-benchmark.md`
 23. [verified] The Generating screen shows the five likely tokens with bars, X toggles them, and int8 parity is unchanged with them shown — verified by `tests/hw/ui-peek.md`
 24. [verified] Picks by D-pad and by touch are appended, Y hands the pen back and B stops with the co-written text kept — verified by `tests/hw/ui-cowrite.md`
+25. [verified] Three paths are offered, a picked path (by D-pad or touch) is appended and the next paths continue it coherently — verified by `tests/hw/ui-paths.md`
 
 ## Maturity
 
@@ -103,6 +105,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - Benchmark card: the standard run on the loaded model, its results on screen and in /dslm/bench.txt.
 - Peek: the five likely next tokens with probability bars while a story model writes (X).
 - Co-writing: the user picks the next tokens among the five likely ones (Y).
+- Choose-your-path: a finished story goes on with three alternative continuations to pick from (X on the Story screen).
 - Settings screen for temperature, top-p and steps, saved to /dslm/dslm.ini.
 
 **Future (aspirational, not committed):**
