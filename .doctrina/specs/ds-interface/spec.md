@@ -6,7 +6,7 @@
 **Realizes:** SC4
 **Depends on:** inference-engine
 **Last updated:** 2026-11-26
-**Version:** 0.12.0
+**Version:** 0.13.0
 
 ## Purpose
 
@@ -42,6 +42,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - When a generation finishes or is stopped, the interface shall save its text, prompt, model and date to a new file in /dslm/history.
 - When the user picks My DS on the Colour row of the Settings screen and saves, the interface shall draw its accent in the favourite colour from the DS settings and save the choice to /dslm/dslm.ini.
 - When a generation ends with the lid closed, the interface shall play the done sound and then put the DS to sleep, showing the result when the lid is opened.
+- When the user opens the Benchmark card, the interface shall generate the first example prompt at temperature 0 for 128 steps on the loaded model, show its speed, time per token, load time and heap peak, and append the run to /dslm/bench.txt without changing the settings or the history.
 
 ### State-driven
 
@@ -82,6 +83,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 19. [verified] The 16 favourite colours are distinct and readable, their shades bracket them, and firmware names convert to trimmed ASCII — verified by `tests/host/test_theme.c`
 20. [verified] The greeting, the personal example and the saved favourite-colour accent show on melonDS with a firmware name and colour — verified by `tests/hw/ui-personal.md`
 21. [verified] With the lid closed mid-generation the tokens keep coming, the DS sleeps after the done sound and wakes on the finished story, and a low battery shows the red icon — verified by `tests/hw/ui-battery.md`
+22. [verified] The Benchmark card reports the standard run, appends it to bench.txt and leaves dslm.ini and the history untouched — verified by `tests/hw/ui-benchmark.md`
 
 ## Maturity
 
@@ -94,6 +96,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - History of finished stories and answers in /dslm/history, browsed from the Home screen.
 - Personal touches from the DS settings: a greeting with the user's name, a story example with it, and an optional accent in their favourite colour.
 - Battery mode: the lid can close during a generation (screens off, model keeps writing, sleep when done); low battery shown in the title bar.
+- Benchmark card: the standard run on the loaded model, its results on screen and in /dslm/bench.txt.
 - Settings screen for temperature, top-p and steps, saved to /dslm/dslm.ini.
 
 **Future (aspirational, not committed):**

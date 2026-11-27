@@ -502,7 +502,8 @@ Controls
 --------
 Every action works with buttons or with the stylus.
   Home:        D-pad and A (or touch) open Stories, Chat (the
-               LittleKedi chat model), History, Settings or About.
+               LittleKedi chat model), History, Settings, Benchmark
+               (measures this DS, adds to dslm/bench.txt) or About.
   History:     every finished story is saved in dslm/history; Up/Down
                pick one, L/R scroll it, Y twice deletes it.
   Prompt:      type with the stylus, or move on the keyboard with the

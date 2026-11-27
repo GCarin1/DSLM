@@ -23,13 +23,14 @@ Developers build this tree with `python tools/dslm.py stage <card root>` (`docs/
 ## Screens
 
 1. **Loading.** The DSLM logo on the top screen; a progress bar and the loading steps below while the model is read into memory.
-2. **Home.** The logo on top and five cards below (with a greeting when your name is set in the DS System Settings): **Stories**, **Chat**, **History**, **Settings** and **About**. Stories and Chat load their model if the other one is loaded, then open the prompt. The DS remembers the last one and starts with its card highlighted.
+2. **Home.** The logo on top and six cards below (with a greeting when your name is set in the DS System Settings): **Stories**, **Chat**, **History**, **Settings**, **Benchmark** and **About**. Stories and Chat load their model if the other one is loaded, then open the prompt. The DS remembers the last one and starts with its card highlighted.
 3. **Prompt.** The top screen shows a welcome text (later, your last story). Its title bar shows the model and its state, and the bar at the bottom shows the buttons to press. The bottom screen shows your prompt, four buttons and the touch keyboard.
 4. **Generating.** The story appears word by word on the top screen (in chat, the question and the answer appear as speech bubbles). The bottom screen shows progress, the time per token, a pulsing brain and a big STOP button. You can close the lid while it writes: the screens turn off to save battery, the model keeps going, and the DS sleeps when it is done (open it to read the result). A red battery in the title bar means the battery is low.
 5. **Story.** The finished story on the top screen; New prompt, Same prompt again and Menu below.
 6. **Settings** (from Home). Temperature, top-p, the number of steps and the story model, saved to `/dslm/dslm.ini`.
 7. **History** (from Home). Every finished story and answer is saved on the card with its date; pick one to read it again (chats in bubbles), or delete it.
-8. **About** (from Home). The loaded model, its context, the free memory and the credits.
+8. **Benchmark** (from Home). Measures this DS: the first example at temperature 0 for 128 tokens, then tokens per second, time per token, load time and memory. The result is added to `/dslm/bench.txt`; your settings and history are not touched.
+9. **About** (from Home). The loaded model, its context, the free memory and the credits.
 
 ## Controls
 
@@ -57,6 +58,7 @@ Every action works with the buttons or with the stylus.
 | History | Scroll the text | L / R | — |
 | History | Delete it (press twice) | Y | Delete |
 | History | Back to Home | B | Back |
+| Benchmark | Run again / back to Home | A / B | Run again / Back |
 | About | Back to Home | B | Back |
 | Settings | Choose a setting | Up / Down | touch its row |
 | Settings | Change it | Left / Right | `[-]` / `[+]` |

@@ -2,7 +2,7 @@
   "$schema_version": "0.1.0",
   "project": "DSLM",
   "framework_version": "0.22.1",
-  "last_updated": "2026-11-26",
+  "last_updated": "2026-11-27",
   "artifacts": {
     "product": {
       "path": ".doctrina/product.md",
@@ -15,7 +15,7 @@
         "id": "ds-interface",
         "path": ".doctrina/specs/ds-interface/spec.md",
         "status": "active",
-        "version": "0.12.0",
+        "version": "0.13.0",
         "last_updated": "2026-11-26",
         "implementation": "verified — bitmap screens in the DSLM palette and pixel font, logo splash, Home menu with Stories, Chat, History, Settings and About, own QWERTY keyboard typed by D-pad or touch, VBlank-latched input, fades, chat bubbles, synthesized interface sounds, history on the card, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, the reference R4 run of the graphical build lands with the v1.3.0 release change",
         "realizes": [
@@ -659,6 +659,20 @@
         "path": ".doctrina/changes/archive/2026-11-26-0027-battery-mode-while-generation",
         "status": "applied",
         "applied": "2026-11-26",
+        "specs_affected": [
+          {
+            "capability": "ds-interface",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "product (uncertain)"
+      },
+      {
+        "id": "0028-benchmark-card-sixth-home",
+        "title": "Benchmark card: a sixth Home card runs the standard benchmark on the loaded model (first example prompt, temperature 0, 128 steps) without touching the user's settings or history, shows tokens per second, time per token, load time and heap peak on a results screen with Run again and Back, and appends the run to /dslm/bench.txt",
+        "path": ".doctrina/changes/archive/2026-11-27-0028-benchmark-card-sixth-home",
+        "status": "applied",
+        "applied": "2026-11-27",
         "specs_affected": [
           {
             "capability": "ds-interface",

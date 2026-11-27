@@ -15,6 +15,7 @@ All notable changes to DSLM are listed here. The format follows [Keep a Changelo
 
 ### Added
 
+- **Benchmark card** (change 0028): measures your DS with the standard run (first example, temperature 0, 128 tokens) and shows tokens per second, time per token, load time and memory; the result is appended to `/dslm/bench.txt` for sharing, and your settings and history stay as they were.
 - **Battery mode** (change 0027): close the lid while the model writes and the screens turn off while it keeps going; when it is done the DS chimes and sleeps, and opening it shows the result. A red battery icon in the title bar warns when the battery is low.
 - **Personal touches** (change 0026): DSLM greets you by the name set in the DS System Settings (Home and welcome text) and uses it in one story example; the new `Colour` row in Settings switches the accent to your DS favourite colour (`[ui] accent` in `dslm.ini`).
 - **History** (change 0025): every finished story and chat answer is saved to `/dslm/history` on the microSD card with its date and time. The new History card on the Home screen lists them newest first, shows the chosen one again (chats in bubbles), scrolls it with L/R and deletes it with Y pressed twice.

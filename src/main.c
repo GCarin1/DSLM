@@ -57,6 +57,7 @@ typedef struct {
     const char *model_name;
     char ckpt_path[DSLM_PATH_MAX]; /* the checkpoint loaded: settings.checkpoint or chat_checkpoint */
     int chat_q;                    /* KIND_CHAT: length of the question at the start of story */
+    int benchmark;                 /* the run is the Benchmark card's: not saved to history */
 
     char prompt[UI_PROMPT_MAX + 1];
     char run_prompt[UI_PROMPT_MAX + 64]; /* what the engine reads: chat markers added */
@@ -503,7 +504,8 @@ static void generate(app *a)
     ui_generating(0);
     write_tokens(a, steps);
     append_bench(a, steps);
-    save_history(a);
+    if (!a->benchmark)
+        save_history(a);
 }
 
 /* ---- screens ------------------------------------------------------------ */
@@ -1013,6 +1015,60 @@ static void history_screen(app *a)
 
 #undef list
 
+/* ---- benchmark ---------------------------------------------------------- */
+
+#define BENCH_STEPS 128
+
+/* The standard run on the loaded model: first example, temperature 0, 128
+ * steps. The user's settings, prompt and last story come back afterwards. */
+static void bench_screen(app *a)
+{
+    dslm_settings saved = a->settings;
+    char prompt[sizeof a->prompt];
+    strcpy(prompt, a->prompt);
+    for (int again = 1; again;) {
+        a->settings.temperature = 0.0f;
+        a->settings.steps = BENCH_STEPS;
+        strcpy(a->prompt, examples[a->kind][0]);
+        a->benchmark = 1;
+        generate(a);
+        a->benchmark = 0;
+        ui_title(a->model_name, a->stopped ? "stopped" : "done");
+        ui_hint("A:run again  B:back");
+
+        int positions = a->n_tokens > 1 ? a->n_tokens - 1 : 0;
+        unsigned tps100 = a->gen_ms ? (unsigned)((uint64_t)positions * 100000 / a->gen_ms) : 0;
+        unsigned ms_each = positions ? a->gen_ms / (unsigned)positions : 0;
+        char l_model[64], l_prompt[64], l_tokens[48], l_speed[48], l_load[64];
+        snprintf(l_model, sizeof l_model, "%s (%s)", a->model_name,
+                 a->kind == KIND_CHAT ? "chat int8" : a->model.format.quantized ? "int8" : "fp32");
+        snprintf(l_prompt, sizeof l_prompt, "Prompt: %.40s", a->prompt);
+        snprintf(l_tokens, sizeof l_tokens, "%d tokens in %u.%u s%s", positions, a->gen_ms / 1000,
+                 (a->gen_ms % 1000) / 100, a->stopped ? " (stopped)" : "");
+        snprintf(l_speed, sizeof l_speed, "Speed: %u.%02u tokens/s (%u ms each)", tps100 / 100, tps100 % 100, ms_each);
+        snprintf(l_load, sizeof l_load, "Load: %u ms   Heap peak: %u KB", a->load_ms,
+                 (unsigned)((getHeapEnd() - getHeapStart()) / 1024));
+        const char *lines[] = {l_model, l_prompt, l_tokens, l_speed, l_load, "",
+                               "Saved to /dslm/bench.txt.",
+                               "Real-DS results are welcome: see",
+                               "tests/hw/runbook.md in the project."};
+        ui_report("Benchmark", lines, (int)(sizeof lines / sizeof lines[0]));
+        for (int waiting = 1; waiting;) {
+            ui_frame();
+            ui_event e = ui_poll(UI_REPORT);
+            if (e.type == UI_EV_AGAIN)
+                waiting = 0;
+            else if (e.type == UI_EV_BACK)
+                waiting = again = 0;
+        }
+    }
+    /* the benchmark text is not the user's story */
+    a->settings = saved;
+    strcpy(a->prompt, prompt);
+    a->story_len = 0;
+    a->story[0] = '\0';
+}
+
 /* Prompt -> Generating -> Story, until the user asks for the menu. */
 static void prompt_screen(app *a)
 {
@@ -1131,6 +1187,9 @@ int main(void)
             break;
         case UI_CARD_SETTINGS:
             note = settings_screen(&a);
+            break;
+        case UI_CARD_BENCH:
+            bench_screen(&a);
             break;
         case UI_CARD_ABOUT:
             about_screen(&a);

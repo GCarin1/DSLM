@@ -774,12 +774,13 @@ static int card_move(int i, int dx, int dy)
 
 static void draw_card(int i)
 {
-    static const char *const titles[UI_CARDS] = {"Stories", "Chat", "History", "Settings", "About"};
+    static const char *const titles[UI_CARDS] = {"Stories", "Chat", "History", "Settings", "Benchmark", "About"};
     static const char *const subs[UI_CARDS] = {NULL, NULL, "Saved stories", "Sampling and models",
-                                               "DSLM " DSLM_VERSION};
-    static const uint8_t *const icons[UI_CARDS] = {icon_book, icon_bubble, icon_clock, icon_gear, icon_info};
-    static const int iw[UI_CARDS] = {ICON_BOOK_W, ICON_BUBBLE_W, ICON_CLOCK_W, ICON_GEAR_W, ICON_INFO_W};
-    static const int ih[UI_CARDS] = {ICON_BOOK_H, ICON_BUBBLE_H, ICON_CLOCK_H, ICON_GEAR_H, ICON_INFO_H};
+                                               "Speed test", "DSLM " DSLM_VERSION};
+    static const uint8_t *const icons[UI_CARDS] = {icon_book, icon_bubble, icon_clock,
+                                                   icon_gear, icon_gauge, icon_info};
+    static const int iw[UI_CARDS] = {ICON_BOOK_W, ICON_BUBBLE_W, ICON_CLOCK_W, ICON_GEAR_W, ICON_GAUGE_W, ICON_INFO_W};
+    static const int ih[UI_CARDS] = {ICON_BOOK_H, ICON_BUBBLE_H, ICON_CLOCK_H, ICON_GEAR_H, ICON_GAUGE_H, ICON_INFO_H};
     rect r = card_rect(i);
     int focus = i == st.home_focus;
     gfx_fill(&gfx_bot, r.x - 1, r.y - 1, r.w + 2, r.h + 2, COL_BG);
@@ -818,6 +819,18 @@ void ui_home(int focus, const char *stories, const char *chat, const char *note)
 }
 
 static const rect ABOUT_BACK = {68, 160, 120, 24};
+static const rect REPORT_AGAIN = {8, 160, 118, 26};
+static const rect REPORT_BACK = {130, 160, 118, 26};
+
+void ui_report(const char *title, const char *const *lines, int n)
+{
+    clear_bottom();
+    header(title, COL_CYAN, "DSLM " DSLM_VERSION);
+    for (int i = 0; i < n && i < 11; i++)
+        gfx_str(&gfx_bot, 10, 24 + i * 12, lines[i], i == 0 ? COL_WHITE : COL_GREY, 1);
+    button(REPORT_AGAIN, "Run again", "A", BTN_PRIMARY, 1);
+    button(REPORT_BACK, "Back", "B", BTN_NORMAL, 1);
+}
 
 /* History: six 22 px rows, then Delete and Back. */
 #define LIST_Y 21
@@ -1015,6 +1028,13 @@ static ui_event poll_input(ui_screen screen)
         if (st.list_n && hit(HIST_DELETE, tx, ty))
             return ev(UI_EV_DELETE, 0);
         if (hit(HIST_BACK, tx, ty))
+            return ev(UI_EV_BACK, 0);
+        break;
+
+    case UI_REPORT:
+        if ((down & KEY_A) || hit(REPORT_AGAIN, tx, ty))
+            return ev(UI_EV_AGAIN, 0);
+        if ((down & KEY_B) || hit(REPORT_BACK, tx, ty))
             return ev(UI_EV_BACK, 0);
         break;
 

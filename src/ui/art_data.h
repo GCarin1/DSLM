@@ -51,5 +51,8 @@ extern const uint8_t icon_info[154];
 #define ICON_CLOCK_W 14
 #define ICON_CLOCK_H 11
 extern const uint8_t icon_clock[154];
+#define ICON_GAUGE_W 14
+#define ICON_GAUGE_H 10
+extern const uint8_t icon_gauge[140];
 
 #endif

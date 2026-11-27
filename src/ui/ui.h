@@ -16,6 +16,7 @@ typedef enum {
     UI_HOME,
     UI_ABOUT,
     UI_HISTORY,
+    UI_REPORT,
     UI_PROMPT,
     UI_GENERATING,
     UI_STORY,
@@ -48,7 +49,7 @@ typedef enum {
 } ui_event_type;
 
 /* Home cards, in reading order of the 2x2 grid */
-enum { UI_CARD_STORIES, UI_CARD_CHAT, UI_CARD_HISTORY, UI_CARD_SETTINGS, UI_CARD_ABOUT, UI_CARDS };
+enum { UI_CARD_STORIES, UI_CARD_CHAT, UI_CARD_HISTORY, UI_CARD_SETTINGS, UI_CARD_BENCH, UI_CARD_ABOUT, UI_CARDS };
 
 /* One row of a list panel. */
 typedef struct {
@@ -91,6 +92,9 @@ int ui_text_lines(const char *text, size_t len);
 void ui_home(int focus, const char *stories, const char *chat, const char *note);
 /* History list: `n` items with `sel` highlighted; confirm asks for a second Y. */
 void ui_history(const ui_list_item *items, int n, int sel, int confirm);
+
+/* A results panel: `n` lines, then Run again (A) and Back (B). */
+void ui_report(const char *title, const char *const *lines, int n);
 
 /* About: the logo on top, `n` lines and a Back button below. */
 void ui_about(const char *const *lines, int n);
