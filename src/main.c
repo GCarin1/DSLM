@@ -19,6 +19,7 @@
 #include "engine/bpe.h"
 #include "engine/llama2.h"
 #include "engine/mlq_chat.h"
+#include "engine/topk.h"
 #include "storage/history.h"
 #include "storage/ini.h"
 #include "storage/sdcard.h"
@@ -390,10 +391,49 @@ typedef struct {
     int steps;
     int stopped;
     uint64_t ticks;
+    /* peek: the likely tokens of the position being generated */
+    int peek_n, peek_prev;
+    int peek_ids[5], peek_pm[5];
 } gen_ctx;
+
+/* Story engine step hook: note the five likely tokens; never changes the pick. */
+static int peek_step(const llama2_step *s, void *user)
+{
+    gen_ctx *g = user;
+    if (!g->a->settings.peek) {
+        g->peek_n = 0;
+        return -1;
+    }
+    g->peek_prev = s->prev;
+    g->peek_n = s->ilogits ? topk_q16(s->ilogits, s->vocab, 5, g->peek_ids, g->peek_pm)
+                           : topk_f32(s->logits, s->vocab, 5, g->peek_ids, g->peek_pm);
+    return -1;
+}
+
+static void show_peek(gen_ctx *g, int token)
+{
+    static char text[5][16];
+    const char *pieces[5];
+    int chosen = -1;
+    for (int i = 0; i < g->peek_n; i++) {
+        const char *t = g->peek_ids[i] == LLAMA2_BOS ? "(the end)"
+                                                     : llama2_token_text(&g->a->model, g->peek_prev, g->peek_ids[i]);
+        size_t k = 0;
+        text[i][k++] = '"';
+        for (const char *c = t; *c && k < sizeof text[i] - 2; c++)
+            text[i][k++] = *c == '\n' ? '/' : *c;
+        text[i][k++] = '"';
+        text[i][k] = '\0';
+        pieces[i] = text[i];
+        if (g->peek_ids[i] == token)
+            chosen = i;
+    }
+    ui_peek(pieces, g->peek_pm, g->peek_n, chosen);
+}
 
 static int on_token(int token, const char *piece, void *user);
 static void save_history(app *a);
+static int save_settings(const dslm_settings *s);
 
 /* chat tokens arrive as raw bytes; the story view wants a C string */
 static int on_chat_token(int token, const uint8_t *piece, int len, void *user)
@@ -418,7 +458,16 @@ static int on_token(int token, const char *piece, void *user)
         ui_text(g->a->story, g->a->story_len, -1);
     }
     ui_panel_generating(g->produced, g->steps, ticks_to_ms(g->ticks) / (unsigned)g->produced);
-    g->stopped = ui_poll(UI_GENERATING).type == UI_EV_STOP;
+    if (g->a->kind == KIND_STORY && g->a->settings.peek && g->peek_n)
+        show_peek(g, token);
+    ui_event e = ui_poll(UI_GENERATING);
+    if (e.type == UI_EV_PEEK) { /* only offered for story models */
+        g->a->settings.peek = !g->a->settings.peek;
+        g->peek_n = 0;
+        ui_peek_mode(g->a->settings.peek ? 2 : 1);
+        ui_panel_generating(g->produced, g->steps, ticks_to_ms(g->ticks) / (unsigned)g->produced);
+    }
+    g->stopped = e.type == UI_EV_STOP;
     return g->stopped;
 }
 
@@ -461,7 +510,9 @@ static void generate(app *a)
 {
     int seq_len = a->seq_len;
     int steps = a->settings.steps > seq_len ? seq_len : a->settings.steps;
-    gen_ctx g = {a, 0, steps, 0, 0};
+    gen_ctx g = {a, 0, steps, 0, 0, 0, 0, {0}, {0}};
+    int peek_before = a->settings.peek;
+    ui_peek_mode(a->kind == KIND_STORY ? (a->settings.peek ? 2 : 1) : 0);
 
     a->story_len = 0;
     a->story[0] = '\0';
@@ -494,6 +545,8 @@ static void generate(app *a)
         snprintf(a->run_prompt, sizeof a->run_prompt, "%s", a->prompt);
         a->model.temperature = a->settings.temperature;
         a->model.topp = a->settings.topp;
+        a->model.on_step = peek_step;
+        a->model.step_user = &g;
         cpuStartTiming(0);
         a->n_tokens = llama2_generate(&a->model, a->prompt, steps, a->tokens, seq_len + 1,
                                       &a->n_prompt_tokens, on_token, &g);
@@ -502,6 +555,9 @@ static void generate(app *a)
     a->gen_ms = ticks_to_ms(g.ticks);
     a->stopped = g.stopped;
     ui_generating(0);
+    a->model.on_step = NULL; /* g lives on this stack frame */
+    if (a->settings.peek != peek_before)
+        save_settings(&a->settings);
     write_tokens(a, steps);
     append_bench(a, steps);
     if (!a->benchmark)

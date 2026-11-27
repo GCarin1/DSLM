@@ -37,6 +37,20 @@ class EngineHost(unittest.TestCase):
             self.assertEqual(got["tokens"], run["tokens"], run["prompt"])
             self.assertEqual(got["text"], run["text"], run["prompt"])
 
+    def test_step_hook_forcing_top1_reproduces_greedy(self):
+        """The visualizer's step hook (llama2.on_step) forcing topk's first token at
+        temperature 1 must give the temperature-0 golden: the hook can steer, and
+        topk ranks like the sampler's argmax."""
+        import os
+        q, tok = dslm.ensure_q80("stories260K")
+        golden = json.loads((dslm.GOLDEN_DIR / "stories260K_q80.json").read_text(encoding="utf-8"))
+        env = dict(os.environ, DSLM_HOOK_TOP1="1")
+        for run in golden["runs"][:3]:
+            out = subprocess.run([str(self.exe), str(q), str(tok), str(golden["steps"]), run["prompt"], "0", "1.0",
+                                  "0.9", "7"], check=True, capture_output=True, text=True, env=env).stdout
+            tokens = [int(t) for t in next(l for l in out.splitlines() if l.startswith("T ")).split()[1:]]
+            self.assertEqual(tokens, run["tokens"], run["prompt"])
+
     def test_int8_matches_its_golden_exactly(self):
         """The DS reference: the fixed-point engine is integer-only, so any change shows here."""
         for model in MIN_MATCH:

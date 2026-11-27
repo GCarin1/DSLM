@@ -403,7 +403,7 @@ def run_golden(exe, checkpoint, tokenizer, prompt, steps, extra=()):
 
 
 ENGINE_SOURCES = ["src/engine/llama2.c", "src/engine/llama2_fixed.arm.c", "src/engine/fxkern.arm.c",
-                  "src/engine/fxmath.arm.c"]
+                  "src/engine/fxmath.arm.c", "src/engine/topk.c"]
 MLQ_SOURCES = ENGINE_SOURCES + ["src/engine/mlq_fixed.arm.c", "src/engine/mlq_chat.c", "src/engine/mla.c",
                                  "src/engine/bpe.c"]
 
@@ -510,7 +510,8 @@ Every action works with buttons or with the stylus.
                D-pad and press A; B deletes, Y adds a space, X shifts,
                L/R example prompts, START or GO generates, SELECT goes
                back to Home.
-  Generating:  B or touch STOP to stop and keep the text. Closing the
+  Generating:  B or touch STOP to stop and keep the text; X shows the
+               model's most likely next tokens (story models). Closing the
                lid turns the screens off and the story keeps going.
   Story:       Up/Down scroll, A new prompt, Y same prompt again,
                SELECT Home.

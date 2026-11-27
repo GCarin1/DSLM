@@ -180,6 +180,22 @@ static void test_accent(void)
     CHECK(b.accent == 1);
 }
 
+static void test_peek(void)
+{
+    dslm_settings a, b;
+    char buf[512];
+    dslm_settings_defaults(&a);
+    CHECK(a.peek == 0);
+    const char *t = "[ui]\npeek = on\n";
+    dslm_ini_parse(t, strlen(t), &a);
+    CHECK(a.peek == 1);
+    size_t n = dslm_ini_format(&a, buf, sizeof buf);
+    CHECK(n > 0 && strstr(buf, "peek = on") != NULL);
+    dslm_settings_defaults(&b);
+    dslm_ini_parse(buf, n, &b);
+    CHECK(b.peek == 1);
+}
+
 static void test_format_refuses_small_buffer(void)
 {
     dslm_settings s;
@@ -194,6 +210,7 @@ int main(void)
     test_chat_model_and_mode();
     test_sound_switch();
     test_accent();
+    test_peek();
     test_format_refuses_small_buffer();
     test_defaults_on_empty();
     test_full_file();

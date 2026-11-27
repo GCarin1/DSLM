@@ -569,6 +569,14 @@ static int printable(const char *piece)
     return 1;
 }
 
+const char *llama2_token_text(llama2 *m, int prev, int token)
+{
+    if (token < 0 || token >= m->config.vocab_size)
+        return "";
+    const char *piece = decode(m, prev, token);
+    return printable(piece) ? piece : "";
+}
+
 static int str_lookup(char *str, llama2_token_index *sorted_vocab, int vocab_size)
 {
     llama2_token_index tok = {.str = str};
@@ -784,7 +792,15 @@ int llama2_generate(llama2 *m, const char *prompt, int steps,
         if (pos < num_prompt_tokens - 1) {
             next = prompt_tokens[pos + 1];
         } else {
-            next = quantized ? fx_sample(m, ilogits) : llama2_sample(m, logits);
+            next = -1;
+            if (m->on_step) { /* absent by default: the sampled sequence is unchanged */
+                llama2_step st = {logits, ilogits, m->config.vocab_size, pos, token};
+                next = m->on_step(&st, m->step_user);
+                if (next >= m->config.vocab_size)
+                    next = -1;
+            }
+            if (next < 0)
+                next = quantized ? fx_sample(m, ilogits) : llama2_sample(m, logits);
         }
         pos++;
 

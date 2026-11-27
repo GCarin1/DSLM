@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include "llama2.h"
+#include "topk.h"
 
 static void *slurp(const char *path, size_t *size)
 {
@@ -43,6 +44,19 @@ static int on_token(int token, const char *piece, void *user)
     return ctx->stop_after > 0 && ctx->seen >= ctx->stop_after;
 }
 
+/* DSLM_HOOK_TOP1=1: the step hook forces the most likely token (topk), which
+ * must reproduce the temperature-0 output whatever the temperature. */
+static int force_top1(const llama2_step *s, void *user)
+{
+    int id, pm;
+    (void)user;
+    if (s->ilogits)
+        topk_q16(s->ilogits, s->vocab, 1, &id, &pm);
+    else
+        topk_f32(s->logits, s->vocab, 1, &id, &pm);
+    return id;
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 5 || argc > 9) {
@@ -64,6 +78,8 @@ int main(int argc, char **argv)
         return 1;
     }
     free(tok);
+    if (getenv("DSLM_HOOK_TOP1"))
+        m.on_step = force_top1;
 
     int steps = atoi(argv[3]);
     int *out = malloc((size_t)(m.config.seq_len + 1) * sizeof(int));

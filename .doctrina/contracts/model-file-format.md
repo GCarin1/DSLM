@@ -73,9 +73,10 @@ seed        = 0
 mode = stories
 sound = on
 accent = dslm
+peek = off
 ```
 
-Unknown keys are ignored. A missing file falls back to these defaults. `checkpoint` is the story model (with `tokenizer`), `chat_checkpoint` the chat model (it names its own tokenizer), `mode` (`stories` or `chat`) the Home card used last, whose model the DS loads at boot, `sound` (`on` or `off`) the interface sounds, and `accent` (`dslm` or `ds`) the accent colour: the DSLM cyan or the favourite colour in the DS settings. An older file without `[ui]` boots on `checkpoint`; if that is a chat model, the DS treats it as the chat model and Chat mode (since change 0023).
+Unknown keys are ignored. A missing file falls back to these defaults. `checkpoint` is the story model (with `tokenizer`), `chat_checkpoint` the chat model (it names its own tokenizer), `mode` (`stories` or `chat`) the Home card used last, whose model the DS loads at boot, `sound` (`on` or `off`) the interface sounds, `accent` (`dslm` or `ds`) the accent colour: the DSLM cyan or the favourite colour in the DS settings, and `peek` (`on` or `off`) the next-token visualizer. An older file without `[ui]` boots on `checkpoint`; if that is a chat model, the DS treats it as the chat model and Chat mode (since change 0023).
 
 **`/dslm/tokens.txt`: the last generation, one `key=value` per line**
 

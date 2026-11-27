@@ -2,13 +2,14 @@ CC     ?= cc
 CFLAGS ?= -std=c99 -Wall -Wextra -Werror -O1 -I../../src/storage -I../../src/ui -I../../src/engine
 
 .PHONY: all clean
-all: test_ini test_history test_textview test_keyboard test_sfx test_theme test_fxmath
+all: test_ini test_history test_textview test_keyboard test_sfx test_theme test_topk test_fxmath
 	./test_ini
 	./test_history
 	./test_textview
 	./test_keyboard
 	./test_sfx
 	./test_theme
+	./test_topk
 	./test_fxmath
 
 # No libnds on the include path: storage and text layout must build without it.
@@ -30,8 +31,11 @@ test_sfx: test_sfx.c ../../src/ui/sfx.c ../../src/ui/sfx.h
 test_theme: test_theme.c ../../src/ui/theme.c ../../src/ui/theme.h
 	$(CC) $(CFLAGS) -o $@ test_theme.c ../../src/ui/theme.c
 
+test_topk: test_topk.c ../../src/engine/topk.c ../../src/engine/topk.h ../../src/engine/fxmath.arm.c
+	$(CC) $(CFLAGS) -o $@ test_topk.c ../../src/engine/topk.c ../../src/engine/fxmath.arm.c -lm
+
 test_fxmath: test_fxmath.c ../../src/engine/fxmath.arm.c ../../src/engine/fxtables.h
 	$(CC) $(CFLAGS) -o $@ test_fxmath.c ../../src/engine/fxmath.arm.c -lm
 
 clean:
-	rm -f test_ini test_ini.exe test_history test_history.exe test_textview test_textview.exe test_keyboard test_keyboard.exe test_sfx test_sfx.exe test_theme test_theme.exe test_fxmath test_fxmath.exe
+	rm -f test_ini test_ini.exe test_history test_history.exe test_textview test_textview.exe test_keyboard test_keyboard.exe test_sfx test_sfx.exe test_theme test_theme.exe test_topk test_topk.exe test_fxmath test_fxmath.exe

@@ -45,7 +45,8 @@ typedef enum {
     UI_EV_MENU,         /* back to Home */
     UI_EV_PAGE_UP,      /* scroll the top screen by a page */
     UI_EV_PAGE_DOWN,
-    UI_EV_DELETE
+    UI_EV_DELETE,
+    UI_EV_PEEK          /* show or hide the likely next tokens */
 } ui_event_type;
 
 /* Home cards, in reading order of the 2x2 grid */
@@ -128,6 +129,10 @@ void ui_fade_in(void);
 void ui_panel_prompt(const char *prompt);
 void ui_panel_generating(int tokens, int steps, unsigned ms_per_token);
 void ui_panel_story(int tokens, unsigned total_ms, int stopped);
+/* Generating panel layout: 0 no peek (chat), 1 peek off (X offers it), 2 peek on. */
+void ui_peek_mode(int mode);
+/* The likely next tokens (most likely first) and which one was picked (-1: none of them). */
+void ui_peek(const char *const *pieces, const int *permille, int n, int chosen);
 void ui_panel_settings(const dslm_settings *s, int cursor, const char *note);
 
 /* One frame of input for the given screen. */

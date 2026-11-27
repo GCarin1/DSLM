@@ -15,6 +15,7 @@ All notable changes to DSLM are listed here. The format follows [Keep a Changelo
 
 ### Added
 
+- **Peek inside the model** (change 0029): press X while a story model writes to see the five tokens it found most likely at each step, with probability bars; the one it picked lights up. Remembered as `[ui] peek`; costs about 3% of speed while shown. Under the hood, the engine gained a read-only step hook and a fixed-point top-k (generation is unchanged when unused).
 - **Benchmark card** (change 0028): measures your DS with the standard run (first example, temperature 0, 128 tokens) and shows tokens per second, time per token, load time and memory; the result is appended to `/dslm/bench.txt` for sharing, and your settings and history stay as they were.
 - **Battery mode** (change 0027): close the lid while the model writes and the screens turn off while it keeps going; when it is done the DS chimes and sleeps, and opening it shows the result. A red battery icon in the title bar warns when the battery is low.
 - **Personal touches** (change 0026): DSLM greets you by the name set in the DS System Settings (Home and welcome text) and uses it in one story example; the new `Colour` row in Settings switches the accent to your DS favourite colour (`[ui] accent` in `dslm.ini`).

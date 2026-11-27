@@ -15,7 +15,7 @@
         "id": "ds-interface",
         "path": ".doctrina/specs/ds-interface/spec.md",
         "status": "active",
-        "version": "0.13.0",
+        "version": "0.14.0",
         "last_updated": "2026-11-26",
         "implementation": "verified — bitmap screens in the DSLM palette and pixel font, logo splash, Home menu with Stories, Chat, History, Settings and About, own QWERTY keyboard typed by D-pad or touch, VBlank-latched input, fades, chat bubbles, synthesized interface sounds, history on the card, streaming, cancel and settings (`src/ui/`, `src/main.c`); verified on melonDS, the reference R4 run of the graphical build lands with the v1.3.0 release change",
         "realizes": [
@@ -44,7 +44,7 @@
         "id": "inference-engine",
         "path": ".doctrina/specs/inference-engine/spec.md",
         "status": "active",
-        "version": "0.4.0",
+        "version": "0.5.0",
         "last_updated": "2026-11-24",
         "implementation": "verified — fp32 engine (`src/engine/llama2.c`), parity with run.c on melonDS and the reference R4",
         "realizes": [
@@ -676,6 +676,24 @@
         "specs_affected": [
           {
             "capability": "ds-interface",
+            "operation": "MODIFIED"
+          }
+        ],
+        "lane": "product (uncertain)"
+      },
+      {
+        "id": "0029-peek-inside-model-read-only",
+        "title": "Peek inside the model: a read-only step hook in the llama2 engine (called before each generated token is sampled, may force a token, absent by default so parity is unchanged), a top-k softmax helper in fixed point, and a visualizer that shows the five most likely next tokens with probability bars on the Generating screen for story models, toggled with X and remembered in dslm.ini",
+        "path": ".doctrina/changes/archive/2026-11-27-0029-peek-inside-model-read-only",
+        "status": "applied",
+        "applied": "2026-11-27",
+        "specs_affected": [
+          {
+            "capability": "ds-interface",
+            "operation": "MODIFIED"
+          },
+          {
+            "capability": "inference-engine",
             "operation": "MODIFIED"
           }
         ],

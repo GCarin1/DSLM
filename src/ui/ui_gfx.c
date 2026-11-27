@@ -634,17 +634,61 @@ void ui_panel_prompt(const char *prompt)
         draw_key(i);
 }
 
-static const rect GEN_STOP = {16, 96, 224, 52};
+static const rect GEN_STOP_BIG = {16, 96, 224, 52};
+static const rect GEN_STOP_SMALL = {16, 140, 224, 32}; /* peek on: the list takes the middle */
+static int peek_mode;
+static int gen_redraw;
+
+static rect gen_stop(void)
+{
+    return peek_mode == 2 ? GEN_STOP_SMALL : GEN_STOP_BIG;
+}
+
+void ui_peek_mode(int mode)
+{
+    if (mode != peek_mode)
+        gen_redraw = 1;
+    peek_mode = mode;
+}
+
+#define PEEK_Y 66
+#define PEEK_ROW 14
+
+void ui_peek(const char *const *pieces, const int *permille, int n, int chosen)
+{
+    if (peek_mode != 2)
+        return;
+    gfx_fill(&gfx_bot, 0, PEEK_Y - 2, GFX_W, 5 * PEEK_ROW + 2, COL_BG);
+    for (int i = 0; i < n && i < 5; i++) {
+        int y = PEEK_Y + i * PEEK_ROW;
+        int pick = i == chosen;
+        size_t len = strlen(pieces[i]);
+        while (len && gfx_text_width(pieces[i], len, 1) > 84)
+            len--;
+        gfx_text(&gfx_bot, 16, y + 1, pieces[i], len, pick ? COL_WHITE : COL_GREY, 1);
+        int w = permille[i] * 100 / 1000;
+        gfx_round(&gfx_bot, 106, y + 1, 102, 10, COL_PANEL);
+        if (w > 0)
+            gfx_fill(&gfx_bot, 107, y + 2, w, 8, pick ? COL_CYAN : COL_CYAN_D);
+        char pct[16];
+        snprintf(pct, sizeof pct, "%d%%", (permille[i] + 5) / 10);
+        gfx_str(&gfx_bot, 214, y + 1, pct, pick ? COL_WHITE : COL_DIM, 1);
+    }
+}
 
 void ui_panel_generating(int tokens, int steps, unsigned ms_per_token)
 {
     char buf[48];
-    if (tokens == 0) {
+    if (tokens == 0 || gen_redraw) {
+        gen_redraw = 0;
         clear_bottom();
-        header("Writing...", COL_AMBER, NULL);
-        gfx_blit_scaled(&gfx_bot, (GFX_W - 2 * ICON_BRAIN_W) / 2, 68, ICON_BRAIN_W, ICON_BRAIN_H, icon_brain, 2);
-        button(GEN_STOP, "STOP", "B", BTN_DANGER, 2);
-        gfx_str_centered(&gfx_bot, 0, 166, GFX_W, "Press B or touch STOP to stop.", COL_DIM, 1);
+        header("Writing...", COL_AMBER, peek_mode == 2 ? "next token odds" : NULL);
+        if (peek_mode != 2)
+            gfx_blit_scaled(&gfx_bot, (GFX_W - 2 * ICON_BRAIN_W) / 2, 68, ICON_BRAIN_W, ICON_BRAIN_H, icon_brain, 2);
+        button(gen_stop(), "STOP", "B", BTN_DANGER, 2);
+        const char *foot = peek_mode == 1 ? "B: stop    X: peek inside the model"
+                         : peek_mode == 2 ? "B: stop    X: hide" : "Press B or touch STOP to stop.";
+        gfx_str_centered(&gfx_bot, 0, peek_mode == 2 ? 178 : 166, GFX_W, foot, COL_DIM, 1);
     }
     gfx_fill(&gfx_bot, 0, 24, GFX_W, 42, COL_BG);
     snprintf(buf, sizeof buf, "%d / %d tokens", tokens, steps);
@@ -978,13 +1022,15 @@ static ui_event poll_input(ui_screen screen)
         /* a tap latched since the last token counts, not only a held button */
         if ((down | held) & KEY_B)
             return ev(UI_EV_STOP, 0);
-        if (ty >= 0 && hit(GEN_STOP, tx, ty))
+        if (ty >= 0 && hit(gen_stop(), tx, ty))
             return ev(UI_EV_STOP, 0);
         if (held & KEY_TOUCH) {
             touchRead(&tp);
-            if (hit(GEN_STOP, tp.px, tp.py))
+            if (hit(gen_stop(), tp.px, tp.py))
                 return ev(UI_EV_STOP, 0);
         }
+        if ((down & KEY_X) && peek_mode)
+            return ev(UI_EV_PEEK, 0);
         break;
 
     case UI_HOME:
@@ -1103,7 +1149,7 @@ static const signed char event_sound[] = {
     [UI_EV_DOWN] = SFX_MOVE,          [UI_EV_LEFT] = SFX_MOVE,         [UI_EV_RIGHT] = SFX_MOVE,
     [UI_EV_SELECT_ROW] = SFX_MOVE,    [UI_EV_SAVE] = SFX_OPEN,         [UI_EV_OPEN] = SFX_OPEN,
     [UI_EV_MENU] = SFX_BACK,          [UI_EV_PAGE_UP] = SFX_MOVE,      [UI_EV_PAGE_DOWN] = SFX_MOVE,
-    [UI_EV_DELETE] = SFX_DELETE,
+    [UI_EV_DELETE] = SFX_DELETE,      [UI_EV_PEEK] = SFX_PAGE,
 };
 
 ui_event ui_poll(ui_screen screen)

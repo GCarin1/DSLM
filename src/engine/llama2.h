@@ -76,6 +76,19 @@ typedef struct {
     int index;
 } llama2_prob_index;
 
+/* One generated position, just before its token is sampled. Exactly one of
+ * logits (fp32 engine) and ilogits (int8 engine, Q16) is set; read-only. */
+typedef struct {
+    const float *logits;
+    const int32_t *ilogits;
+    int vocab;
+    int pos;  /* position being predicted */
+    int prev; /* the token before it */
+} llama2_step;
+
+/* Return a token id to use instead of sampling, or -1 to sample as usual. */
+typedef int (*llama2_step_fn)(const llama2_step *step, void *user);
+
 typedef struct {
     llama2_config config;
     llama2_format format;
@@ -102,6 +115,9 @@ typedef struct {
     int32_t fx_inv_temp;    /* 1 / temperature, Q16; 0 means argmax */
     int32_t fx_topp;        /* top-p, Q16 */
 
+    /* optional observer of generated positions (NULL after llama2_init) */
+    llama2_step_fn on_step;
+    void *step_user;
     /* scratch, allocated once so generation never allocates */
     char *str_buffer;
     int *prompt_tokens;
@@ -164,6 +180,9 @@ typedef int (*llama2_token_fn)(int token, const char *piece, void *user);
 int llama2_generate(llama2 *m, const char *prompt, int steps,
                     int *out, int out_cap, int *n_prompt_tokens,
                     llama2_token_fn on_token, void *user);
+
+/* Text of `token` after `prev` as generation prints it ("" when nothing would print). */
+const char *llama2_token_text(llama2 *m, int prev, int token);
 
 float *llama2_forward(llama2 *m, int token, int pos);
 int llama2_sample(llama2 *m, float *logits);
