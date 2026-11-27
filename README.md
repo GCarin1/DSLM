@@ -6,7 +6,7 @@
 
 A tiny LLM running **100% offline on a Nintendo DS**, launched from an **R4** flashcart. DSLM is a port of [`llama2.c`](https://github.com/karpathy/llama2.c) running small story models (`stories260K` and `tiny1m`) that write short, simple stories in English, plus an experimental chat model (LittleKedi) that answers questions.
 
-> **Status:** v1.2.0 — two story models and a chat model in the package, picked on the DS; up to **6.9 tokens/s** on real hardware (int8 fixed point), a 2M-parameter chat model at 2.8 tokens/s, token-for-token parity with the PC reference.
+> **Status:** v1.3.0 — a graphical DS app: Home menu, own keyboard (stylus or D-pad), sounds, history, book mode, a view of the model's next-token odds, co-writing, choose-your-path stories and a voice mode; two story models and a chat model, up to **7.7 tokens/s** on a real DSi (int8 fixed point), token-for-token parity with the PC reference.
 
 ## Play it
 

@@ -19,3 +19,4 @@ Stage the card and build `dslm.nds`. In melonDS, set the microphone input to whi
 | Date | Target | Build | Result | emulated |
 |------|--------|-------|--------|----------|
 | 2026-11-27 | melonDS 1.1 | change 0033 | 1-4 pass with white noise and the Mic hotkey: a 0.12 s tap did not trigger, a 1 s blow started the run at "voice:temp 1.2" ("…a little bird named Lily…"), stopped by B; the saved temperature was unchanged. Without a held hotkey melonDS feeds silence (meter at 0) | yes |
+| 2026-11-26 | DSi (DS mode), reference R4 / YSMenu | v1.3 development build | voice mode meter and blow trigger work on the real microphone; checked by the owner | no |

@@ -2,13 +2,13 @@
 
 All notable changes to DSLM are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/). Each entry links to the Doctrina change that delivered it (`.doctrina/changes/archive/`).
 
-## [Unreleased]
+## [1.3.0] - 2026-11-26
 
 ### Changed
 
 - **New look** (change 0021, ADR 0011): both screens are drawn as graphics in the colours of the DSLM logo, with an original pixel font (about 40 characters per line instead of 32), rounded buttons labelled with the DS button that presses them, a title bar with the model and its state, and a splash with the logo while a model loads. The flashcart menu shows a brain icon and "Run LLMs on Nintendo DS". Controls are unchanged.
 - The top screen shows 14 lines of text instead of 20 (more fit on each line).
-- **New keyboard** (change 0022, ADR 0012): a QWERTY keyboard in the same style with keys twice as large, typed by touch or without the stylus: the D-pad moves the highlight and A types the key; B deletes, Y adds a space, X makes the next letter a capital, `?123` opens numbers and symbols. On the prompt screen START (or GO) generates; A now types.
+- **New keyboard** (change 0022, ADR 0012): a QWERTY keyboard in the same style with keys twice as large, typed by touch or without the stylus: the D-pad moves the highlight and A types the key; B deletes, Y adds a space, `Aa` makes the next letter a capital (X also did until change 0033), `?123` opens numbers and symbols. On the prompt screen START (or GO) generates; A now types.
 - A short press of B stops a generation; it no longer has to be held.
 - **Home screen** (change 0023, ADR 0013): after the logo, four cards: Stories, Chat, Settings and About. Chat loads LittleKedi by itself and Stories goes back to the story model; the DS remembers the last one (`[ui] mode` and `chat_checkpoint` in `dslm.ini`) and starts with its card highlighted. SELECT returns to Home from the prompt and story screens; Settings is opened from Home and lists the story models.
 - Chat questions and answers appear as speech bubbles; screens fade into each other, and the brain icon pulses while the model writes.
@@ -29,6 +29,19 @@ All notable changes to DSLM are listed here. The format follows [Keep a Changelo
 ### Fixed
 
 - Touching Back on the Settings screen could type a character on the keyboard of the prompt screen.
+
+### Hardware results
+
+Measured with the Benchmark card (first example, temperature 0, 128 steps) on a DSi in DS mode with the reference R4 clone (YSMenu kernel), `emulated=no`:
+
+| Model | Tokens/s | Heap peak | File |
+|---|---|---|---|
+| stories260K int8 | 7.68 | 1,374,340 B | `benchmarks/2026-11-26-r4-ysmenu-dsi-v1-3-dev-int8.txt` |
+| tiny1m int8 | 4.93 | 2,418,820 B | `benchmarks/2026-11-26-r4-ysmenu-dsi-v1-3-dev-tiny1m-int8.txt` |
+| LittleKedi chat int8 | 3.13 | 3,418,244 B | `benchmarks/2026-11-26-r4-ysmenu-dsi-v1-3-dev-littlekedi-chat-int8.txt` |
+| stories260K fp32 | 1.76 | 1,783,940 B | `benchmarks/2026-11-26-r4-ysmenu-dsi-v1-3-dev-fp32.txt` |
+
+int8 parity on the hardware: 129/129 tokens against the golden. The lid, battery icon, microphone and sounds were checked on the same DSi.
 
 ## [1.2.0] - 2026-11-25
 

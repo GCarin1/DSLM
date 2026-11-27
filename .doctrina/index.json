@@ -767,6 +767,15 @@
           }
         ],
         "lane": "product (uncertain)"
+      },
+      {
+        "id": "0034-release-v1-3-0-graphical-interface",
+        "title": "Release v1.3.0: graphical interface, keyboard, Home, sounds, history, personalization, battery mode, benchmark card, peek, co-writing, paths, book mode and voice mode (version bump, release notes, changelog, hardware results; no tag or main merge yet)",
+        "path": ".doctrina/changes/archive/2026-11-27-0034-release-v1-3-0-graphical-interface",
+        "status": "applied",
+        "applied": "2026-11-27",
+        "specs_affected": [],
+        "lane": "chore (confident; signals: bump, changelog) — opened as chore"
       }
     ],
     "skills": [

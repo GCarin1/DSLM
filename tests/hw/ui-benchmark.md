@@ -19,3 +19,4 @@ Stage the card and build `dslm.nds`. Note the files in `/dslm/history` and the `
 | Date | Target | Build | Result | emulated |
 |------|--------|-------|--------|----------|
 | 2026-11-26 | melonDS 1.1 | change 0028 | 1-4 pass: stories260K_q80 int8, 128 tokens in 15.7 s, 8.13 tokens/s (122 ms each), load 138 ms, heap peak 1,338 KB; `bench.txt` got `steps=128`, history stayed at 5 files | yes |
+| 2026-11-26 | DSi (DS mode), reference R4 / YSMenu | v1.3 development build | all four models: int8 7.68, tiny1m 4.93, chat 3.13, fp32 1.76 tokens/s; int8 parity 129/129 (`benchmarks/2026-11-26-r4-ysmenu-dsi-v1-3-dev-*.txt`) | no |

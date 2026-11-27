@@ -21,3 +21,4 @@ Stage the card (`python tools/dslm.py stage .tools/card`) and build `dslm.nds`. 
 | Date | Target | Build | Result | emulated |
 |------|--------|-------|--------|----------|
 | 2026-11-26 | melonDS 1.1 | change 0024 | Loopback recording: the boot chime notes 784, 1047, 1568 and 2093 Hz at 0.1 s steps and the open sound 1319 → 1976 Hz on A (the 1000 Hz probe first showed the PSG rate is 8x the pitch, now corrected); step 6 saved `sound = off`; int8 parity 129/129, 256 steps 35,460 ms | yes |
+| 2026-11-26 | DSi (DS mode), reference R4 / YSMenu | v1.3 development build | boot chime and interface sounds play on the DSi speaker; checked by the owner | no |

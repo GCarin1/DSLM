@@ -20,3 +20,4 @@ Stage the card and build `dslm.nds`. In melonDS, map a key to "Close/open lid" (
 | Date | Target | Build | Result | emulated |
 |------|--------|-------|--------|----------|
 | 2026-11-26 | melonDS 1.1 | change 0027 | 1-4 pass: 28 → 56 tokens with the lid closed, sleep after done, woke on "Done 257 tokens, 35.4 s" (gen_ms 35,447); 6: the red icon with `LevelOkay = false`. The backlight-off step is left for the R4 run of the v1.3.0 release | yes |
+| 2026-11-26 | DSi (DS mode), reference R4 / YSMenu | v1.3 development build | lid closed mid-generation turned the screens off and the run finished; sleep and wake on the result; checked by the owner | no |
