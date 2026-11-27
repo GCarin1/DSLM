@@ -22,6 +22,14 @@ Developers build this tree with `python tools/dslm.py stage <card root>` (`docs/
 
 ## Screens
 
+<table>
+  <tr><td align="center"><img src="../assets/screenshots/home.png" alt="Home" width="200"><br><sub>Home</sub></td><td align="center"><img src="../assets/screenshots/prompt.png" alt="Prompt and keyboard" width="200"><br><sub>Prompt and keyboard</sub></td><td align="center"><img src="../assets/screenshots/peek.png" alt="Generating, with Peek" width="200"><br><sub>Generating, with Peek</sub></td></tr>
+  <tr><td align="center"><img src="../assets/screenshots/story.png" alt="Story" width="200"><br><sub>Story</sub></td><td align="center"><img src="../assets/screenshots/paths.png" alt="What happens next?" width="200"><br><sub>What happens next?</sub></td><td align="center"><img src="../assets/screenshots/chat.png" alt="Chat in bubbles" width="200"><br><sub>Chat in bubbles</sub></td></tr>
+  <tr><td align="center"><img src="../assets/screenshots/history.png" alt="History" width="200"><br><sub>History</sub></td><td align="center"><img src="../assets/screenshots/settings.png" alt="Settings" width="200"><br><sub>Settings</sub></td><td></td></tr>
+</table>
+
+<p align="center"><img src="../assets/screenshots/book.png" alt="Book mode" width="460"><br><sub>Book mode, as seen with the DS held sideways</sub></p>
+
 1. **Loading.** The DSLM logo on the top screen; a progress bar and the loading steps below while the model is read into memory.
 2. **Home.** The logo on top and six cards below (with a greeting when your name is set in the DS System Settings): **Stories**, **Chat**, **History**, **Settings**, **Benchmark** and **About**. Stories and Chat load their model if the other one is loaded, then open the prompt. The DS remembers the last one and starts with its card highlighted.
 3. **Prompt.** The top screen shows a welcome text (later, your last story). Its title bar shows the model and its state, and the bar at the bottom shows the buttons to press. The bottom screen shows your prompt, four buttons and the touch keyboard.

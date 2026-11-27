@@ -8,11 +8,22 @@ A tiny LLM running **100% offline on a Nintendo DS**, launched from an **R4** fl
 
 > **Status:** v1.3.0 — a graphical DS app: Home menu, own keyboard (stylus or D-pad), sounds, history, book mode, a view of the model's next-token odds, co-writing, choose-your-path stories and a voice mode; two story models and a chat model, up to **7.7 tokens/s** on a real DSi (int8 fixed point), token-for-token parity with the PC reference.
 
+## Screenshots
+
+Captured on melonDS (both screens, 2x); the same build runs on a real DSi.
+
+<table>
+  <tr><td align="center"><img src="assets/screenshots/home.png" alt="Home: pick a mode" width="200"><br><sub>Home: pick a mode</sub></td><td align="center"><img src="assets/screenshots/prompt.png" alt="Type with the stylus or the D-pad" width="200"><br><sub>Type with the stylus or the D-pad</sub></td><td align="center"><img src="assets/screenshots/peek.png" alt="Peek: the next-token odds" width="200"><br><sub>Peek: the next-token odds</sub></td></tr>
+  <tr><td align="center"><img src="assets/screenshots/chat.png" alt="Chat with LittleKedi" width="200"><br><sub>Chat with LittleKedi</sub></td><td align="center"><img src="assets/screenshots/paths.png" alt="What happens next? Pick a path" width="200"><br><sub>What happens next? Pick a path</sub></td><td align="center"><img src="assets/screenshots/history.png" alt="History of saved stories" width="200"><br><sub>History of saved stories</sub></td></tr>
+</table>
+
+<p align="center"><img src="assets/screenshots/book.png" alt="Book mode: hold the DS sideways" width="520"><br><sub>Book mode: hold the DS sideways and read across both screens</sub></p>
+
 ## Play it
 
 1. Download the latest **`dslm-vX.Y.Z.zip`** from [Releases](https://github.com/GCarin1/DSLM/releases/latest).
 2. Unzip it at the root of your flashcart's microSD card (the kernel must already be installed).
-3. Launch `dslm.nds`, type the start of a story (or press L/R for an example) and press START.
+3. Launch `dslm.nds`, pick **Stories** on the Home screen, type the start of a story (or press L/R for an example) and press START.
 
 Controls, settings and troubleshooting: [`docs/user-guide.md`](docs/user-guide.md). Tested carts and emulators: [`docs/compatibility.md`](docs/compatibility.md). What changed: [`CHANGELOG.md`](CHANGELOG.md).
 
