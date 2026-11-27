@@ -45,7 +45,9 @@ Every action works with the buttons or with the stylus.
 | Prompt | Type the highlighted key | A | touch the key |
 | Prompt | Delete a character | B | DEL |
 | Prompt | Space | Y | space |
-| Prompt | Capital letter (next one only) | X | Aa |
+| Prompt | Capital letter (next one only) | — | Aa (D-pad or touch) |
+| Prompt | Voice mode on / off | X | — |
+| Prompt | Generate by blowing on the microphone (voice mode) | blow | — |
 | Prompt | Numbers and symbols | — | ?123 (abc goes back) |
 | Prompt | Previous / next example prompt | L / R | `<` / `>` |
 | Prompt | Generate | START | GO |
@@ -75,6 +77,8 @@ Every action works with the buttons or with the stylus.
 | Settings | Pick another model (row `Model`) | Left / Right, then START | `[<]` / `[>]`, then Save |
 | Settings | Save to the card | START | Save |
 | Settings | Back to Home without saving | B | Back |
+
+Voice mode (X): blow on the DS (or say something loudly) for a moment and the story starts; the louder you blow, the more creative (higher temperature) that story is. The microphone listens only while voice mode is on.
 
 Without the stylus, the D-pad moves the highlight over the keyboard and A types the key; `?123`, `GO` and `DEL` can be reached the same way. A short press of B is enough to stop: it is noticed after the current word.
 

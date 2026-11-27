@@ -53,7 +53,9 @@ typedef enum {
     UI_EV_COWRITE,      /* take the pen (generating) or give it back (choosing) */
     UI_EV_PICK,         /* value = choice row, or -1 for the highlighted one */
     UI_EV_PATHS,        /* continue the story with choices */
-    UI_EV_BOOK          /* read it as a book */
+    UI_EV_BOOK,         /* read it as a book */
+    UI_EV_MIC,          /* switch voice mode on or off (prompt screen) */
+    UI_EV_BLOW          /* value = peak loudness of a detected blow */
 } ui_event_type;
 
 /* Home cards, in reading order of the 2x2 grid */
@@ -129,6 +131,10 @@ void ui_generating(int on);
  * events itself); off silences everything. */
 void ui_sound(int sfx);
 void ui_sound_enable(int on);
+
+/* Voice mode: record the microphone, show its level on the prompt panel and
+ * report a sustained loud sound as UI_EV_BLOW. Off stops the microphone. */
+void ui_mic(int on);
 
 /* Accent colour: 0 the DSLM cyan, 1 the favourite colour in the DS settings. */
 void ui_accent(int from_ds);

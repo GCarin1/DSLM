@@ -24,3 +24,5 @@ tests/host/test_theme
 tests/host/test_theme.exe
 tests/host/test_topk
 tests/host/test_topk.exe
+tests/host/test_mic
+tests/host/test_mic.exe

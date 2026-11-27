@@ -23,6 +23,7 @@
 #include "storage/history.h"
 #include "storage/ini.h"
 #include "storage/sdcard.h"
+#include "ui/mic.h"
 #include "ui/sfx.h"
 #include "ui/textview.h"
 #include "ui/ui.h"
@@ -60,6 +61,8 @@ typedef struct {
     int chat_q;                    /* KIND_CHAT: length of the question at the start of story */
     int benchmark;                 /* the run is the Benchmark card's: not saved to history */
     int gen_tokens;                /* n_tokens when the generation ended (paths may add more) */
+    int mic;                       /* voice mode is on (prompt screen) */
+    int voice_milli;               /* > 0: temperature x1000 set by a blow, for the next run only */
 
     char prompt[UI_PROMPT_MAX + 1];
     char run_prompt[UI_PROMPT_MAX + 64]; /* what the engine reads: chat markers added */
@@ -588,7 +591,15 @@ static void generate(app *a)
     a->chat_q = a->kind == KIND_CHAT ? (int)strlen(a->prompt) : -1;
     ui_set_chat(a->chat_q);
     ui_title(a->model_name, "generating");
-    ui_hint("B:stop");
+    float user_temp = a->settings.temperature;
+    if (a->voice_milli > 0) { /* this run only: the saved settings keep theirs */
+        char hint[40];
+        a->settings.temperature = (float)a->voice_milli / 1000.0f;
+        snprintf(hint, sizeof hint, "B:stop  voice:temp %d.%d", a->voice_milli / 1000, a->voice_milli % 1000 / 100);
+        ui_hint(hint);
+    } else {
+        ui_hint("B:stop");
+    }
     ui_text("", 0, 0);
     ui_panel_generating(0, steps, 0);
     ui_generating(1);
@@ -624,6 +635,8 @@ static void generate(app *a)
     a->gen_ms = ticks_to_ms(g.ticks);
     a->stopped = g.stopped;
     ui_generating(0);
+    a->settings.temperature = user_temp;
+    a->voice_milli = 0;
     a->gen_tokens = a->n_tokens;
     a->model.on_step = NULL; /* g lives on this stack frame */
     if (a->settings.peek != peek_before)
@@ -682,7 +695,7 @@ static int show_story(app *a, int first_line)
 static void enter_prompt(app *a, int show_last)
 {
     ui_title(a->model_name, "ready");
-    ui_hint("START:go  A:key  B:del  Y:space  X:Aa");
+    ui_hint(a->mic ? "blow:go  START:go  X:mic off" : "START:go  A:key  B:del  Y:space  X:mic");
     if (show_last && a->story_len)
         show_story(a, a->scroll);
     else
@@ -1345,7 +1358,20 @@ static void prompt_screen(app *a)
         ui_frame();
         ui_event e = ui_poll(UI_PROMPT);
         size_t len = strlen(a->prompt);
+        if (e.type == UI_EV_BLOW) { /* a blow starts it, and its strength sets the temperature */
+            a->voice_milli = mic_temperature_milli(e.value);
+            e.type = UI_EV_GO;
+        }
+        if (e.type == UI_EV_GO || e.type == UI_EV_MENU) { /* the microphone only listens on this screen */
+            ui_mic(0);
+            a->mic = 0;
+        }
         switch (e.type) {
+        case UI_EV_MIC:
+            a->mic = !a->mic;
+            ui_mic(a->mic);
+            enter_prompt(a, 1);
+            break;
         case UI_EV_CHAR:
             if (len < UI_PROMPT_MAX) {
                 a->prompt[len] = (char)e.value;

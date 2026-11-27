@@ -109,6 +109,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - Co-writing: the user picks the next tokens among the five likely ones (Y).
 - Choose-your-path: a finished story goes on with three alternative continuations to pick from (X on the Story screen).
 - Book mode: stories and history entries read on rotated pages across both screens.
+- Voice mode: blow on the microphone to start a story; its loudness sets the temperature (ADR 0015).
 - Settings screen for temperature, top-p and steps, saved to /dslm/dslm.ini.
 
 **Future (aspirational, not committed):**

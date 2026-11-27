@@ -19,6 +19,7 @@
 
 #include "gfx.h"
 #include "keyboard.h"
+#include "mic.h"
 #include "sfx.h"
 #include "theme.h"
 #include "splash.h"
@@ -165,6 +166,45 @@ void ui_sound(int sfx)
 void ui_sound_enable(int on)
 {
     sound_on = on;
+}
+
+/* ---- voice mode: microphone level ---------------------------------------- */
+
+static int16_t mic_buf[800] __attribute__((aligned(32))); /* two halves of 50 ms at 8 kHz */
+static volatile int mic_level;
+static int mic_on;
+static mic_detector mic_det;
+
+static void mic_done(void *data, int length)
+{
+    DC_InvalidateRange(data, (u32)length); /* the ARM7 filled it behind the data cache */
+    mic_level = mic_level_s16((const int16_t *)data, length / 2);
+}
+
+void ui_mic(int on)
+{
+    if (on && !mic_on) {
+        mic_reset(&mic_det);
+        mic_level = 0;
+        mic_on = soundMicRecord(mic_buf, sizeof mic_buf, MicFormat_12Bit, 8000, mic_done) != 0;
+    } else if (!on && mic_on) {
+        soundMicOff();
+        mic_on = 0;
+        mic_level = 0;
+    }
+}
+
+/* The level meter in the prompt header, red once loud enough to count. */
+static void mic_meter(void)
+{
+    int level = mic_level;
+    gfx_fill(&gfx_bot, 118, 2, 136, 13, COL_PANEL);
+    gfx_str(&gfx_bot, 120, 5, "MIC", COL_CYAN, 1);
+    gfx_round(&gfx_bot, 142, 4, 106, 9, COL_PANEL2);
+    int w = level * 104 / 127;
+    if (w > 0)
+        gfx_fill(&gfx_bot, 143, 5, w, 7, level >= MIC_THRESHOLD ? COL_RED : COL_CYAN);
+    gfx_fill(&gfx_bot, 143 + MIC_THRESHOLD * 104 / 127, 4, 1, 9, COL_GREY);
 }
 
 /* ---- input latched in the VBlank interrupt ------------------------------ */
@@ -607,7 +647,9 @@ static void focus_key(int key)
 void ui_panel_prompt(const char *prompt)
 {
     clear_bottom();
-    header("Prompt", COL_CYAN, "L/R: examples");
+    header("Prompt", COL_CYAN, mic_on ? NULL : "L/R: examples");
+    if (mic_on)
+        mic_meter();
     gfx_round(&gfx_bot, PR_FIELD.x, PR_FIELD.y, PR_FIELD.w, PR_FIELD.h, COL_LINE);
     gfx_round(&gfx_bot, PR_FIELD.x + 1, PR_FIELD.y + 1, PR_FIELD.w - 2, PR_FIELD.h - 2, COL_PANEL);
 
@@ -1126,12 +1168,13 @@ static ui_event poll_input(ui_screen screen)
             return ev(UI_EV_BACKSPACE, 0);
         if (down & KEY_Y)
             return ev(UI_EV_CHAR, ' ');
-        if (down & KEY_X) {
-            st.kb.mode = st.kb.mode == KB_LOWER ? KB_UPPER : KB_LOWER;
-            for (int i = 0; i < KB_KEYS; i++)
-                draw_key(i);
-            ui_sound(SFX_PAGE);
-            return ev(UI_EV_NONE, 0);
+        if (down & KEY_X) /* shift stays on the Aa key */
+            return ev(UI_EV_MIC, 0);
+        if (mic_on) {
+            mic_meter();
+            int peak = mic_feed(&mic_det, mic_level);
+            if (peak)
+                return ev(UI_EV_BLOW, peak);
         }
         if (down & KEY_L)
             return ev(UI_EV_EXAMPLE_PREV, 0);
@@ -1342,6 +1385,7 @@ static const signed char event_sound[] = {
     [UI_EV_MENU] = SFX_BACK,          [UI_EV_PAGE_UP] = SFX_MOVE,      [UI_EV_PAGE_DOWN] = SFX_MOVE,
     [UI_EV_DELETE] = SFX_DELETE,      [UI_EV_PEEK] = SFX_PAGE,         [UI_EV_COWRITE] = SFX_OPEN,
     [UI_EV_PICK] = SFX_KEY,           [UI_EV_PATHS] = SFX_START,       [UI_EV_BOOK] = SFX_OPEN,
+    [UI_EV_MIC] = SFX_PAGE,           [UI_EV_BLOW] = SFX_START,
 };
 
 ui_event ui_poll(ui_screen screen)

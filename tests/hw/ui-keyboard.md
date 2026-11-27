@@ -10,7 +10,7 @@ Stage the card (`python tools/dslm.py stage .tools/card`) and build `dslm.nds`. 
 
 1. Boot. Prompt screen: the keyboard fills the bottom screen below the buttons, with `q` highlighted in cyan.
 2. Press B sixteen times: the prompt is empty.
-3. X, Down, Right ×5, A: `H` is typed and the keyboard goes back to lower case. Up, Right ×2, A: `i`. Y: a space. Left ×7, A: `q` (the row wraps). The prompt reads `Hi q`.
+3. Shift (since change 0033 on the `Aa` key: Down twice, Left, A), then Up, Right ×5, A: `H` is typed and the keyboard goes back to lower case. Up, Right ×2, A: `i`. Y: a space. Left ×7, A: `q` (the row wraps). The prompt reads `Hi q`.
 4. Touch `?123`: the digits and symbols page. Touch `abc`: back to letters.
 5. With the stylus lifted between taps, touch `q`, `w`, `e`, `a`, `s`: those letters are typed. Touch `DEL`: one is deleted.
 6. START (or touch GO): generation starts. After about 3 s, tap B for about 0.1 s: the Story screen says "Stopped" and keeps the text.

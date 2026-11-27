@@ -507,7 +507,8 @@ Every action works with buttons or with the stylus.
   History:     every finished story is saved in dslm/history; Up/Down
                pick one, L/R scroll it, Y twice deletes it.
   Prompt:      type with the stylus, or move on the keyboard with the
-               D-pad and press A; B deletes, Y adds a space, X shifts,
+               D-pad and press A; B deletes, Y adds a space, X voice
+               mode (blow on the DS to start, louder = more creative),
                L/R example prompts, START or GO generates, SELECT goes
                back to Home.
   Generating:  B or touch STOP to stop and keep the text; X shows the

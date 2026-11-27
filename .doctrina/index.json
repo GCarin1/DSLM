@@ -230,9 +230,26 @@
         "date": "2026-11-26",
         "landed": "2026-11-26 — `src/ui/sfx.c`, `src/ui/ui_gfx.c`, `tests/hw/ui-sound.md`",
         "summary": "Original sounds only, synthesized on the DS's PSG square-wave channels."
+      },
+      {
+        "id": "0015",
+        "path": ".doctrina/decisions/0015-voice-mode-on-the-microphone-x-toggles-it-on-the-prompt-screen-a-sustained-loud-sound-starts-the-run-and-sets-its-temperature.md",
+        "title": "Voice mode on the microphone: X toggles it on the prompt screen; a sustained loud sound starts the run and sets its temperature",
+        "status": "proposed",
+        "date": "2026-11-27",
+        "summary": "What was decided."
       }
     ],
-    "changes": [],
+    "changes": [
+      {
+        "id": "0033-voice-mode-microphone-prompt",
+        "title": "Voice mode with the microphone: X on the prompt screen switches the microphone on or off and shows a live level meter; blowing or speaking loudly for about a quarter of a second starts the generation, and how loud it was sets the temperature for that run (soft 0.2 to strong 1.2) without changing the saved settings; shift stays on the Aa key; blow detection and the loudness-to-temperature mapping are pure C tested on the host",
+        "path": ".doctrina/changes/0033-voice-mode-microphone-prompt",
+        "status": "proposed",
+        "opened": "2026-11-27",
+        "lane": "product (uncertain)"
+      }
+    ],
     "changes_archive": [
       {
         "id": "0001-r4-research-and-delivery-roadmap",
