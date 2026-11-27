@@ -1,0 +1,16 @@
+cart=R4 clone (R4.dat/TTMenu.dat, DSONEi SDHC / R4i-SDHC YSMenu package) in a DSi (DS mode)
+kernel=YSMenu
+microsd=3.8 GB FAT32 partition (card reports 64 GB)
+commit=0566c3d
+version=1.2.0
+build=chat-int8
+emulated=no
+checkpoint=/dslm/models/littlekedi_q80.bin
+prompt=What causes the seasons?
+steps=128
+stopped=0
+load_ms=600
+tokens=40
+gen_ms=12450
+tok_per_s=3.13
+heap_peak_bytes=3418244

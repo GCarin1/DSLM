@@ -16,7 +16,8 @@ Where DSLM has been run, and how. Hardware results come from the DS's own timers
 |---|---|---|
 | Nintendo DS (model not recorded) | DS mode | ✅ Works (reference runs) |
 | DS Lite | DS mode | Expected to work (same hardware); not tested yet |
-| DSi / 3DS | DS mode via flashcart | Not tested; DSi mode is out of scope for 1.0 |
+| DSi / DSi XL | DS mode via the reference R4 | ✅ Works: the v1.3 development build (graphical interface, Home, history, peek, paths, book, voice) ran all four models, with int8 parity 129/129 on hardware (`benchmarks/2026-11-26-r4-ysmenu-dsi-v1-3-dev-*.txt`) |
+| 3DS / 2DS | DS mode via flashcart | Not tested; DSi/3DS native mode is out of scope |
 
 ## Emulators
 

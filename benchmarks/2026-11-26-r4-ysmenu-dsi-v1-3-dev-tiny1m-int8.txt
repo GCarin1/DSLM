@@ -1,0 +1,16 @@
+cart=R4 clone (R4.dat/TTMenu.dat, DSONEi SDHC / R4i-SDHC YSMenu package) in a DSi (DS mode)
+kernel=YSMenu
+microsd=3.8 GB FAT32 partition (card reports 64 GB)
+commit=0566c3d
+version=1.2.0
+build=int8
+emulated=no
+checkpoint=/dslm/models/tiny1m_q80.bin
+prompt=Once upon a time
+steps=128
+stopped=0
+load_ms=266
+tokens=129
+gen_ms=25931
+tok_per_s=4.93
+heap_peak_bytes=2418820
