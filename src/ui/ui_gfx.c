@@ -641,7 +641,7 @@ static int gen_redraw;
 
 static rect gen_stop(void)
 {
-    return peek_mode == 2 ? GEN_STOP_SMALL : GEN_STOP_BIG;
+    return peek_mode >= 2 ? GEN_STOP_SMALL : GEN_STOP_BIG;
 }
 
 void ui_peek_mode(int mode)
@@ -654,14 +654,23 @@ void ui_peek_mode(int mode)
 #define PEEK_Y 66
 #define PEEK_ROW 14
 
-void ui_peek(const char *const *pieces, const int *permille, int n, int chosen)
+static rect choice_row(int i)
 {
-    if (peek_mode != 2)
-        return;
+    rect r = {8, PEEK_Y + i * PEEK_ROW - 1, GFX_W - 16, PEEK_ROW};
+    return r;
+}
+
+static void odds_rows(const char *const *pieces, const int *permille, int n, int chosen, int cursor)
+{
     gfx_fill(&gfx_bot, 0, PEEK_Y - 2, GFX_W, 5 * PEEK_ROW + 2, COL_BG);
     for (int i = 0; i < n && i < 5; i++) {
         int y = PEEK_Y + i * PEEK_ROW;
-        int pick = i == chosen;
+        int pick = i == chosen || i == cursor;
+        if (i == cursor) {
+            rect r = choice_row(i);
+            gfx_round(&gfx_bot, r.x, r.y, r.w, r.h, COL_PANEL2);
+            gfx_fill(&gfx_bot, r.x, r.y + 2, 2, r.h - 4, COL_CYAN);
+        }
         size_t len = strlen(pieces[i]);
         while (len && gfx_text_width(pieces[i], len, 1) > 84)
             len--;
@@ -676,19 +685,38 @@ void ui_peek(const char *const *pieces, const int *permille, int n, int chosen)
     }
 }
 
+void ui_peek(const char *const *pieces, const int *permille, int n, int chosen)
+{
+    if (peek_mode == 2)
+        odds_rows(pieces, permille, n, chosen, -1);
+}
+
+static int choice_n;
+
+void ui_choices(const char *const *pieces, const int *permille, int n, int sel)
+{
+    choice_n = n;
+    odds_rows(pieces, permille, n, -1, sel);
+}
+
 void ui_panel_generating(int tokens, int steps, unsigned ms_per_token)
 {
     char buf[48];
     if (tokens == 0 || gen_redraw) {
         gen_redraw = 0;
         clear_bottom();
-        header("Writing...", COL_AMBER, peek_mode == 2 ? "next token odds" : NULL);
-        if (peek_mode != 2)
+        if (peek_mode == 3)
+            header("Your turn: pick the next token", COL_CYAN, NULL);
+        else
+            header("Writing...", COL_AMBER, peek_mode == 2 ? "next token odds" : NULL);
+        if (peek_mode < 2)
             gfx_blit_scaled(&gfx_bot, (GFX_W - 2 * ICON_BRAIN_W) / 2, 68, ICON_BRAIN_W, ICON_BRAIN_H, icon_brain, 2);
         button(gen_stop(), "STOP", "B", BTN_DANGER, 2);
-        const char *foot = peek_mode == 1 ? "B: stop    X: peek inside the model"
-                         : peek_mode == 2 ? "B: stop    X: hide" : "Press B or touch STOP to stop.";
-        gfx_str_centered(&gfx_bot, 0, peek_mode == 2 ? 178 : 166, GFX_W, foot, COL_DIM, 1);
+        const char *foot = peek_mode == 1 ? "X: peek   Y: write together   B: stop"
+                         : peek_mode == 2 ? "X: hide   Y: write together   B: stop"
+                         : peek_mode == 3 ? "A: use it   Y: let it write   B: stop"
+                                          : "Press B or touch STOP to stop.";
+        gfx_str_centered(&gfx_bot, 0, peek_mode >= 2 ? 178 : 166, GFX_W, foot, COL_DIM, 1);
     }
     gfx_fill(&gfx_bot, 0, 24, GFX_W, 42, COL_BG);
     snprintf(buf, sizeof buf, "%d / %d tokens", tokens, steps);
@@ -1031,6 +1059,24 @@ static ui_event poll_input(ui_screen screen)
         }
         if ((down & KEY_X) && peek_mode)
             return ev(UI_EV_PEEK, 0);
+        if ((down & KEY_Y) && peek_mode)
+            return ev(UI_EV_COWRITE, 0);
+        break;
+
+    case UI_CHOOSE:
+        if (rep & KEY_UP)
+            return ev(UI_EV_UP, 0);
+        if (rep & KEY_DOWN)
+            return ev(UI_EV_DOWN, 0);
+        if (down & KEY_A)
+            return ev(UI_EV_PICK, -1);
+        if (down & KEY_Y)
+            return ev(UI_EV_COWRITE, 0);
+        if ((down & KEY_B) || (ty >= 0 && hit(gen_stop(), tx, ty)))
+            return ev(UI_EV_STOP, 0);
+        for (int i = 0; i < choice_n; i++)
+            if (hit(choice_row(i), tx, ty))
+                return ev(UI_EV_PICK, i);
         break;
 
     case UI_HOME:
@@ -1149,7 +1195,8 @@ static const signed char event_sound[] = {
     [UI_EV_DOWN] = SFX_MOVE,          [UI_EV_LEFT] = SFX_MOVE,         [UI_EV_RIGHT] = SFX_MOVE,
     [UI_EV_SELECT_ROW] = SFX_MOVE,    [UI_EV_SAVE] = SFX_OPEN,         [UI_EV_OPEN] = SFX_OPEN,
     [UI_EV_MENU] = SFX_BACK,          [UI_EV_PAGE_UP] = SFX_MOVE,      [UI_EV_PAGE_DOWN] = SFX_MOVE,
-    [UI_EV_DELETE] = SFX_DELETE,      [UI_EV_PEEK] = SFX_PAGE,
+    [UI_EV_DELETE] = SFX_DELETE,      [UI_EV_PEEK] = SFX_PAGE,         [UI_EV_COWRITE] = SFX_OPEN,
+    [UI_EV_PICK] = SFX_KEY,
 };
 
 ui_event ui_poll(ui_screen screen)

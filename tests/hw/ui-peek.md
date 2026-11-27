@@ -8,7 +8,7 @@ Stage the card and build `dslm.nds`. A story model loaded (Stories mode). Key ma
 
 ## Steps and expected result
 
-1. Stories, START. The footer reads "B: stop    X: peek inside the model".
+1. Stories, START. The footer reads "X: peek   Y: write together   B: stop" (since change 0030).
 2. X: STOP shrinks, the header says "next token odds", and five rows show each candidate in quotes with a bar and a percentage. The token actually picked is white and bright cyan. A newline shows as `/`, and the end of the story as "(the end)".
 3. X again: the brain and the big STOP come back. The choice is saved as `[ui] peek` in `dslm.ini` at the end of the run, if it changed.
 4. Chat mode: no X hint and no visualizer (the chat engine has no step hook).

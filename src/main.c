@@ -394,27 +394,77 @@ typedef struct {
     /* peek: the likely tokens of the position being generated */
     int peek_n, peek_prev;
     int peek_ids[5], peek_pm[5];
+    int cowrite;   /* the user picks the next tokens */
+    int stop_req;  /* B while choosing: stop at the next token */
 } gen_ctx;
 
+static void peek_texts(gen_ctx *g, const char **pieces);
+static void gen_panel(gen_ctx *g);
+
 /* Story engine step hook: note the five likely tokens; never changes the pick. */
+/* Co-writing: offer the likely tokens and wait for the user. Returns the
+ * token to force, or -1 to let the model sample (pen given back, or stop). */
+static int choose_token(gen_ctx *g)
+{
+    const char *pieces[5];
+    int sel = 0;
+    g->ticks += cpuGetTiming(); /* the wait is not generation time */
+    peek_texts(g, pieces);
+    ui_choices(pieces, g->peek_pm, g->peek_n, sel);
+    for (;;) {
+        ui_frame();
+        ui_event e = ui_poll(UI_CHOOSE);
+        int pick = -2;
+        switch (e.type) {
+        case UI_EV_UP:
+            sel = sel > 0 ? sel - 1 : g->peek_n - 1;
+            break;
+        case UI_EV_DOWN:
+            sel = sel + 1 < g->peek_n ? sel + 1 : 0;
+            break;
+        case UI_EV_PICK:
+            pick = e.value >= 0 && e.value < g->peek_n ? e.value : sel;
+            break;
+        case UI_EV_COWRITE:
+            g->cowrite = 0;
+            pick = -1;
+            break;
+        case UI_EV_STOP:
+            g->stop_req = 1;
+            pick = -1;
+            break;
+        default:
+            continue;
+        }
+        if (pick == -2) {
+            ui_choices(pieces, g->peek_pm, g->peek_n, sel);
+            continue;
+        }
+        if (!g->cowrite || g->stop_req) {
+            ui_peek_mode(g->a->settings.peek ? 2 : 1);
+            gen_panel(g);
+        }
+        cpuStartTiming(0);
+        return pick >= 0 ? g->peek_ids[pick] : -1;
+    }
+}
+
 static int peek_step(const llama2_step *s, void *user)
 {
     gen_ctx *g = user;
-    if (!g->a->settings.peek) {
+    if (!g->a->settings.peek && !g->cowrite) {
         g->peek_n = 0;
         return -1;
     }
     g->peek_prev = s->prev;
     g->peek_n = s->ilogits ? topk_q16(s->ilogits, s->vocab, 5, g->peek_ids, g->peek_pm)
                            : topk_f32(s->logits, s->vocab, 5, g->peek_ids, g->peek_pm);
-    return -1;
+    return g->cowrite && g->peek_n ? choose_token(g) : -1;
 }
 
-static void show_peek(gen_ctx *g, int token)
+static void peek_texts(gen_ctx *g, const char **pieces)
 {
     static char text[5][16];
-    const char *pieces[5];
-    int chosen = -1;
     for (int i = 0; i < g->peek_n; i++) {
         const char *t = g->peek_ids[i] == LLAMA2_BOS ? "(the end)"
                                                      : llama2_token_text(&g->a->model, g->peek_prev, g->peek_ids[i]);
@@ -425,10 +475,24 @@ static void show_peek(gen_ctx *g, int token)
         text[i][k++] = '"';
         text[i][k] = '\0';
         pieces[i] = text[i];
+    }
+}
+
+static void show_peek(gen_ctx *g, int token)
+{
+    const char *pieces[5];
+    int chosen = -1;
+    peek_texts(g, pieces);
+    for (int i = 0; i < g->peek_n; i++)
         if (g->peek_ids[i] == token)
             chosen = i;
-    }
     ui_peek(pieces, g->peek_pm, g->peek_n, chosen);
+}
+
+static void gen_panel(gen_ctx *g)
+{
+    unsigned ms = g->produced ? ticks_to_ms(g->ticks) / (unsigned)g->produced : 0;
+    ui_panel_generating(g->produced, g->steps, ms);
 }
 
 static int on_token(int token, const char *piece, void *user);
@@ -460,14 +524,18 @@ static int on_token(int token, const char *piece, void *user)
     ui_panel_generating(g->produced, g->steps, ticks_to_ms(g->ticks) / (unsigned)g->produced);
     if (g->a->kind == KIND_STORY && g->a->settings.peek && g->peek_n)
         show_peek(g, token);
-    ui_event e = ui_poll(UI_GENERATING);
+    ui_event e = g->cowrite ? (ui_event){UI_EV_NONE, 0} : ui_poll(UI_GENERATING);
     if (e.type == UI_EV_PEEK) { /* only offered for story models */
         g->a->settings.peek = !g->a->settings.peek;
         g->peek_n = 0;
         ui_peek_mode(g->a->settings.peek ? 2 : 1);
-        ui_panel_generating(g->produced, g->steps, ticks_to_ms(g->ticks) / (unsigned)g->produced);
+        gen_panel(g);
+    } else if (e.type == UI_EV_COWRITE) { /* the next step asks the user */
+        g->cowrite = 1;
+        ui_peek_mode(3);
+        gen_panel(g);
     }
-    g->stopped = e.type == UI_EV_STOP;
+    g->stopped = e.type == UI_EV_STOP || g->stop_req;
     return g->stopped;
 }
 
@@ -510,7 +578,7 @@ static void generate(app *a)
 {
     int seq_len = a->seq_len;
     int steps = a->settings.steps > seq_len ? seq_len : a->settings.steps;
-    gen_ctx g = {a, 0, steps, 0, 0, 0, 0, {0}, {0}};
+    gen_ctx g = {a, 0, steps, 0, 0, 0, 0, {0}, {0}, 0, 0};
     int peek_before = a->settings.peek;
     ui_peek_mode(a->kind == KIND_STORY ? (a->settings.peek ? 2 : 1) : 0);
 

@@ -511,7 +511,8 @@ Every action works with buttons or with the stylus.
                L/R example prompts, START or GO generates, SELECT goes
                back to Home.
   Generating:  B or touch STOP to stop and keep the text; X shows the
-               model's most likely next tokens (story models). Closing the
+               model's most likely next tokens, Y lets you pick them
+               yourself (story models). Closing the
                lid turns the screens off and the story keeps going.
   Story:       Up/Down scroll, A new prompt, Y same prompt again,
                SELECT Home.
