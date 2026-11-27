@@ -503,6 +503,19 @@ static void gen_panel(gen_ctx *g)
     ui_panel_generating(g->produced, g->steps, ms);
 }
 
+/* Play the overlay once a session and bring the generating screen back. */
+static int play_overlay(gen_ctx *g)
+{
+    if (g->a->overlay == 2 || g->a->benchmark)
+        return 0;
+    ui_overlay();
+    g->a->overlay = 2;
+    gen_chrome(g->a);
+    ui_text(g->a->story, g->a->story_len, -1);
+    gen_panel(g);
+    return 1;
+}
+
 static int on_token(int token, const char *piece, void *user);
 static void save_history(app *a);
 static int save_settings(const dslm_settings *s);
@@ -533,15 +546,13 @@ static int on_token(int token, const char *piece, void *user)
     if (g->a->kind == KIND_STORY && g->a->settings.peek && g->peek_n)
         show_peek(g, token);
     ui_event e = g->cowrite ? (ui_event){UI_EV_NONE, 0} : ui_poll(UI_GENERATING);
-    if (g->a->overlay != 2 && !g->a->benchmark &&
-        (e.type == UI_EV_OVERLAY || (g->a->overlay == 1 && (g->produced == 12 || g->produced == g->steps)))) {
-        ui_overlay();
-        g->a->overlay = 2;
-        gen_chrome(g->a);
-        ui_text(g->a->story, g->a->story_len, -1);
-        gen_panel(g);
-        cpuStartTiming(0); /* the pause is not generation time */
-        return 0;
+    /* chat answers can be a few tokens long: start early there */
+    int at = g->a->kind == KIND_CHAT ? 3 : 12;
+    if (e.type == UI_EV_OVERLAY || (g->a->overlay == 1 && (g->produced == at || g->produced == g->steps))) {
+        if (play_overlay(g)) {
+            cpuStartTiming(0); /* the pause is not generation time */
+            return 0;
+        }
     }
     if (e.type == UI_EV_PEEK) { /* only offered for story models */
         g->a->settings.peek = !g->a->settings.peek;
@@ -655,6 +666,8 @@ static void generate(app *a)
     g.ticks += cpuGetTiming();
     a->gen_ms = ticks_to_ms(g.ticks);
     a->stopped = g.stopped;
+    if (a->overlay == 1 && !g.stopped) /* the run ended before it started */
+        play_overlay(&g);
     ui_generating(0);
     a->settings.temperature = user_temp;
     a->voice_milli = 0;
