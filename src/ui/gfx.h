@@ -18,6 +18,7 @@
 
 typedef struct {
     volatile uint16_t *px; /* 256x256 bitmap, 128 halfwords per row */
+    int w, h;              /* drawable area: 256x192, or 192x256 in book mode */
 } gfx_surface;
 
 extern gfx_surface gfx_top;
@@ -27,6 +28,13 @@ extern gfx_surface gfx_bot;
 void gfx_init(void);
 /* Loads sub-screen palette entries 0 and 32-255. */
 void gfx_load_palette(void);
+
+/*
+ * Book mode: both screens show their bitmap turned a quarter turn by the
+ * background hardware, so a page drawn 192 wide and 256 tall reads upright
+ * with the DS held sideways (top screen on the left). Off restores 256x192.
+ */
+void gfx_book(int on);
 
 void gfx_fill(gfx_surface *s, int x, int y, int w, int h, uint8_t c);
 /* Filled rectangle with 2 px rounded corners (the corner pixels are left untouched). */

@@ -690,6 +690,32 @@ static void enter_prompt(app *a, int show_last)
     ui_panel_prompt(a->prompt);
 }
 
+/* ---- book mode ---------------------------------------------------------- */
+
+/* Read `text` as a book until B or START; the caller redraws its screen. */
+static void book_screen(const char *text, size_t len, const char *title)
+{
+    ui_fade_out();
+    int spreads = ui_book_open(text, len, title), spread = 0;
+    ui_book_show(spread);
+    ui_fade_in();
+    for (;;) {
+        ui_frame();
+        ui_event e = ui_poll(UI_BOOK);
+        int was = spread;
+        if (e.type == UI_EV_PAGE_DOWN && spread + 1 < spreads)
+            spread++;
+        else if (e.type == UI_EV_PAGE_UP && spread > 0)
+            spread--;
+        else if (e.type == UI_EV_BACK)
+            break;
+        if (spread != was)
+            ui_book_show(spread);
+    }
+    ui_fade_out();
+    ui_book_close();
+}
+
 /* ---- choose-your-path ---------------------------------------------------- */
 
 #define PATHS 3
@@ -1155,7 +1181,7 @@ static void history_screen(app *a)
 #define list (*lp)
     void *file = NULL;
     history_entry e;
-    int sel = 0, scroll = 0, confirm = 0, loaded = -1;
+    int sel = 0, scroll = 0, confirm = 0, loaded = -1, refade = 0;
     (void)a;
     load_history_list(&list);
     ui_fade_out();
@@ -1175,7 +1201,7 @@ static void history_screen(app *a)
             loaded = sel;
             scroll = 0;
             ui_title(e.model[0] ? e.model : "", "history");
-            ui_hint(list.n ? "Up/Down:pick  L/R:scroll  Y:delete  B:back" : "B:back");
+            ui_hint(list.n ? "Up/Down:pick  A:book  L/R:scroll  Y:del  B:back" : "B:back");
         }
         if (list.n && e.text) {
             ui_set_chat(e.chat ? e.question : -1);
@@ -1187,8 +1213,10 @@ static void history_screen(app *a)
             ui_text(none, sizeof none - 1, 0);
         }
         ui_history(list.items, list.n, sel, confirm);
-        if (fade)
+        if (fade || refade) {
             ui_fade_in();
+            refade = 0;
+        }
         for (int redraw = 0; !redraw;) {
             ui_frame();
             ui_event ev = ui_poll(UI_HISTORY);
@@ -1231,6 +1259,13 @@ static void history_screen(app *a)
                 load_history_list(&list);
                 sel = sel < list.n ? sel : (list.n ? list.n - 1 : 0);
                 loaded = -1;
+                break;
+            case UI_EV_BOOK:
+                if (e.text) {
+                    book_screen(e.text, e.text_len, e.date[0] ? e.date : e.model);
+                    loaded = -1; /* redraw the preview */
+                    refade = 1;
+                }
                 break;
             case UI_EV_BACK:
                 free(file);
@@ -1353,6 +1388,11 @@ static void prompt_screen(app *a)
                     case UI_EV_PATHS:
                         paths_screen(a);
                         enter_story(a);
+                        break;
+                    case UI_EV_BOOK:
+                        book_screen(a->story, a->story_len, a->model_name);
+                        enter_story(a);
+                        ui_fade_in();
                         break;
                     case UI_EV_MENU:
                         return;

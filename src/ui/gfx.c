@@ -36,6 +36,8 @@ void gfx_init(void)
     bgSetPriority(bot, 3);
     gfx_top.px = bgGetGfxPtr(top);
     gfx_bot.px = bgGetGfxPtr(bot);
+    gfx_top.w = gfx_bot.w = GFX_W;
+    gfx_top.h = gfx_bot.h = GFX_H;
 
     dmaCopy(art_palette, BG_PALETTE, 256 * 2);
     BG_PALETTE[0] = art_palette[COL_BG];
@@ -47,6 +49,27 @@ void gfx_init(void)
     }
     gfx_fill(&gfx_top, 0, 0, GFX_W, GFX_H, COL_BG);
     gfx_fill(&gfx_bot, 0, 0, GFX_W, GFX_H, COL_BG);
+}
+
+void gfx_book(int on)
+{
+    /* screen (sx, sy) samples bitmap (bx, by) = (sy, 255 - sx); 8.8 fixed point */
+    int16_t pa = on ? 0 : 256, pb = on ? 256 : 0, pc = on ? -256 : 0, pd = on ? 0 : 256;
+    int32_t y0 = on ? 255 << 8 : 0;
+    REG_BG2PA = pa;
+    REG_BG2PB = pb;
+    REG_BG2PC = pc;
+    REG_BG2PD = pd;
+    REG_BG2X = 0;
+    REG_BG2Y = y0;
+    REG_BG2PA_SUB = pa;
+    REG_BG2PB_SUB = pb;
+    REG_BG2PC_SUB = pc;
+    REG_BG2PD_SUB = pd;
+    REG_BG2X_SUB = 0;
+    REG_BG2Y_SUB = y0;
+    gfx_top.w = gfx_bot.w = on ? GFX_H : GFX_W;
+    gfx_top.h = gfx_bot.h = on ? 256 : GFX_H;
 }
 
 static inline void put(gfx_surface *s, int x, int y, uint8_t c)
@@ -68,10 +91,10 @@ void gfx_fill(gfx_surface *s, int x, int y, int w, int h, uint8_t c)
         h += y;
         y = 0;
     }
-    if (x + w > GFX_W)
-        w = GFX_W - x;
-    if (y + h > GFX_H)
-        h = GFX_H - y;
+    if (x + w > s->w)
+        w = s->w - x;
+    if (y + h > s->h)
+        h = s->h - y;
     if (w <= 0 || h <= 0)
         return;
     uint16_t pair = (uint16_t)(c | (c << 8));
@@ -106,7 +129,7 @@ void gfx_blit(gfx_surface *s, int x, int y, int w, int h, const uint8_t *src)
         for (int i = 0; i < w; i++) {
             uint8_t c = src[j * w + i];
             int px = x + i, py = y + j;
-            if (c && (unsigned)px < GFX_W && (unsigned)py < GFX_H)
+            if (c && px >= 0 && px < s->w && py >= 0 && py < s->h)
                 put(s, px, py, c);
         }
 }
@@ -135,12 +158,12 @@ int gfx_text(gfx_surface *s, int x, int y, const char *t, size_t n, uint8_t c, i
             continue;
         const uint8_t *rows = font_rows + g * FONT_HEIGHT;
         int w = font_width[g];
-        if (x + w * scale > GFX_W)
+        if (x + w * scale > s->w)
             break;
         for (int r = 0; r < FONT_HEIGHT; r++) {
             uint8_t bits = rows[r];
             int py = y + r * scale;
-            if (!bits || py < 0 || py + scale > GFX_H)
+            if (!bits || py < 0 || py + scale > s->h)
                 continue;
             for (int k = 0; k < w; k++)
                 if (bits & (0x80 >> k)) {

@@ -29,8 +29,9 @@ Developers build this tree with `python tools/dslm.py stage <card root>` (`docs/
 5. **Story.** The finished story on the top screen; New prompt, Same prompt again, What happens next? and Menu below. "What happens next?" (story models) writes three different ways the story could go on; pick one and it is added, then three more follow, until you press B.
 6. **Settings** (from Home). Temperature, top-p, the number of steps and the story model, saved to `/dslm/dslm.ini`.
 7. **History** (from Home). Every finished story and answer is saved on the card with its date; pick one to read it again (chats in bubbles), or delete it.
-8. **Benchmark** (from Home). Measures this DS: the first example at temperature 0 for 128 tokens, then tokens per second, time per token, load time and memory. The result is added to `/dslm/bench.txt`; your settings and history are not touched.
-9. **About** (from Home). The loaded model, its context, the free memory and the credits.
+8. **Book** (START on the Story screen, A in History). Turn the DS a quarter turn to the left, like a book: the text fills both screens on light pages with page numbers.
+9. **Benchmark** (from Home). Measures this DS: the first example at temperature 0 for 128 tokens, then tokens per second, time per token, load time and memory. The result is added to `/dslm/bench.txt`; your settings and history are not touched.
+10. **About** (from Home). The loaded model, its context, the free memory and the credits.
 
 ## Controls
 
@@ -56,12 +57,16 @@ Every action works with the buttons or with the stylus.
 | Story | Same prompt again | Y | Same prompt again |
 | Story | Scroll | Up / Down | — |
 | Story | What happens next? (pick one of three continuations) | X, then Up / Down and A; B finishes | touch a path |
+| Story | Read it as a book | START | Book |
 | Story | Back to Home | SELECT | Menu |
 | History | Pick an entry | Up / Down | touch its row |
+| History | Read it as a book | A | — |
 | History | Scroll the text | L / R | — |
 | History | Delete it (press twice) | Y | Delete |
 | History | Back to Home | B | Back |
 | Benchmark | Run again / back to Home | A / B | Run again / Back |
+| Book | Next / previous pages | A, R / Y, L | touch the right page |
+| Book | Close | B or START | — |
 | About | Back to Home | B | Back |
 | Settings | Choose a setting | Up / Down | touch its row |
 | Settings | Change it | Left / Right | `[-]` / `[+]` |

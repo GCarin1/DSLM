@@ -19,6 +19,7 @@ typedef enum {
     UI_REPORT,
     UI_CHOOSE,          /* co-writing: the user picks the next token */
     UI_PATHS,           /* choose-your-path: the user picks a continuation */
+    UI_BOOK,            /* book mode: PAGE_DOWN/PAGE_UP turn, BACK closes */
     UI_PROMPT,
     UI_GENERATING,
     UI_STORY,
@@ -51,7 +52,8 @@ typedef enum {
     UI_EV_PEEK,         /* show or hide the likely next tokens */
     UI_EV_COWRITE,      /* take the pen (generating) or give it back (choosing) */
     UI_EV_PICK,         /* value = choice row, or -1 for the highlighted one */
-    UI_EV_PATHS         /* continue the story with choices */
+    UI_EV_PATHS,        /* continue the story with choices */
+    UI_EV_BOOK          /* read it as a book */
 } ui_event_type;
 
 /* Home cards, in reading order of the 2x2 grid */
@@ -101,6 +103,13 @@ void ui_history(const ui_list_item *items, int n, int sel, int confirm);
 
 /* A results panel: `n` lines, then Run again (A) and Back (B). */
 void ui_report(const char *title, const char *const *lines, int n);
+
+/* Book mode: lay `text` out on pages (chat text keeps its question first)
+ * and return the number of spreads (two pages each). */
+int ui_book_open(const char *text, size_t len, const char *title);
+void ui_book_show(int spread);
+/* Back to the normal screens; the caller redraws its screen. */
+void ui_book_close(void);
 
 /* About: the logo on top, `n` lines and a Back button below. */
 void ui_about(const char *const *lines, int n);

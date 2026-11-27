@@ -6,7 +6,7 @@
 **Realizes:** SC4
 **Depends on:** inference-engine
 **Last updated:** 2026-11-26
-**Version:** 0.16.0
+**Version:** 0.17.0
 
 ## Purpose
 
@@ -45,6 +45,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - When the user opens the Benchmark card, the interface shall generate the first example prompt at temperature 0 for 128 steps on the loaded model, show its speed, time per token, load time and heap peak, and append the run to /dslm/bench.txt without changing the settings or the history.
 - When the user presses Y while a story model generates, the interface shall offer the five most likely next tokens at each step and use the one the user picks, until Y gives the choice back to the model or B stops.
 - When the user presses X on the Story screen of a story model with room left in the context, the interface shall write three alternative continuations, append the one the user picks, and offer three more until B finishes.
+- When the user presses START on the Story screen or A on a History entry, the interface shall show the text as a book on rotated pages across both screens, turning pages on A, R or a touch and closing on B or START.
 
 ### State-driven
 
@@ -90,6 +91,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 23. [verified] The Generating screen shows the five likely tokens with bars, X toggles them, and int8 parity is unchanged with them shown — verified by `tests/hw/ui-peek.md`
 24. [verified] Picks by D-pad and by touch are appended, Y hands the pen back and B stops with the co-written text kept — verified by `tests/hw/ui-cowrite.md`
 25. [verified] Three paths are offered, a picked path (by D-pad or touch) is appended and the next paths continue it coherently — verified by `tests/hw/ui-paths.md`
+26. [verified] Stories and history entries open as rotated book pages with page numbers and close back to their screen — verified by `tests/hw/ui-book.md`
 
 ## Maturity
 
@@ -106,6 +108,7 @@ The homebrew's interface on the DS's two 256x192 screens. The top screen streams
 - Peek: the five likely next tokens with probability bars while a story model writes (X).
 - Co-writing: the user picks the next tokens among the five likely ones (Y).
 - Choose-your-path: a finished story goes on with three alternative continuations to pick from (X on the Story screen).
+- Book mode: stories and history entries read on rotated pages across both screens.
 - Settings screen for temperature, top-p and steps, saved to /dslm/dslm.ini.
 
 **Future (aspirational, not committed):**

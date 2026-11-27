@@ -14,6 +14,7 @@
 #include <nds.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "gfx.h"
@@ -733,6 +734,7 @@ static const rect STORY_AGAIN = {12, 81, 232, 27};
 static const rect STORY_PATHS = {12, 112, 232, 27};
 static const rect STORY_SET = {12, 143, 232, 27};
 static int story_branch;
+static const rect STORY_BOOK = {176, 21, 72, 15};
 
 void ui_panel_story(int tokens, int gen_tokens, unsigned total_ms, int stopped, int can_branch)
 {
@@ -747,6 +749,7 @@ void ui_panel_story(int tokens, int gen_tokens, unsigned total_ms, int stopped, 
              tps10 / 10, tps10 % 10);
     gfx_str(&gfx_bot, 16, 24, stats, COL_WHITE, 1);
     gfx_str(&gfx_bot, 16, 37, "Up/Down scrolls the story", COL_DIM, 1);
+    button(STORY_BOOK, "Book", "START", BTN_NORMAL, 1);
     button(STORY_NEW, "New prompt", "A", BTN_PRIMARY, 1);
     button(STORY_AGAIN, "Same prompt again", "Y", BTN_NORMAL, 1);
     if (can_branch)
@@ -896,6 +899,74 @@ void ui_home(int focus, const char *stories, const char *chat, const char *note)
 }
 
 static const rect ABOUT_BACK = {68, 160, 120, 24};
+
+/* ---- book mode: 192x256 pages, the top screen on the left ---------------- */
+
+#define PAGE_W 192
+#define PAGE_H 256
+#define PAGE_MARGIN 12
+#define PAGE_LINES 20
+#define BOOK_MAX_LINES 1024
+
+static struct {
+    const char *text;
+    tv_line *lines; /* on the heap while the book is open: static RAM would shrink the chat context */
+    int n_lines, pages;
+    char title[48];
+} book;
+
+int ui_book_open(const char *text, size_t len, const char *title)
+{
+    book.text = text;
+    book.lines = malloc(BOOK_MAX_LINES * sizeof *book.lines);
+    book.n_lines = book.lines ? tv_wrap_px(text, len, PAGE_W - 2 * PAGE_MARGIN, gfx_advance, book.lines,
+                                           BOOK_MAX_LINES)
+                              : 0;
+    if (book.n_lines > BOOK_MAX_LINES)
+        book.n_lines = BOOK_MAX_LINES;
+    book.pages = (book.n_lines + PAGE_LINES - 1) / PAGE_LINES;
+    if (book.pages < 1)
+        book.pages = 1;
+    snprintf(book.title, sizeof book.title, "%s", title);
+    gfx_book(1);
+    st.splash = 0;
+    return (book.pages + 1) / 2;
+}
+
+static void book_page(gfx_surface *s, int page)
+{
+    char foot[24];
+    gfx_fill(s, 0, 0, s->w, s->h, COL_BG);
+    if (page >= book.pages)
+        return; /* the right page after the last one stays blank */
+    gfx_round(s, 4, 4, PAGE_W - 8, PAGE_H - 8, COL_WHITE);
+    gfx_str(s, PAGE_MARGIN, 10, book.title, COL_DIM, 1);
+    gfx_fill(s, PAGE_MARGIN, 22, PAGE_W - 2 * PAGE_MARGIN, 1, COL_GREY);
+    for (int k = 0; k < PAGE_LINES; k++) {
+        int i = page * PAGE_LINES + k;
+        if (i >= book.n_lines)
+            break;
+        gfx_text(s, PAGE_MARGIN, 28 + k * GFX_LINE_H, book.text + book.lines[i].start, book.lines[i].len, COL_BG, 1);
+    }
+    snprintf(foot, sizeof foot, "%d / %d", page + 1, book.pages);
+    gfx_str_centered(s, 0, PAGE_H - 20, PAGE_W, foot, COL_DIM, 1);
+}
+
+void ui_book_show(int spread)
+{
+    book_page(&gfx_top, spread * 2);
+    book_page(&gfx_bot, spread * 2 + 1);
+}
+
+void ui_book_close(void)
+{
+    free(book.lines);
+    book.lines = NULL;
+    gfx_book(0);
+    gfx_fill(&gfx_top, 0, 0, GFX_W, GFX_H, COL_BG);
+    gfx_fill(&gfx_bot, 0, 0, GFX_W, GFX_H, COL_BG);
+    body_invalidate();
+}
 
 /* Choose-your-path: three continuation cards and Finish. */
 static const rect PATHS_FINISH = {68, 166, 120, 22};
@@ -1159,6 +1230,8 @@ static ui_event poll_input(ui_screen screen)
             return ev(UI_EV_DELETE, 0);
         if (down & KEY_B)
             return ev(UI_EV_BACK, 0);
+        if ((down & KEY_A) && st.list_n)
+            return ev(UI_EV_BOOK, 0);
         for (int k = 0; k < LIST_ROWS && st.list_first + k < st.list_n; k++)
             if (hit(list_row(k), tx, ty))
                 return ev(UI_EV_SELECT_ROW, st.list_first + k);
@@ -1180,6 +1253,15 @@ static ui_event poll_input(ui_screen screen)
         for (int i = 0; i < paths_n; i++)
             if (hit(path_card(i), tx, ty))
                 return ev(UI_EV_PICK, i);
+        break;
+
+    case UI_BOOK:
+        if ((down & (KEY_A | KEY_R | KEY_RIGHT | KEY_DOWN)) || ty >= 0)
+            return ev(UI_EV_PAGE_DOWN, 0);
+        if (down & (KEY_Y | KEY_L | KEY_LEFT | KEY_UP))
+            return ev(UI_EV_PAGE_UP, 0);
+        if (down & (KEY_B | KEY_START))
+            return ev(UI_EV_BACK, 0);
         break;
 
     case UI_REPORT:
@@ -1213,6 +1295,8 @@ static ui_event poll_input(ui_screen screen)
             return ev(UI_EV_MENU, 0);
         if (story_branch && ((down & KEY_X) || hit(STORY_PATHS, tx, ty)))
             return ev(UI_EV_PATHS, 0);
+        if ((down & KEY_START) || hit(STORY_BOOK, tx, ty))
+            return ev(UI_EV_BOOK, 0);
         break;
 
     case UI_SETTINGS:
@@ -1257,7 +1341,7 @@ static const signed char event_sound[] = {
     [UI_EV_SELECT_ROW] = SFX_MOVE,    [UI_EV_SAVE] = SFX_OPEN,         [UI_EV_OPEN] = SFX_OPEN,
     [UI_EV_MENU] = SFX_BACK,          [UI_EV_PAGE_UP] = SFX_MOVE,      [UI_EV_PAGE_DOWN] = SFX_MOVE,
     [UI_EV_DELETE] = SFX_DELETE,      [UI_EV_PEEK] = SFX_PAGE,         [UI_EV_COWRITE] = SFX_OPEN,
-    [UI_EV_PICK] = SFX_KEY,           [UI_EV_PATHS] = SFX_START,
+    [UI_EV_PICK] = SFX_KEY,           [UI_EV_PATHS] = SFX_START,       [UI_EV_BOOK] = SFX_OPEN,
 };
 
 ui_event ui_poll(ui_screen screen)
